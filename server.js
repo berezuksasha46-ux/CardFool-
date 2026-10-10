@@ -1,8 +1,8 @@
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
-const path = require('path');
 const cors = require('cors');
 
 const app = express();
@@ -19,7 +19,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let useMemoryFallback = false;
 const memoryUsers = new Map();
-const memoryFriends = new Map(); // telegram_id -> Set of friend_telegram_ids
+const memoryFriends = new Map();
 
 async function dbGetOrCreateUser(telegramId, userData) {
   const uniqueId = Math.floor(100000 + Math.random() * 900000).toString();
@@ -32,11 +32,10 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 50,
+        stars_balance: 0,
         wins: 0,
         losses: 0,
         level: 1,
-        claimed_level: 1,
         last_daily_claim: null,
         referrer_id: userData.referrer_id || null
       });
@@ -53,11 +52,10 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 50,
+        stars_balance: 0,
         wins: 0,
         losses: 0,
         level: 1,
-        claimed_level: 1,
         last_daily_claim: null,
         referrer_id: userData.referrer_id || null
       };
@@ -132,93 +130,12 @@ io.on('connection', (socket) => {
     if (!telegram_id) return;
     currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url, referrer_id });
     socket._telegram_id = telegram_id;
-
-    if (referrer_id && !currentUser.referrer_id && Number(referrer_id) !== Number(telegram_id)) {
-      await dbUpdateUser(telegram_id, { referrer_id: Number(referrer_id) });
-      const refUser = await dbGetOrCreateUser(Number(referrer_id), {});
-      if (refUser) {
-        await dbUpdateUser(Number(referrer_id), { stars_balance: (refUser.stars_balance || 0) + 10 });
-      }
-    }
-
     socket.emit('auth_success', currentUser);
     emitLobbies();
   });
 
   socket.on('set_socket_user', (telegram_id) => { socket._telegram_id = telegram_id; });
   socket.on('get_lobbies', () => { emitLobbies(socket); });
-
-  socket.on('get_friends', async (data) => {
-    const tId = data?.telegram_id || currentUser?.telegram_id;
-    if (!tId) return;
-
-    if (useMemoryFallback) {
-      const friendIds = memoryFriends.get(tId) || new Set();
-      const friendsList = [];
-      for (let fId of friendIds) {
-        if (memoryUsers.has(fId)) friendsList.push(memoryUsers.get(fId));
-      }
-      socket.emit('friends_list', { friends: friendsList });
-      return;
-    }
-
-    try {
-      const { data: friends } = await supabase.from('users').select('*').eq('referrer_id', Number(tId));
-      socket.emit('friends_list', { friends: friends || [] });
-    } catch (e) {
-      socket.emit('friends_list', { friends: [] });
-    }
-  });
-
-  socket.on('add_friend_by_unique_id', async (data) => {
-    const { uniqueId } = data;
-    if (!currentUser || !uniqueId) return;
-
-    let targetUser = null;
-    if (useMemoryFallback) {
-      for (let u of memoryUsers.values()) {
-        if (u.unique_id === uniqueId) { targetUser = u; break; }
-      }
-    } else {
-      const { data } = await supabase.from('users').select('*').eq('unique_id', uniqueId).single();
-      targetUser = data;
-    }
-
-    if (!targetUser) {
-      socket.emit('error_message', 'Игрок с таким ID не найден!');
-      return;
-    }
-
-    if (String(targetUser.telegram_id) === String(currentUser.telegram_id)) {
-      socket.emit('error_message', 'Нельзя добавить самого себя!');
-      return;
-    }
-
-    if (useMemoryFallback) {
-      if (!memoryFriends.has(currentUser.telegram_id)) memoryFriends.set(currentUser.telegram_id, new Set());
-      memoryFriends.get(currentUser.telegram_id).add(targetUser.telegram_id);
-    } else {
-      await dbUpdateUser(targetUser.telegram_id, { referrer_id: currentUser.telegram_id });
-    }
-
-    socket.emit('error_message', `Игрок ${targetUser.first_name || targetUser.username} успешно добавлен в друзья!`);
-    socket.emit('friends_list', { friends: [targetUser] });
-  });
-
-  socket.on('claim_daily', async () => {
-    if (!currentUser) return;
-    const now = new Date();
-    const lastClaim = currentUser.last_daily_claim ? new Date(currentUser.last_daily_claim) : null;
-    if (lastClaim && (now - lastClaim) < 24 * 60 * 60 * 1000) {
-      socket.emit('daily_error', { message: 'Ежедневный бонус уже получен сегодня!' });
-      return;
-    }
-    currentUser.stars_balance = (currentUser.stars_balance || 0) + 10;
-    currentUser.last_daily_claim = now.toISOString();
-    await dbUpdateUser(currentUser.telegram_id, { stars_balance: currentUser.stars_balance, last_daily_claim: currentUser.last_daily_claim });
-    socket.emit('auth_success', currentUser);
-    socket.emit('daily_success', { stars_balance: currentUser.stars_balance });
-  });
 
   socket.on('create_table', async (config) => {
     if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
@@ -267,11 +184,6 @@ io.on('connection', (socket) => {
 
     if (table.hostId === currentUser.telegram_id) {
       socket.join(tableId);
-      return;
-    }
-
-    if (currentUser.stars_balance < table.stake) {
-      socket.emit('error_message', 'Недостаточно звезд для входа!');
       return;
     }
 
@@ -324,31 +236,34 @@ io.on('connection', (socket) => {
 });
 
 function broadcastGameState(game) {
-  const p1 = game.players[0];
-  const p2 = game.players[1];
+  game.players.forEach((player, idx) => {
+    const isAttacker = game.attackerIndex === idx;
+    const isDefender = game.defenderIndex === idx;
+    const sock = io.sockets.sockets.get(player.socketId);
 
-  io.to(game.gameId).emit('game_state', {
-    gameId: game.gameId,
-    deckCount: game.deck.length,
-    trumpCard: game.trumpCard,
-    tableCards: game.tableCards,
-    players: [
-      { name: p1.name, handCount: p1.hand.length },
-      { name: p2.name, handCount: p2.hand.length }
-    ]
+    if (sock) {
+      sock.emit('game_state', {
+        gameId: game.gameId,
+        deckCount: game.deck.length,
+        trumpCard: game.trumpCard,
+        tableCards: game.tableCards,
+        players: game.players.map(p => ({ name: p.name, handCount: p.hand.length }))
+      });
+      sock.emit('your_hand', player.hand);
+      sock.emit('is_turn_data', {
+        isMyTurn: isAttacker || (isDefender && game.tableCards.some(tc => !tc.defend)),
+        isAttacker: isAttacker
+      });
+    }
   });
+}
 
-  const sock1 = io.sockets.sockets.get(p1.socketId);
-  const sock2 = io.sockets.sockets.get(p2.socketId);
-
-  if (sock1) {
-    sock1.emit('your_hand', p1.hand);
-    sock1.emit('is_turn_data', { isMyTurn: game.attackerIndex === 0 || game.defenderIndex === 0, isAttacker: game.attackerIndex === 0 });
-  }
-  if (sock2) {
-    sock2.emit('your_hand', p2.hand);
-    sock2.emit('is_turn_data', { isMyTurn: game.attackerIndex === 1 || game.defenderIndex === 1, isAttacker: game.attackerIndex === 1 });
-  }
+function replenishHands(game) {
+  [game.attackerIndex, game.defenderIndex].forEach(idx => {
+    while (game.players[idx].hand.length < 6 && game.deck.length > 0) {
+      game.players[idx].hand.push(game.deck.pop());
+    }
+  });
 }
 
 async function handleGameAction(socket, data) {
@@ -361,60 +276,52 @@ async function handleGameAction(socket, data) {
 
   const isAttacker = game.attackerIndex === playerIdx;
   const isDefender = game.defenderIndex === playerIdx;
-  const card = game.players[playerIdx].hand[cardIndex];
 
-  if (action === 'play_card' && isAttacker) {
+  if (action === 'play_card') {
+    const card = game.players[playerIdx].hand[cardIndex];
     if (!card) return;
-    if (game.tableCards.length > 0) {
-      const ranksOnTable = new Set();
-      game.tableCards.forEach(tc => {
-        ranksOnTable.add(tc.attack.rank);
-        if (tc.defend) ranksOnTable.add(tc.defend.rank);
-      });
-      if (!ranksOnTable.has(card.rank)) return;
-    }
 
-    game.players[playerIdx].hand.splice(cardIndex, 1);
-    game.tableCards.push({ attack: card, defend: null });
-    const temp = game.attackerIndex;
-    game.attackerIndex = game.defenderIndex;
-    game.defenderIndex = temp;
+    if (isAttacker) {
+      // Атакующий кладет карту
+      if (game.tableCards.length > 0) {
+        const ranksOnTable = new Set();
+        game.tableCards.forEach(tc => {
+          ranksOnTable.add(tc.attack.rank);
+          if (tc.defend) ranksOnTable.add(tc.defend.rank);
+        });
+        if (!ranksOnTable.has(card.rank)) return;
+      }
 
-    broadcastGameState(game);
-  } 
-  else if (action === 'play_card' && isDefender) {
-    if (!card) return;
-    const activeAttack = game.tableCards.find(tc => !tc.defend);
-    if (!activeAttack) return;
+      const undefendedCount = game.tableCards.filter(tc => !tc.defend).length;
+      if (undefendedCount >= game.players[game.defenderIndex].hand.length) return;
 
-    const canTransfer = game.mode === 'perevodnoy' && game.tableCards.length === 1 && !activeAttack.defend && card.rank === activeAttack.attack.rank;
-    if (canTransfer) {
       game.players[playerIdx].hand.splice(cardIndex, 1);
       game.tableCards.push({ attack: card, defend: null });
-      const temp = game.attackerIndex;
-      game.attackerIndex = game.defenderIndex;
-      game.defenderIndex = temp;
       broadcastGameState(game);
-      return;
-    }
+    } 
+    else if (isDefender) {
+      // Защищающийся отбивается
+      const activeAttack = game.tableCards.find(tc => !tc.defend);
+      if (!activeAttack) return;
 
-    const isValid = (card.suit === activeAttack.attack.suit && card.value > activeAttack.attack.value) ||
-                    (card.suit === game.trumpCard.suit && activeAttack.attack.suit !== game.trumpCard.suit);
+      const isValid = (card.suit === activeAttack.attack.suit && card.value > activeAttack.attack.value) ||
+                      (card.suit === game.trumpCard.suit && activeAttack.attack.suit !== game.trumpCard.suit);
 
-    if (isValid) {
-      game.players[playerIdx].hand.splice(cardIndex, 1);
-      activeAttack.defend = card;
-      const temp = game.attackerIndex;
-      game.attackerIndex = game.defenderIndex;
-      game.defenderIndex = temp;
-      broadcastGameState(game);
+      if (isValid) {
+        game.players[playerIdx].hand.splice(cardIndex, 1);
+        activeAttack.defend = card;
+        broadcastGameState(game);
+      }
     }
   }
-  else if (action === 'bito') {
+  else if (action === 'bito' && isAttacker) {
     if (game.tableCards.length > 0 && game.tableCards.every(tc => tc.defend)) {
       game.tableCards = [];
-      while (game.players[0].hand.length < 6 && game.deck.length > 0) game.players[0].hand.push(game.deck.pop());
-      while (game.players[1].hand.length < 6 && game.deck.length > 0) game.players[1].hand.push(game.deck.pop());
+      replenishHands(game);
+      // Смена ролей при «Бито»
+      const temp = game.attackerIndex;
+      game.attackerIndex = game.defenderIndex;
+      game.defenderIndex = temp;
       broadcastGameState(game);
     }
   }
@@ -426,8 +333,8 @@ async function handleGameAction(socket, data) {
     });
     game.players[playerIdx].hand.push(...cardsToTake);
     game.tableCards = [];
-    while (game.players[0].hand.length < 6 && game.deck.length > 0) game.players[0].hand.push(game.deck.pop());
-    while (game.players[1].hand.length < 6 && game.deck.length > 0) game.players[1].hand.push(game.deck.pop());
+    replenishHands(game);
+    // Ход остается у того же атакующего
     broadcastGameState(game);
   }
 }
