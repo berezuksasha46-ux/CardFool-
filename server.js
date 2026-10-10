@@ -24,13 +24,14 @@ function generateUniqueId() {
 }
 
 async function dbGetOrCreateUser(telegramId, userData) {
+  const cleanId = String(telegramId).trim();
   const cleanName = userData.first_name || (userData.username ? userData.username.split('@')[0] : 'Игрок');
   const photoUrl = userData.photo_url || null;
 
   if (useMemoryFallback) {
-    if (!memoryUsers.has(telegramId)) {
-      memoryUsers.set(telegramId, {
-        telegram_id: telegramId,
+    if (!memoryUsers.has(cleanId)) {
+      memoryUsers.set(cleanId, {
+        telegram_id: cleanId,
         unique_id: generateUniqueId(),
         username: userData.username || cleanName,
         first_name: cleanName,
@@ -42,19 +43,19 @@ async function dbGetOrCreateUser(telegramId, userData) {
         last_daily_claim: null
       });
     } else {
-      const u = memoryUsers.get(telegramId);
+      const u = memoryUsers.get(cleanId);
       if (photoUrl) u.photo_url = photoUrl;
       if (cleanName) u.first_name = cleanName;
     }
-    return memoryUsers.get(telegramId);
+    return memoryUsers.get(cleanId);
   }
 
   try {
-    let { data, error } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
+    let { data, error } = await supabase.from('users').select('*').eq('telegram_id', cleanId).single();
     
     if (error && error.code === 'PGRST116') {
       const newUser = {
-        telegram_id: telegramId,
+        telegram_id: cleanId,
         unique_id: generateUniqueId(),
         username: userData.username || cleanName,
         first_name: cleanName,
@@ -85,29 +86,32 @@ async function dbGetOrCreateUser(telegramId, userData) {
     }
 
     if (Object.keys(updatePayload).length > 0) {
-      await supabase.from('users').update(updatePayload).eq('telegram_id', telegramId);
+      await supabase.from('users').update(updatePayload).eq('telegram_id', cleanId);
+      Object.assign(data, updatePayload);
     }
 
     return data;
   } catch (err) {
+    console.warn('Supabase error, switching to memory fallback:', err.message);
     useMemoryFallback = true;
-    return dbGetOrCreateUser(telegramId, userData);
+    return dbGetOrCreateUser(cleanId, userData);
   }
 }
 
 async function dbUpdateUser(telegramId, updateFields) {
+  const cleanId = String(telegramId).trim();
   if (useMemoryFallback) {
-    const user = memoryUsers.get(telegramId);
+    const user = memoryUsers.get(cleanId);
     if (user) Object.assign(user, updateFields);
     return user;
   }
   try {
-    const { data, error } = await supabase.from('users').update(updateFields).eq('telegram_id', telegramId).select().single();
+    const { data, error } = await supabase.from('users').update(updateFields).eq('telegram_id', cleanId).select().single();
     if (error) throw error;
     return data;
   } catch (err) {
     useMemoryFallback = true;
-    return dbUpdateUser(telegramId, updateFields);
+    return dbUpdateUser(cleanId, updateFields);
   }
 }
 
@@ -151,20 +155,34 @@ io.on('connection', (socket) => {
   let currentUser = null;
 
   socket.on('auth', async (data) => {
-    const { telegram_id, username, first_name, photo_url } = data;
+    const { telegram_id, username, first_name, photo_url } = data || {};
     if (!telegram_id) return;
     currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url });
-    socket._telegram_id = telegram_id;
+    socket._telegram_id = String(telegram_id);
     socket.emit('auth_success', currentUser);
     emitLobbies();
   });
 
-  socket.on('set_socket_user', (telegram_id) => { socket._telegram_id = telegram_id; });
+  socket.on('set_socket_user', (telegram_id) => { 
+    if (telegram_id) socket._telegram_id = String(telegram_id); 
+  });
+
   socket.on('get_lobbies', () => { emitLobbies(socket); });
 
+  // Дополнительный сокет для стабильной загрузки таблицы лидеров
+  socket.on('get_leaderboard', async () => {
+    const list = await dbGetLeaderboard();
+    socket.emit('leaderboard_data', list);
+  });
+
   socket.on('get_friends', async (data) => {
-    const tId = data?.telegram_id || currentUser?.telegram_id;
+    const tId = data?.telegram_id || currentUser?.telegram_id || socket._telegram_id;
     if (!tId) return;
+
+    if (useMemoryFallback) {
+      socket.emit('friends_list', { friends: [], requests: [] });
+      return;
+    }
 
     try {
       const { data: relations } = await supabase.from('friends').select('friend_id').eq('user_id', tId);
