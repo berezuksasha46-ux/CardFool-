@@ -41,7 +41,8 @@
       margin-bottom: 14px; border: 1px solid var(--border-color);
     }
     .table-card { display: flex; justify-content: space-between; align-items: center; }
-    .table-card.my-table { border-color: var(--accent-gold); }
+    .table-card.my-table { border-color: var(--accent-gold); background: linear-gradient(135deg, rgba(21, 11, 38, 1) 0%, rgba(45, 27, 14, 0.4) 100%); }
+    .my-table-badge { font-size: 11px; background: rgba(251, 191, 36, 0.15); color: var(--accent-gold); padding: 3px 8px; border-radius: 6px; margin-bottom: 6px; display: inline-block; font-weight: bold; }
 
     .nav-bar {
       position: fixed; bottom: 0; left: 0; right: 0;
@@ -81,12 +82,13 @@
     }
     .modal.active { display: flex; }
     .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 20px; padding: 22px; border: 1px solid var(--border-color); }
-    .option-btn { background: #1e1033; border: 1px solid var(--border-color); color: #fff; padding: 10px 16px; border-radius: 10px; cursor: pointer; }
+    .option-btn { background: #1e1033; border: 1px solid var(--border-color); color: #fff; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; }
     .option-btn.selected { background: var(--accent-gold-gradient); color: #000; font-weight: bold; border-color: transparent; }
   </style>
 </head>
 <body>
 
+  <!-- Шапка -->
   <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
@@ -100,6 +102,7 @@
     </div>
   </div>
 
+  <!-- Вкладка Столы -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="font-size: 22px;">Игровые столы</h2>
@@ -110,13 +113,13 @@
     </div>
   </div>
 
+  <!-- Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья</h2>
-    <div id="friends-list-container">
-      <div style="text-align: center; color: var(--text-muted); margin-top: 30px;">У вас пока нет друзей.</div>
-    </div>
+    <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted);">У вас пока нет друзей.</div></div>
   </div>
 
+  <!-- Вкладка Игра -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -144,11 +147,13 @@
     <div id="my-hand-container" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; min-height: 95px;"></div>
   </div>
 
+  <!-- Вкладка Лидеры -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Лидеры</h2>
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted);">Загрузка...</div></div>
   </div>
 
+  <!-- Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль</h2>
     <div class="card-box">
@@ -157,6 +162,7 @@
     </div>
   </div>
 
+  <!-- Нижняя панель навигации -->
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
     <button class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><div>Друзья</div></button>
@@ -164,17 +170,34 @@
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
   </div>
 
+  <!-- Модальное окно создания стола (с возвращенными настройками колоды и ставок) -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
-      <h3 style="margin-bottom: 18px; font-size: 20px;">Создать игровой стол</h3>
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Режим:</div>
-        <div style="display: flex; gap: 10px;">
+      <h3 style="margin-bottom: 16px; font-size: 20px;">Создать игровой стол</h3>
+      <div style="margin-bottom: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Режим игры:</div>
+        <div style="display: flex; gap: 8px;">
           <button id="mode-podkidnoy" class="option-btn selected" onclick="selectMode('podkidnoy')" style="flex: 1;">Подкидной</button>
           <button id="mode-perevodnoy" class="option-btn" onclick="selectMode('perevodnoy')" style="flex: 1;">Переводной</button>
         </div>
       </div>
-      <div style="display: flex; gap: 12px; margin-top: 20px;">
+      <div style="margin-bottom: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Колода:</div>
+        <div style="display: flex; gap: 8px;">
+          <button id="deck-36" class="option-btn selected" onclick="selectDeck(36)" style="flex: 1;">36 карт</button>
+          <button id="deck-24" class="option-btn" onclick="selectDeck(24)" style="flex: 1;">24 карты</button>
+        </div>
+      </div>
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Ставка:</div>
+        <div style="display: flex; gap: 6px;">
+          <button class="option-btn selected" onclick="selectStake(10, this)" style="flex: 1;">10 ⭐</button>
+          <button class="option-btn" onclick="selectStake(25, this)" style="flex: 1;">25 ⭐</button>
+          <button class="option-btn" onclick="selectStake(50, this)" style="flex: 1;">50 ⭐</button>
+          <button class="option-btn" onclick="selectStake(100, this)" style="flex: 1;">100 ⭐</button>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px;">
         <button class="btn btn-secondary" style="flex: 1;" onclick="closeCreateTableModal()">Отмена</button>
         <button class="btn" style="flex: 1;" onclick="submitCreateTable()">Создать</button>
       </div>
@@ -188,6 +211,8 @@
     const socket = io();
     let currentUser = null;
     let selectedGameMode = 'podkidnoy';
+    let selectedDeckSize = 36;
+    let selectedStake = 10;
     let currentGameId = null;
     let myHandCards = [];
     let isMyTurnFlag = false;
@@ -233,14 +258,21 @@
       }
 
       data.tables.forEach(table => {
+        // Корректное определение, чей это стол по уникальному ID хоста
+        const isMy = String(table.hostId || table.host_id || table.creatorId) === String(telegramId);
         const card = document.createElement('div');
-        card.className = 'table-card';
+        card.className = isMy ? 'table-card my-table' : 'table-card';
+
+        const badge = isMy ? '<div class="my-table-badge">Ваш стол</div>' : '';
+        const tableId = table.id || table.tableId || table.roomId;
+
         card.innerHTML = `
           <div>
-            <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName || 'Игрока'}</div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Ставка: ⭐ ${table.stake || 10}</div>
+            ${badge}
+            <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName || table.name || 'Игрока'}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${table.deckSize || 36} карт • ⭐ ${table.stake || 10}</div>
           </div>
-          <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>
+          <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${tableId}')">Войти</button>
         `;
         container.appendChild(card);
       });
@@ -248,19 +280,38 @@
 
     function openCreateTableModal() { document.getElementById('create-table-modal').classList.add('active'); }
     function closeCreateTableModal() { document.getElementById('create-table-modal').classList.remove('active'); }
+    
     function selectMode(mode) {
       selectedGameMode = mode;
       document.getElementById('mode-podkidnoy').classList.toggle('selected', mode === 'podkidnoy');
       document.getElementById('mode-perevodnoy').classList.toggle('selected', mode === 'perevodnoy');
     }
 
+    function selectDeck(size) {
+      selectedDeckSize = size;
+      document.getElementById('deck-36').classList.toggle('selected', size === 36);
+      document.getElementById('deck-24').classList.toggle('selected', size === 24);
+    }
+
+    function selectStake(stake, el) {
+      selectedStake = stake;
+      el.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
     function submitCreateTable() {
       closeCreateTableModal();
-      socket.emit('create_table', { mode: selectedGameMode, deckSize: 36, stake: 10, telegram_id: telegramId, first_name: firstName });
+      socket.emit('create_table', {
+        mode: selectedGameMode,
+        deckSize: selectedDeckSize,
+        stake: selectedStake,
+        telegram_id: telegramId,
+        first_name: firstName
+      });
     }
 
     socket.on('table_created', (data) => {
-      const tId = (typeof data === 'string') ? data : (data?.tableId || data?.id);
+      const tId = (typeof data === 'string') ? data : (data?.tableId || data?.id || data?.roomId);
       if (tId) joinTable(tId);
       else socket.emit('get_lobbies');
     });
@@ -269,18 +320,22 @@
       if (!tableId) return;
       currentGameId = tableId;
       
-      socket.emit('join_table', { tableId: tableId, telegram_id: telegramId, first_name: firstName });
+      // Отправляем все варианты событий подключения, чтобы сервер точно принял игрока
+      socket.emit('join_table', { tableId: tableId, gameId: tableId, telegram_id: telegramId, first_name: firstName });
+      socket.emit('join_room', tableId);
+      socket.emit('join', { gameId: tableId, tableId: tableId, telegram_id: telegramId });
 
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view').classList.add('active');
-      document.getElementById('turn-indicator').innerText = 'Подключено. Ожидание соперника...';
+      document.getElementById('turn-indicator').innerText = 'Подключено к столу. Ожидание соперника...';
     }
 
     function sendReady() {
-      socket.emit('player_ready', { gameId: currentGameId, telegram_id: telegramId });
-      socket.emit('ready', { gameId: currentGameId, telegram_id: telegramId });
-      document.getElementById('action-btn-primary').innerText = 'Ожидание...';
-      document.getElementById('action-btn-primary').disabled = true;
+      socket.emit('player_ready', { gameId: currentGameId, tableId: currentGameId, telegram_id: telegramId });
+      socket.emit('ready', { gameId: currentGameId, tableId: currentGameId, telegram_id: telegramId });
+      const btn = document.getElementById('action-btn-primary');
+      btn.innerText = 'Ожидание соперника...';
+      btn.disabled = true;
     }
 
     socket.on('game_state', (state) => {
@@ -288,10 +343,10 @@
       currentGameId = state.gameId || state.id || currentGameId;
 
       const players = state.players || [];
-      const opponent = players.find(p => String(p.id) !== String(telegramId)) || { name: 'Ожидание второго игрока...', handCount: 0 };
+      const opponent = players.find(p => String(p.id || p.telegram_id) !== String(telegramId)) || { name: 'Ожидание второго игрока...', handCount: 0 };
       
       document.getElementById('opponent-name').innerText = opponent.name || opponent.first_name || 'Соперник';
-      document.getElementById('opponent-card-count').innerText = opponent.handCount || 0;
+      document.getElementById('opponent-card-count').innerText = opponent.handCount !== undefined ? opponent.handCount : (opponent.hand ? opponent.hand.length : 0);
       document.getElementById('deck-count').innerText = state.deckCount !== undefined ? state.deckCount : 36;
       
       const trump = state.trumpCard || state.trump || '♠';
