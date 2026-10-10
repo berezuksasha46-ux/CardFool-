@@ -280,7 +280,7 @@
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
     const initDataUnsafe = tg?.initDataUnsafe || {};
-    const telegramId = initDataUnsafe.user?.id || 12345;
+    const telegramId = String(initDataUnsafe.user?.id || 12345);
     const username = initDataUnsafe.user?.username || 'User_' + telegramId;
     const firstName = initDataUnsafe.user?.first_name || 'Игрок';
 
@@ -389,7 +389,7 @@
       }
     }
 
-    // Отрисовка списка столов с кнопкой удаления крестиком
+    // Список столов: выводим крестик для удаления ТОЛЬКО создателю
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
@@ -408,8 +408,7 @@
               <div style="font-size: 12px; color: var(--text-muted);">${table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной'} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
-              ${isMy ? `<button class="btn-danger" style="padding: 8px 12px;" onclick="deleteMyTable('${table.id}')">✖</button>` : ''}
-              <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">${isMy ? 'Войти' : 'Войти'}</button>
+              ${isMy ? `<button class="btn-danger" style="padding: 8px 12px;" onclick="deleteMyTable('${table.id}')">✖</button>` : `<button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>`}
             </div>
           </div>`;
       });
@@ -418,6 +417,10 @@
     function deleteMyTable(tId) {
       socket.emit('delete_table', tId);
     }
+
+    socket.on('table_deleted', () => {
+      currentGameId = null;
+    });
 
     function openCreateTableModal() { document.getElementById('create-table-modal')?.classList.add('active'); }
     function closeCreateTableModal() { document.getElementById('create-table-modal')?.classList.remove('active'); }
@@ -430,7 +433,10 @@
       socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: telegramId, first_name: firstName });
     }
 
-    socket.on('table_created', (tId) => joinTable(tId));
+    socket.on('table_created', (tId) => {
+      currentGameId = tId;
+    });
+
     function joinTable(tId) {
       currentGameId = tId;
       socket.emit('join_table', tId);
