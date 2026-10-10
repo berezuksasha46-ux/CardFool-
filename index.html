@@ -319,42 +319,49 @@
     let currentGameId = null, isGamePlaying = false;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
+    // Гарантированная привязка аккаунта Telegram без подмены ID
     function getTelegramUserData() {
-      const initData = tg?.initDataUnsafe?.user;
-      if (initData && initData.id) {
+      const tgUser = tg?.initDataUnsafe?.user;
+      if (tgUser && tgUser.id) {
         return {
-          telegram_id: String(initData.id),
-          username: initData.username || 'User_' + initData.id,
-          first_name: initData.first_name || (initData.username ? initData.username : 'Игрок'),
-          photo_url: initData.photo_url || null
+          telegram_id: String(tgUser.id),
+          username: tgUser.username || ('User_' + tgUser.id),
+          first_name: tgUser.first_name || (tgUser.username ? tgUser.username : 'Игрок'),
+          photo_url: tgUser.photo_url || null
         };
       }
       
-      // Фикс проблемы со сменой ID при тестировании в обычном браузере:
-      // Сохраняем постоянный ID в localStorage устройства
-      let savedId = localStorage.getItem('cardfool_test_id');
+      // Локальное фиксированное хранилище для тестирования через браузер
+      let savedId = localStorage.getItem('cardfool_fixed_id');
       if (!savedId) {
-        savedId = 'user_' + Math.floor(100000 + Math.random() * 900000);
-        localStorage.setItem('cardfool_test_id', savedId);
+        savedId = 'test_' + Math.floor(100000 + Math.random() * 900000);
+        localStorage.setItem('cardfool_fixed_id', savedId);
       }
 
       return {
         telegram_id: savedId,
         username: 'TestUser_' + savedId.slice(-4),
-        first_name: 'Игрок (' + savedId.slice(-4) + ')',
+        first_name: 'Игрок ' + savedId.slice(-4),
         photo_url: null
       };
     }
 
-    const userData = getTelegramUserData();
+    let userData = getTelegramUserData();
 
     function authenticate() {
+      userData = getTelegramUserData();
       socket.emit('set_socket_user', userData.telegram_id);
       socket.emit('auth', userData);
     }
 
     socket.on('connect', () => { authenticate(); });
     authenticate();
+
+    // Если данные от Telegram приходят с небольшой задержкой, обновляем авторизацию
+    if (tg) {
+      tg.onEvent('mainButtonClicked', () => {});
+      setTimeout(() => { authenticate(); }, 500);
+    }
 
     socket.on('auth_success', (user) => {
       currentUser = user;
@@ -715,7 +722,7 @@
       switchTab('lobbies', document.querySelector('.nav-item'));
     }
     
-    // Исправленная загрузка таблицы лидеров (поддержка и API и сокетов)
+    // Бесперебойная загрузка лидеров (сначала через REST, при сбое — через WebSocket)
     async function loadLeaderboard() {
       const container = document.getElementById('leaderboard-list');
       if (!container) return;
@@ -723,11 +730,10 @@
 
       try {
         const res = await fetch('/api/leaderboard');
-        if (!res.ok) throw new Error('HTTP error');
+        if (!res.ok) throw new Error();
         const list = await res.json();
         renderLeaderboard(list);
       } catch (e) {
-        // Запасной вариант через сокеты, если REST-запрос не прошел
         socket.emit('get_leaderboard');
       }
     }
@@ -766,8 +772,4 @@
 
     function claimDailyBonus() { socket.emit('claim_daily'); }
     socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
-    socket.on('daily_error', (d) => alert(d.message));
-    socket.on('error_message', (msg) => alert(msg));
-  </script>
-</body>
-</html>
+    so
