@@ -30,13 +30,18 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 100,
+        stars_balance: userData.stars_balance !== undefined ? userData.stars_balance : 50,
         wins: 0,
         losses: 0,
         level: 1,
         last_daily_claim: null,
         referrer_id: userData.referrer_id || null
       });
+    } else {
+      // Обновляем photo_url и имя, если они изменились
+      const existing = memoryUsers.get(telegramId);
+      if (userData.photo_url) existing.photo_url = userData.photo_url;
+      if (userData.first_name) existing.first_name = userData.first_name;
     }
     return memoryUsers.get(telegramId);
   }
@@ -49,7 +54,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 100,
+        stars_balance: 50,
         wins: 0,
         losses: 0,
         level: 1,
@@ -60,8 +65,16 @@ async function dbGetOrCreateUser(telegramId, userData) {
       if (insertErr) throw insertErr;
       return inserted;
     } else if (error) throw error;
+    
+    // Если пользователь найден, подтягиваем актуальную аватарку, если она прилетела
+    if (userData.photo_url && data.photo_url !== userData.photo_url) {
+      await supabase.from('users').update({ photo_url: userData.photo_url }).eq('telegram_id', telegramId);
+      data.photo_url = userData.photo_url;
+    }
+
     return data;
   } catch (err) {
+    console.warn('Supabase error, switching to memory fallback:', err.message);
     useMemoryFallback = true;
     return dbGetOrCreateUser(telegramId, userData);
   }
@@ -124,6 +137,8 @@ io.on('connection', (socket) => {
 
   socket.on('auth', async (data) => {
     const { telegram_id, username, first_name, photo_url, referrer_id } = data;
+    if (!telegram_id) return;
+    
     currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url, referrer_id });
     socket._telegram_id = telegram_id;
     socket.emit('auth_success', currentUser);
@@ -139,7 +154,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('create_table', async (config) => {
+    if (!currentUser && socket._telegram_id) {
+      currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
+    }
     if (!currentUser) return;
+
     const { mode, deckSize, stake } = config;
 
     if (currentUser.stars_balance < stake) {
@@ -165,7 +184,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join_table', async (data) => {
+    if (!currentUser && socket._telegram_id) {
+      currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
+    }
     if (!currentUser) return;
+
     const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
     const table = tables.get(tableId);
 
@@ -240,7 +263,10 @@ io.on('connection', (socket) => {
     broadcastGameState(gameState);
   });
 
-  socket.on('game_action', (data) => {
+  socket.on('game_action', async (data) => {
+    if (!currentUser && socket._telegram_id) {
+      currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
+    }
     handleGameAction(socket, data);
   });
 
