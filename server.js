@@ -46,6 +46,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
 
   try {
     let { data, error } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
+    
     if (error && error.code === 'PGRST116') {
       const newUser = {
         telegram_id: telegramId,
@@ -64,10 +65,10 @@ async function dbGetOrCreateUser(telegramId, userData) {
       return inserted;
     } else if (error) throw error;
 
-    // Если ID уже есть в базе — жестко закрепляем его и больше никогда не меняем
+    // Жестко фиксируем ID, если он пустой
     if (!data.unique_id) {
       const fixedId = generateUniqueId();
-      await dbUpdateUser(telegramId, { unique_id: fixedId });
+      await supabase.from('users').update({ unique_id: fixedId }).eq('telegram_id', telegramId);
       data.unique_id = fixedId;
     }
 
@@ -303,9 +304,13 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Снимаем ставки со счетов обоих игроков сразу при старте игры
     const hostUser = await dbGetOrCreateUser(table.hostId, {});
-    
+    if ((hostUser.stars_balance || 0) < table.stake) {
+      socket.emit('error_message', 'У создателя стола недостаточно звезд!');
+      return;
+    }
+
+    // Списание ставок
     hostUser.stars_balance = Math.max(0, (hostUser.stars_balance || 0) - table.stake);
     currentUser.stars_balance = Math.max(0, (currentUser.stars_balance || 0) - table.stake);
 
@@ -406,11 +411,9 @@ async function checkGameEnd(game) {
     const winner = game.players[winnerIdx];
     const loser = game.players[loserIdx];
 
-    // Расчет банка: ставка * 2 минус 10% комиссии
     const totalPot = game.stake * 2;
     const prize = Math.round(totalPot * 0.9);
 
-    // Обновляем статистику в БД
     const wUser = await dbGetOrCreateUser(winner.id, {});
     const lUser = await dbGetOrCreateUser(loser.id, {});
 
@@ -421,7 +424,6 @@ async function checkGameEnd(game) {
     await dbUpdateUser(wUser.telegram_id, { stars_balance: wUser.stars_balance, wins: wUser.wins });
     await dbUpdateUser(lUser.telegram_id, { losses: lUser.losses });
 
-    // Оповещаем игроков об окончании партии
     const wSock = io.sockets.sockets.get(winner.socketId);
     const lSock = io.sockets.sockets.get(loser.socketId);
 
