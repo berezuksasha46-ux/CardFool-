@@ -25,11 +25,13 @@ function generateUniqueId() {
 }
 
 async function dbGetOrCreateUser(telegramId, userData) {
+  const generatedId = generateUniqueId();
+
   if (useMemoryFallback) {
     if (!memoryUsers.has(telegramId)) {
       memoryUsers.set(telegramId, {
         telegram_id: telegramId,
-        unique_id: generateUniqueId(),
+        unique_id: generatedId,
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
@@ -48,7 +50,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
     if (error && error.code === 'PGRST116') {
       const newUser = {
         telegram_id: telegramId,
-        unique_id: generateUniqueId(),
+        unique_id: generatedId,
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
@@ -64,9 +66,8 @@ async function dbGetOrCreateUser(telegramId, userData) {
     } else if (error) throw error;
 
     if (!data.unique_id) {
-      const uId = generateUniqueId();
-      const updated = await dbUpdateUser(telegramId, { unique_id: uId });
-      if (updated) data = updated;
+      data.unique_id = generatedId;
+      await dbUpdateUser(telegramId, { unique_id: generatedId });
     }
 
     return data;
@@ -196,7 +197,7 @@ io.on('connection', (socket) => {
         { sender_id: currentUser.telegram_id, receiver_id: targetUser.telegram_id, status: 'pending' }
       ], { onConflict: ['sender_id', 'receiver_id'] });
 
-      socket.emit('error_message', `Заявка в друзья отправлена игроку ${targetUser.first_name || targetUser.username}!`);
+      socket.emit('error_message', `Заявка отправлена игроку ${targetUser.first_name || targetUser.username}!`);
     } catch (e) {
       socket.emit('error_message', 'Ошибка при отправке заявки.');
     }
@@ -221,24 +222,29 @@ io.on('connection', (socket) => {
       socket.emit('error_message', 'Ошибка обработки заявки.');
     }
   });
-  socket.on('claim_daily', async () => {
-    if (!currentUser) return;
-    const now = new Date();
-    const lastClaim = currentUser.last_daily_claim ? new Date(currentUser.last_daily_claim) : null;
-    if (lastClaim && (now - lastClaim) < 24 * 60 * 60 * 1000) {
-      socket.emit('daily_error', { message: 'Ежедневный бонус уже получен сегодня!' });
-      return;
-    }
-    currentUser.stars_balance = (currentUser.stars_balance || 0) + 10;
-    currentUser.last_daily_claim = now.toISOString();
-    await dbUpdateUser(currentUser.telegram_id, { stars_balance: currentUser.stars_balance, last_daily_claim: currentUser.last_daily_claim });
-    socket.emit('auth_success', currentUser);
-    socket.emit('daily_success', { stars_balance: currentUser.stars_balance });
-  });
 
+  // Удаление стола создателем до начала игры
+  socket.on('delete_table', (tableId) => {
+    if (!currentUser) return;
+    const table = tables.get(tableId);
+    if (table && String(table.hostId) === String(currentUser.telegram_id)) {
+      tables.delete(tableId);
+      socket.leave(tableId);
+      socket.emit('error_message', 'Ваш стол был успешно закрыт!');
+      emitLobbies();
+    }
+  });
   socket.on('create_table', async (config) => {
     if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
     if (!currentUser) return;
+
+    // Проверка: уже ли у пользователя есть неначатый стол
+    for (let t of tables.values()) {
+      if (String(t.hostId) === String(currentUser.telegram_id)) {
+        socket.emit('error_message', 'У вас уже есть созданный стол!');
+        return;
+      }
+    }
 
     const { mode, deckSize, stake } = config;
     const currentStake = Number(stake) || 10;
@@ -272,6 +278,7 @@ io.on('connection', (socket) => {
     const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
     const table = tables.get(tableId);
 
+    // Если игра идет, переподключаем
     if (activeGames.has(tableId)) {
       const existingGame = activeGames.get(tableId);
       const player = existingGame.players.find(p => String(p.id) === String(currentUser.telegram_id));
@@ -288,8 +295,7 @@ io.on('connection', (socket) => {
     }
 
     if (String(table.hostId) === String(currentUser.telegram_id)) {
-      socket.join(tableId);
-      socket.emit('error_message', 'Ожидаем подключения второго игрока...');
+      socket.emit('error_message', 'Вы уже находитесь в своем столе!');
       return;
     }
 
