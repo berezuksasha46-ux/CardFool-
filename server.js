@@ -16,39 +16,16 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://your-supabase-url.supa
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'your-supabase-key';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let useMemoryFallback = false;
-const memoryUsers = new Map();
-
 function generateUniqueId() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function dbGetOrCreateUser(telegramId, userData) {
+async function dbGetOrCreateUser(telegramId, userData = {}) {
   const cleanId = String(telegramId).trim();
+  if (!cleanId || cleanId === 'undefined' || cleanId === 'null') return null;
+
   const cleanName = userData.first_name || (userData.username ? userData.username.split('@')[0] : 'Игрок');
   const photoUrl = userData.photo_url || null;
-
-  if (useMemoryFallback) {
-    if (!memoryUsers.has(cleanId)) {
-      memoryUsers.set(cleanId, {
-        telegram_id: cleanId,
-        unique_id: generateUniqueId(),
-        username: userData.username || cleanName,
-        first_name: cleanName,
-        photo_url: photoUrl,
-        stars_balance: 50,
-        wins: 0,
-        losses: 0,
-        level: 1,
-        last_daily_claim: null
-      });
-    } else {
-      const u = memoryUsers.get(cleanId);
-      if (photoUrl) u.photo_url = photoUrl;
-      if (cleanName) u.first_name = cleanName;
-    }
-    return memoryUsers.get(cleanId);
-  }
 
   try {
     let { data, error } = await supabase.from('users').select('*').eq('telegram_id', cleanId).single();
@@ -69,7 +46,9 @@ async function dbGetOrCreateUser(telegramId, userData) {
       const { data: inserted, error: insertErr } = await supabase.from('users').insert([newUser]).select().single();
       if (insertErr) throw insertErr;
       return inserted;
-    } else if (error) throw error;
+    } else if (error) {
+      throw error;
+    }
 
     const updatePayload = {};
     if (!data.unique_id) {
@@ -80,7 +59,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
       data.photo_url = photoUrl;
       updatePayload.photo_url = photoUrl;
     }
-    if (cleanName && data.first_name !== cleanName) {
+    if (cleanName && data.first_name !== cleanName && cleanName !== 'Игрок') {
       data.first_name = cleanName;
       updatePayload.first_name = cleanName;
     }
@@ -92,39 +71,31 @@ async function dbGetOrCreateUser(telegramId, userData) {
 
     return data;
   } catch (err) {
-    useMemoryFallback = true;
-    return dbGetOrCreateUser(cleanId, userData);
+    console.error(` Ошибка Supabase для ID ${cleanId}:`, err.message);
+    return null;
   }
 }
 
 async function dbUpdateUser(telegramId, updateFields) {
   const cleanId = String(telegramId).trim();
-  if (useMemoryFallback) {
-    const user = memoryUsers.get(cleanId);
-    if (user) Object.assign(user, updateFields);
-    return user;
-  }
   try {
     const { data, error } = await supabase.from('users').update(updateFields).eq('telegram_id', cleanId).select().single();
     if (error) throw error;
     return data;
   } catch (err) {
-    useMemoryFallback = true;
-    return dbUpdateUser(cleanId, updateFields);
+    console.error(` Ошибка обновления пользователя ${cleanId}:`, err.message);
+    return null;
   }
 }
 
 async function dbGetLeaderboard() {
-  if (useMemoryFallback) {
-    return Array.from(memoryUsers.values()).sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 50);
-  }
   try {
     const { data, error } = await supabase.from('users').select('telegram_id, unique_id, username, first_name, photo_url, stars_balance, wins, losses, level').order('wins', { ascending: false }).limit(50);
     if (error) throw error;
     return data || [];
   } catch (err) {
-    useMemoryFallback = true;
-    return dbGetLeaderboard();
+    console.error('Ошибка получения лидборда:', err.message);
+    return [];
   }
 }
 const tables = new Map();
@@ -163,10 +134,12 @@ io.on('connection', (socket) => {
   socket.on('auth', async (data) => {
     const { telegram_id, username, first_name, photo_url } = data || {};
     if (!telegram_id) return;
-    currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url });
     socket._telegram_id = String(telegram_id);
-    socket.emit('auth_success', currentUser);
-    emitLobbies();
+    currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url });
+    if (currentUser) {
+      socket.emit('auth_success', currentUser);
+      emitLobbies();
+    }
   });
 
   socket.on('set_socket_user', (telegram_id) => { 
@@ -180,10 +153,9 @@ io.on('connection', (socket) => {
     socket.emit('leaderboard_data', list);
   });
 
-  // Добавлен обработчик бонуса
   socket.on('claim_daily', async () => {
     const user = await ensureUser();
-    if (!user) return socket.emit('daily_error', { message: 'Пользователь не найден' });
+    if (!user) return socket.emit('daily_error', { message: 'Ошибка авторизации' });
 
     const now = Date.now();
     const COOLDOWN = 24 * 60 * 60 * 1000;
@@ -201,13 +173,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_friends', async (data) => {
-    const tId = data?.telegram_id || currentUser?.telegram_id || socket._telegram_id;
+    const user = await ensureUser();
+    const tId = data?.telegram_id || user?.telegram_id || socket._telegram_id;
     if (!tId) return;
-
-    if (useMemoryFallback) {
-      socket.emit('friends_list', { friends: [], requests: [] });
-      return;
-    }
 
     try {
       const { data: relations } = await supabase.from('friends').select('friend_id').eq('user_id', tId);
@@ -363,7 +331,7 @@ io.on('connection', (socket) => {
     }
 
     const hostUser = await dbGetOrCreateUser(table.hostId, {});
-    if ((hostUser.stars_balance || 0) < table.stake) {
+    if (!hostUser || (hostUser.stars_balance || 0) < table.stake) {
       socket.emit('error_message', 'У создателя стола недостаточно звезд!');
       return;
     }
