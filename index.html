@@ -221,7 +221,6 @@
     </div>
     <button class="btn" style="width: 100%; margin-bottom: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
   </div>
-
   <!-- Нижняя панель навигации со ВСЕМИ вкладками -->
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
@@ -465,4 +464,36 @@
       } 
       else if (!isMyAttackTurn && tableHasCards) { 
         bitoBtn.style.display = 'none'; 
-        takeBtn.sty
+        takeBtn.style.display = 'inline-block'; 
+      } 
+      else { 
+        bitoBtn.style.display = 'none'; 
+        takeBtn.style.display = 'none'; 
+      }
+    }
+
+    function handleGameAction(actionType) { socket.emit('game_action', { gameId: currentGameId, action: actionType }); }
+    
+    async function loadLeaderboard() {
+      try {
+        const res = await fetch('/api/leaderboard');
+        const list = await res.json();
+        const container = document.getElementById('leaderboard-list');
+        if (!container) return;
+        container.innerHTML = '';
+        if (list.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Пока нет лидеров</div>';
+          return;
+        }
+        list.forEach((u, i) => {
+          container.innerHTML += `<div class="table-card"><span>#${i+1} ${u.first_name || u.username} (ID: ${u.unique_id || '---'})</span><span style="color:var(--accent-gold);">⭐ ${u.stars_balance}</span></div>`;
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    function claimDailyBonus() { socket.emit('claim_daily'); }
+    socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
+    socket.on('daily_error', (d) => alert(d.message));
+  </script>
+</body>
+</html>
