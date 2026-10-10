@@ -33,12 +33,11 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 50,
+        stars_balance: 10,
         wins: 0,
         losses: 0,
         level: 1,
-        last_daily_claim: null,
-        referrer_id: userData.referrer_id || null
+        last_daily_claim: null
       });
     }
     return memoryUsers.get(telegramId);
@@ -53,19 +52,17 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 50,
+        stars_balance: 10,
         wins: 0,
         losses: 0,
         level: 1,
-        last_daily_claim: null,
-        referrer_id: userData.referrer_id || null
+        last_daily_claim: null
       };
       const { data: inserted, error: insertErr } = await supabase.from('users').insert([newUser]).select().single();
       if (insertErr) throw insertErr;
       return inserted;
     } else if (error) throw error;
 
-    // Если у пользователя еще нет unique_id, дозаписываем его
     if (!data.unique_id) {
       const uId = generateUniqueId();
       const updated = await dbUpdateUser(telegramId, { unique_id: uId });
@@ -97,12 +94,12 @@ async function dbUpdateUser(telegramId, updateFields) {
 
 async function dbGetLeaderboard() {
   if (useMemoryFallback) {
-    return Array.from(memoryUsers.values()).sort((a, b) => b.wins - a.wins).slice(0, 50);
+    return Array.from(memoryUsers.values()).sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 50);
   }
   try {
     const { data, error } = await supabase.from('users').select('telegram_id, unique_id, username, first_name, photo_url, stars_balance, wins, losses, level').order('wins', { ascending: false }).limit(50);
     if (error) throw error;
-    return data;
+    return data || [];
   } catch (err) {
     useMemoryFallback = true;
     return dbGetLeaderboard();
@@ -135,9 +132,9 @@ io.on('connection', (socket) => {
   let currentUser = null;
 
   socket.on('auth', async (data) => {
-    const { telegram_id, username, first_name, photo_url, referrer_id } = data;
+    const { telegram_id, username, first_name, photo_url } = data;
     if (!telegram_id) return;
-    currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url, referrer_id });
+    currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url });
     socket._telegram_id = telegram_id;
     socket.emit('auth_success', currentUser);
     emitLobbies();
@@ -161,7 +158,13 @@ io.on('connection', (socket) => {
     }
 
     try {
-      const { data: friends } = await supabase.from('users').select('*').eq('referrer_id', Number(tId));
+      const { data: relations } = await supabase.from('friends').select('friend_id').eq('user_id', tId);
+      if (!relations || relations.length === 0) {
+        socket.emit('friends_list', { friends: [] });
+        return;
+      }
+      const friendIds = relations.map(r => r.friend_id);
+      const { data: friends } = await supabase.from('users').select('*').in('telegram_id', friendIds);
       socket.emit('friends_list', { friends: friends || [] });
     } catch (e) {
       socket.emit('friends_list', { friends: [] });
@@ -196,11 +199,14 @@ io.on('connection', (socket) => {
       if (!memoryFriends.has(currentUser.telegram_id)) memoryFriends.set(currentUser.telegram_id, new Set());
       memoryFriends.get(currentUser.telegram_id).add(targetUser.telegram_id);
     } else {
-      await dbUpdateUser(targetUser.telegram_id, { referrer_id: currentUser.telegram_id });
+      await supabase.from('friends').insert([
+        { user_id: currentUser.telegram_id, friend_id: targetUser.telegram_id },
+        { user_id: targetUser.telegram_id, friend_id: currentUser.telegram_id }
+      ]);
     }
 
-    socket.emit('error_message', `Игрок ${targetUser.first_name || targetUser.username} успешно добавлен в друзья!`);
-    socket.emit('friends_list', { friends: [targetUser] });
+    socket.emit('error_message', `Игрок ${targetUser.first_name || targetUser.username} добавлен в друзья!`);
+    socket.emit('get_friends', { telegram_id: currentUser.telegram_id });
   });
 
   socket.on('claim_daily', async () => {
