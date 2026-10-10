@@ -12,7 +12,7 @@
     :root {
       --bg-main: #0b0614;
       --bg-card: #150b26;
-      --bg-card-hover: #1f1038;
+      --table-felt: #132a1c;
       --accent-gold: #f59e0b;
       --accent-gold-gradient: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
       --text-main: #ffffff;
@@ -163,6 +163,62 @@
       object-fit: cover;
     }
 
+    /* Игровой стол (Дурак Онлайн Style) */
+    .poker-table {
+      background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%);
+      border: 2px solid #2d5a3c;
+      border-radius: 20px;
+      padding: 14px;
+      min-height: 260px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .card-item {
+      width: 54px;
+      height: 82px;
+      background: #ffffff;
+      color: #111;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 4px;
+      font-weight: bold;
+      font-size: 13px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      user-select: none;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    .card-item.red {
+      color: #dc2626;
+    }
+
+    .card-item.selected {
+      transform: translateY(-12px);
+      border-color: var(--accent-gold);
+      box-shadow: 0 8px 16px rgba(245, 158, 11, 0.5);
+    }
+
+    .card-pair {
+      position: relative;
+      width: 65px;
+      height: 95px;
+    }
+
+    .card-pair .defend-card {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 2;
+    }
+
     .progress-bar-bg {
       width: 100%;
       height: 8px;
@@ -252,25 +308,6 @@
       font-weight: bold;
       border-color: transparent;
     }
-
-    .card-item {
-      width: 55px;
-      height: 85px;
-      background: #fff;
-      color: #000;
-      border-radius: 6px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 5px;
-      font-weight: bold;
-      font-size: 13px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    }
-
-    .card-item.red {
-      color: #dc2626;
-    }
   </style>
 </head>
 <body>
@@ -289,7 +326,7 @@
     </div>
   </div>
 
-  <!-- 1. Вкладка Лобби / Столы -->
+  <!-- 1. Вкладка Лобби -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="font-size: 22px;">Игровые столы</h2>
@@ -300,14 +337,14 @@
     </div>
   </div>
 
-  <!-- 2. Вкладка Друзья и Рефералы -->
+  <!-- 2. Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
       <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎁 Реферальная система</div>
       <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
-        Приглашайте друзей по вашей личной ссылке. Когда они перейдут в бота, они автоматически добавятся в ваш список друзей!
+        Приглашайте друзей. После перехода по вашей ссылке они добавятся в ваш список друзей!
       </div>
       <button class="btn" style="width: 100%;" onclick="copyReferralLink()">Скопировать реферальную ссылку</button>
     </div>
@@ -318,35 +355,40 @@
     </div>
   </div>
 
-  <!-- Вкладка Игра -->
+  <!-- 3. Вкладка Игра (Интерфейс «Дурак Онлайн») -->
   <div id="game-view" class="view">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <div>
-        <div id="opponent-name" style="font-weight: bold; font-size: 16px;">Соперник</div>
-        <div style="font-size: 12px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">6</span></div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div id="opponent-avatar" class="avatar-container" style="width: 32px; height: 32px; font-size: 12px;">O</div>
+        <div>
+          <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Соперник</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Карт: <span id="opponent-card-count">6</span></div>
+        </div>
       </div>
-      <div style="background: var(--bg-card); padding: 6px 12px; border-radius: 8px; font-size: 13px; border: 1px solid var(--border-color);">
-        Колода: <span id="deck-count">36</span> | Козырь: <span id="deck-card-view" style="font-weight: bold; font-size: 16px;">♠</span>
+      <div style="background: var(--bg-card); padding: 4px 10px; border-radius: 8px; font-size: 12px; border: 1px solid var(--border-color);">
+        Колода: <span id="deck-count">36</span> | Козырь: <span id="deck-card-view" style="font-weight: bold; font-size: 14px;">♠</span>
       </div>
     </div>
 
-    <div style="width: 100%; height: 4px; background: #23163d; border-radius: 2px; margin-bottom: 16px; overflow: hidden;">
+    <div style="width: 100%; height: 4px; background: #23163d; border-radius: 2px; margin-bottom: 10px; overflow: hidden;">
       <div id="timer-bar" style="width: 100%; height: 100%; background: var(--accent-gold); transition: width 0.3s linear;"></div>
     </div>
 
-    <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 14px; color: var(--accent-gold);">Ожидание хода...</div>
-    <div id="table-cards-slot" style="display: flex; gap: 10px; min-height: 110px; justify-content: center; align-items: center; margin-bottom: 20px; flex-wrap: wrap;"></div>
-
-    <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 20px;">
-      <button id="action-btn-primary" class="btn" style="display: none;" onclick="handleGameAction('bito')">Бито</button>
-      <button id="action-btn-secondary" class="btn btn-secondary" style="display: none;" onclick="handleGameAction('take')">Взять</button>
+    <!-- Покерный зелёный стол -->
+    <div class="poker-table">
+      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold);">Загрузка...</div>
+      <div id="table-cards-slot" style="display: flex; gap: 12px; min-height: 110px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 10px 0;"></div>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button id="action-btn-primary" class="btn" style="display: none; padding: 8px 16px; font-size: 13px;" onclick="handleGameAction('bito')">Бито</button>
+        <button id="action-btn-secondary" class="btn btn-secondary" style="display: none; padding: 8px 16px; font-size: 13px;" onclick="handleGameAction('take')">Взять</button>
+      </div>
     </div>
 
-    <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ваши карты:</div>
-    <div id="my-hand-container" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px;"></div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 6px;">Ваши карты (нажмите на карту для хода):</div>
+    <div id="my-hand-container" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; min-height: 95px;"></div>
   </div>
 
-  <!-- 3. Вкладка Лидеры -->
+  <!-- 4. Вкладка Лидеры -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров</h2>
     <div id="leaderboard-list">
@@ -354,7 +396,7 @@
     </div>
   </div>
 
-  <!-- 4. Вкладка Профиль -->
+  <!-- 5. Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     
@@ -468,8 +510,7 @@
       </div>
     </div>
   </div>
-     <script>
-    // Имя бота Telegram для формирования правильных реферальных ссылок
+  <script>
     const BOT_USERNAME = "GOCardFoolbot";
 
     let tg = window.Telegram?.WebApp;
@@ -487,6 +528,7 @@
     let currentGameId = null;
     let myHandCards = [];
     let isMyTurnFlag = false;
+    let selectedCardIndex = null;
 
     const initDataUnsafe = tg.initDataUnsafe || {};
     const telegramId = initDataUnsafe.user?.id || Math.floor(Math.random() * 1000000);
@@ -496,7 +538,6 @@
     const urlParams = new URLSearchParams(window.location.search);
     const referrerId = urlParams.get('startapp') || null;
 
-    // Авторизация пользователя (передаем photo_url и referrer_id)
     socket.emit('set_socket_user', telegramId);
     socket.emit('auth', {
       telegram_id: telegramId,
@@ -515,7 +556,6 @@
       alert(msg);
     });
 
-    // Функция создания верстки аватара (фото из Telegram или первая буква имени)
     function renderUserAvatar(user, size = 40) {
       const name = user.first_name || user.username || 'U';
       const initial = name[0].toUpperCase();
@@ -525,9 +565,8 @@
       return `<div class="avatar-container" style="width: ${size}px; height: ${size}px; font-size: ${size * 0.4}px;">${initial}</div>`;
     }
 
-    // Обновление элементов интерфейса и баланса
     function updateProfileUI(user) {
-      const starsBalance = (user.stars_balance !== undefined && user.stars_balance !== null) ? user.stars_balance : 0;
+      const starsBalance = (user.stars_balance !== undefined && user.stars_balance !== null) ? Number(user.stars_balance) : 0;
 
       document.getElementById('header-stars').innerText = starsBalance;
       document.getElementById('header-level').innerText = user.level || 1;
@@ -565,7 +604,6 @@
       }
     }
 
-    // Навигация по вкладкам без зависания
     function switchTab(tabId, el) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -583,7 +621,6 @@
         
         socket.emit('get_friends', { telegram_id: telegramId });
         
-        // Таймаут безопасности 1.5с
         setTimeout(() => {
           if (container.innerHTML.includes('Загрузка')) {
             container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">У вас пока нет друзей в игре. Пригласите первого!</div>';
@@ -623,20 +660,21 @@
       });
     });
 
-    // Ежедневный бонус
+    // Ежедневный бонус с ровным начислением +10 ⭐
     function claimDailyBonus() {
       socket.emit('claim_daily', { telegram_id: telegramId });
     }
 
     socket.on('daily_success', (data) => {
-      const added = data.amount || 10;
-      alert(`🎉 Вы успешно получили ежедневный бонус +${added} ⭐!`);
+      alert(`🎉 Вы получили ежедневный бонус +10 ⭐!`);
       if (currentUser) {
-        const currentStars = Number(currentUser.stars_balance) || 0;
-        const newBalance = (data.balance !== undefined && data.balance !== null) ? data.balance : 
-                           ((data.new_balance !== undefined && data.new_balance !== null) ? data.new_balance : currentStars + added);
-        
-        currentUser.stars_balance = newBalance;
+        if (data.stars_balance !== undefined) {
+          currentUser.stars_balance = data.stars_balance;
+        } else if (data.new_balance !== undefined) {
+          currentUser.stars_balance = data.new_balance;
+        } else {
+          currentUser.stars_balance = Number(currentUser.stars_balance || 0) + 10;
+        }
         updateProfileUI(currentUser);
       }
     });
@@ -645,7 +683,6 @@
       alert(data.message || 'Ежедневный бонус можно получать только раз в сутки!');
     });
 
-    // Забрать награду за уровень
     function claimLevelReward() {
       socket.emit('claim_level_reward', { telegram_id: telegramId });
     }
@@ -653,14 +690,12 @@
     socket.on('level_reward_success', (data) => {
       alert(`⭐ Награда за уровень получена: +10 звёзд!`);
       if (currentUser) {
-        const currentStars = Number(currentUser.stars_balance) || 0;
-        currentUser.stars_balance = (data.balance !== undefined) ? data.balance : currentStars + 10;
+        currentUser.stars_balance = data.stars_balance || (Number(currentUser.stars_balance) + 10);
         currentUser.claimed_level = data.claimed_level;
         updateProfileUI(currentUser);
       }
     });
 
-    // Скопировать личную реферальную ссылку с вызовом GOCardFoolbot
     function copyReferralLink() {
       const refLink = `https://t.me/${BOT_USERNAME}/app?startapp=${telegramId}`;
       navigator.clipboard.writeText(refLink).then(() => {
@@ -670,6 +705,7 @@
       });
     }
 
+    // Отображение столов и исправление входа
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
@@ -681,21 +717,21 @@
       }
 
       data.tables.forEach(table => {
-        const isMy = table.hostId === data.currentUserId;
+        const isMy = String(table.hostId) === String(data.currentUserId || telegramId);
         const card = document.createElement('div');
         card.className = isMy ? 'table-card my-table' : 'table-card';
 
         const badge = isMy ? '<div class="my-table-badge">Ваш стол</div>' : '';
         const mode = table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной';
         const btn = isMy 
-          ? '<span style="font-size: 12px; color: var(--text-muted);">Ожидание игрока</span>' 
+          ? `<button class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="joinTable('${table.id}')">Войти в стол</button>` 
           : `<button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>`;
 
         card.innerHTML = `
-          ${badge}
           <div>
-            <div style="font-weight: bold; font-size: 16px;">Стол от ${table.hostName}</div>
-            <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">${mode} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
+            ${badge}
+            <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName || 'Игрока'}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${mode} • ${table.deckSize || 36} карт • ⭐ ${table.stake || 10}</div>
           </div>
           <div>${btn}</div>
         `;
@@ -738,71 +774,109 @@
       closeCreateTableModal();
     }
 
-    socket.on('table_created', () => {
+    socket.on('table_created', (data) => {
       socket.emit('get_lobbies');
+      if (data && data.tableId) {
+        joinTable(data.tableId);
+      }
     });
 
     function joinTable(tableId) {
-      socket.emit('join_table', tableId);
+      socket.emit('join_table', { tableId: tableId, telegram_id: telegramId });
+      socket.emit('join_room', tableId);
     }
 
+    // Логика игры «Дурак Онлайн»
     socket.on('game_state', (state) => {
-      currentGameId = state.gameId;
-      document.getElementById('lobbies-view').classList.remove('active');
+      currentGameId = state.gameId || state.id;
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view').classList.add('active');
 
-      const opponent = state.players.find(p => p.id !== currentUser.telegram_id) || state.players[1];
-      document.getElementById('opponent-name').innerText = opponent.name;
-      document.getElementById('opponent-card-count').innerText = opponent.handCount;
-      document.getElementById('deck-count').innerText = state.deckCount;
-      document.getElementById('deck-card-view').innerText = state.trumpCard.suit;
+      const opponent = (state.players || []).find(p => String(p.id) !== String(telegramId)) || { name: 'Соперник', handCount: 6 };
+      document.getElementById('opponent-name').innerText = opponent.name || opponent.first_name || 'Соперник';
+      document.getElementById('opponent-card-count').innerText = opponent.handCount !== undefined ? opponent.handCount : 6;
+      document.getElementById('deck-count').innerText = state.deckCount !== undefined ? state.deckCount : 36;
       
-      if (['♥', '♦'].includes(state.trumpCard.suit)) {
+      const trumpSuit = state.trumpCard?.suit || state.trumpSuit || '♠';
+      document.getElementById('deck-card-view').innerText = trumpSuit;
+      if (['♥', '♦'].includes(trumpSuit)) {
         document.getElementById('deck-card-view').style.color = '#dc2626';
+      } else {
+        document.getElementById('deck-card-view').style.color = '#ffffff';
       }
 
       const tableSlot = document.getElementById('table-cards-slot');
       tableSlot.innerHTML = '';
-      state.tableCards.forEach(pair => {
-        const slot = document.createElement('div');
-        slot.className = 'card-slot';
+      
+      const cardsOnTable = state.tableCards || state.table || [];
+      cardsOnTable.forEach(pair => {
+        const pairDiv = document.createElement('div');
+        pairDiv.className = 'card-pair';
         
-        const attCard = document.createElement('div');
-        attCard.className = `card-item ${['♥','♦'].includes(pair.attack.suit) ? 'red' : ''}`;
-        attCard.innerHTML = `<span>${pair.attack.rank}</span><span style="font-size:18px; text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span>`;
-        slot.appendChild(attCard);
+        if (pair.attack) {
+          const attCard = document.createElement('div');
+          attCard.className = `card-item ${['♥','♦'].includes(pair.attack.suit) ? 'red' : ''}`;
+          attCard.innerHTML = `<span>${pair.attack.rank}</span><span style="font-size:18px; text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span>`;
+          pairDiv.appendChild(attCard);
+        }
 
         if (pair.defend) {
           const defCard = document.createElement('div');
-          defCard.className = `card-item ${['♥','♦'].includes(pair.defend.suit) ? 'red' : ''}`;
+          defCard.className = `card-item defend-card ${['♥','♦'].includes(pair.defend.suit) ? 'red' : ''}`;
           defCard.innerHTML = `<span>${pair.defend.rank}</span><span style="font-size:18px; text-align:center;">${pair.defend.suit}</span><span style="transform: rotate(180deg);">${pair.defend.rank}</span>`;
-          slot.appendChild(defCard);
+          pairDiv.appendChild(defCard);
         }
-        tableSlot.appendChild(slot);
+        tableSlot.appendChild(pairDiv);
       });
     });
 
     socket.on('your_hand', (hand) => {
-      myHandCards = hand;
+      myHandCards = hand || [];
+      renderMyHand();
+    });
+
+    function renderMyHand() {
       const handContainer = document.getElementById('my-hand-container');
+      if (!handContainer) return;
       handContainer.innerHTML = '';
 
-      hand.forEach((card, index) => {
+      myHandCards.forEach((card, index) => {
         const cardEl = document.createElement('div');
-        cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''}`;
+        const isSelected = selectedCardIndex === index;
+        cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''} ${isSelected ? 'selected' : ''}`;
         cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:18px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
         cardEl.onclick = () => onCardClick(index);
         handContainer.appendChild(cardEl);
       });
-    });
+    }
+
+    function onCardClick(index) {
+      if (!isMyTurnFlag) return;
+      selectedCardIndex = index;
+      renderMyHand();
+
+      socket.emit('game_action', {
+        gameId: currentGameId,
+        action: 'play_card',
+        cardIndex: index,
+        card: myHandCards[index],
+        telegram_id: telegramId
+      });
+    }
 
     socket.on('is_my_turn', (isMyTurn) => {
       isMyTurnFlag = isMyTurn;
-      document.getElementById('turn-indicator').innerText = isMyTurn ? 'Ваш ход!' : 'Ход соперника';
-      document.getElementById('turn-indicator').style.color = isMyTurn ? 'var(--success)' : 'var(--accent-gold)';
+      selectedCardIndex = null;
+      renderMyHand();
+
+      const indicator = document.getElementById('turn-indicator');
+      if (indicator) {
+        indicator.innerText = isMyTurn ? 'Ваш ход! Выберите карту' : 'Ход соперника...';
+        indicator.style.color = isMyTurn ? 'var(--success)' : 'var(--accent-gold)';
+      }
       
-      document.getElementById('action-btn-primary').style.display = isMyTurn ? 'block' : 'none';
-      document.getElementById('action-btn-secondary').style.display = isMyTurn ? 'block' : 'none';
+      document.getElementById('action-btn-primary').style.display = isMyTurn ? 'inline-block' : 'none';
+      document.getElementById('action-btn-secondary').style.display = isMyTurn ? 'inline-block' : 'none';
     });
 
     socket.on('timer_update', (sec) => {
@@ -812,17 +886,12 @@
       }
     });
 
-    function onCardClick(index) {
-      if (!isMyTurnFlag) return;
-      socket.emit('game_action', { gameId: currentGameId, action: 'attack', cardIndex: index });
-    }
-
     function handleGameAction(actionType) {
-      socket.emit('game_action', { gameId: currentGameId, action: actionType });
+      socket.emit('game_action', { gameId: currentGameId, action: actionType, telegram_id: telegramId });
     }
 
     socket.on('game_over', (data) => {
-      alert(`Игра окончена! Победитель: ${data.winnerName}. Выигрыш: +${data.prize} ⭐`);
+      alert(` Игра окончена! Победитель: ${data.winnerName || 'Игрок'}. Выигрыш: +${data.prize || 10} ⭐`);
       switchTab('lobbies');
     });
 
@@ -843,10 +912,10 @@
               ${renderUserAvatar(user, 36)}
               <div>
                 <div style="font-weight: bold; font-size: 15px;">${user.first_name || user.username}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">Побед: ${user.wins} | Ур. ${user.level || 1}</div>
+                <div style="font-size: 12px; color: var(--text-muted);">Побед: ${user.wins || 0} | Ур. ${user.level || 1}</div>
               </div>
             </div>
-            <div style="color: var(--accent-gold); font-weight: bold; font-size: 15px;">⭐ ${user.stars_balance}</div>
+            <div style="color: var(--accent-gold); font-weight: bold; font-size: 15px;">⭐ ${user.stars_balance || 0}</div>
           `;
           container.appendChild(item);
         });
@@ -855,3 +924,5 @@
       }
     }
   </script>
+</body>
+</html>
