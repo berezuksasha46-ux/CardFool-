@@ -36,7 +36,7 @@
     .btn:active { transform: scale(0.97); }
     .btn-secondary { background: #23163d; color: #fff; border: 1px solid var(--border-color); box-shadow: none; }
     .btn-success { background: var(--success); color: #fff; padding: 6px 12px; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; }
-    .btn-danger { background: var(--danger); color: #fff; padding: 6px 12px; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; }
+    .btn-danger { background: var(--danger); color: #fff; padding: 8px 12px; font-size: 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
 
     .card-box, .table-card {
       background: var(--bg-card); border-radius: 16px; padding: 16px;
@@ -145,7 +145,7 @@
     <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div></div>
   </div>
 
-  <!-- Вкладка Друзья с входящими заявками -->
+  <!-- Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     
@@ -157,7 +157,6 @@
       </div>
     </div>
 
-    <!-- Блок входящих заявок -->
     <div id="requests-section" style="display: none; margin-bottom: 20px;">
       <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; color: var(--accent-gold);">📥 Входящие заявки (<span id="requests-count">0</span>)</div>
       <div id="requests-list-container"></div>
@@ -294,13 +293,14 @@
     });
 
     function updateProfileData(user) {
+      const uId = user.unique_id || '------';
       document.getElementById('header-stars').innerText = user.stars_balance || 0;
       document.getElementById('header-level').innerText = user.level || 1;
       document.getElementById('header-name').innerText = user.first_name || user.username;
-      document.getElementById('header-unique-id').innerText = user.unique_id || '------';
+      document.getElementById('header-unique-id').innerText = uId;
       
       document.getElementById('profile-name').innerText = user.first_name || user.username;
-      document.getElementById('profile-unique-id').innerText = user.unique_id || '------';
+      document.getElementById('profile-unique-id').innerText = uId;
       document.getElementById('stat-wins').innerText = user.wins || 0;
       document.getElementById('stat-losses').innerText = user.losses || 0;
       
@@ -321,7 +321,6 @@
       else if (tabId === 'leaderboard') loadLeaderboard();
     }
 
-    // Обработка списков друзей и входящих заявок
     socket.on('friends_list', (data) => {
       const friendsContainer = document.getElementById('friends-list-container');
       const friendsCountEl = document.getElementById('friends-count');
@@ -331,7 +330,6 @@
 
       if (!friendsContainer) return;
 
-      // 1. Отрисовка друзей
       friendsContainer.innerHTML = '';
       const friends = data.friends || [];
       if (friendsCountEl) friendsCountEl.innerText = friends.length;
@@ -343,7 +341,6 @@
         });
       }
 
-      // 2. Отрисовка входящих заявок
       if (requestsContainer && requestsSection) {
         requestsContainer.innerHTML = '';
         const requests = data.requests || [];
@@ -392,6 +389,7 @@
       }
     }
 
+    // Отрисовка списка столов с кнопкой удаления крестиком
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
@@ -409,10 +407,17 @@
               <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName}</div>
               <div style="font-size: 12px; color: var(--text-muted);">${table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной'} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
             </div>
-            <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              ${isMy ? `<button class="btn-danger" style="padding: 8px 12px;" onclick="deleteMyTable('${table.id}')">✖</button>` : ''}
+              <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">${isMy ? 'Войти' : 'Войти'}</button>
+            </div>
           </div>`;
       });
     });
+
+    function deleteMyTable(tId) {
+      socket.emit('delete_table', tId);
+    }
 
     function openCreateTableModal() { document.getElementById('create-table-modal')?.classList.add('active'); }
     function closeCreateTableModal() { document.getElementById('create-table-modal')?.classList.remove('active'); }
@@ -429,12 +434,13 @@
     function joinTable(tId) {
       currentGameId = tId;
       socket.emit('join_table', tId);
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.getElementById('game-view')?.classList.add('active');
     }
 
     socket.on('game_state', (state) => {
       if (!state) return;
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('game-view')?.classList.add('active');
+
       const opponent = (state.players || []).find(p => p.name !== firstName) || { name: 'Соперник', handCount: 0 };
       document.getElementById('opponent-name').innerText = opponent.name || 'Соперник';
       document.getElementById('opponent-card-count').innerText = opponent.handCount || 0;
