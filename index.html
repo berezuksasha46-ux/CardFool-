@@ -76,17 +76,8 @@
     .card-item.red { color: var(--danger); }
     .card-item.selected { transform: translateY(-12px); border-color: var(--accent-gold); }
 
-    .card-pair {
-      position: relative;
-      width: 65px;
-      height: 95px;
-    }
-    .card-pair .defend-card {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      z-index: 2;
-    }
+    .card-pair { position: relative; width: 65px; height: 95px; }
+    .card-pair .defend-card { position: absolute; top: 12px; left: 12px; z-index: 2; }
 
     .progress-bar-bg { width: 100%; height: 8px; background: #23163d; border-radius: 4px; overflow: hidden; margin-top: 8px; margin-bottom: 6px; }
     .progress-bar-fill { height: 100%; background: var(--accent-gold-gradient); width: 0%; transition: width 0.4s ease; }
@@ -108,7 +99,6 @@
 </head>
 <body>
 
-  <!-- Шапка -->
   <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
@@ -122,7 +112,6 @@
     </div>
   </div>
 
-  <!-- Вкладка Столы -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="font-size: 22px;">Игровые столы</h2>
@@ -133,7 +122,6 @@
     </div>
   </div>
 
-  <!-- Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
@@ -149,7 +137,6 @@
     </div>
   </div>
 
-  <!-- Вкладка Игра -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -177,13 +164,11 @@
     <div id="my-hand-container" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; min-height: 95px;"></div>
   </div>
 
-  <!-- Вкладка Лидеры -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров</h2>
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted);">Загрузка...</div></div>
   </div>
 
-  <!-- Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     <div class="card-box">
@@ -237,7 +222,6 @@
     </div>
   </div>
 
-  <!-- Нижняя панель навигации -->
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
     <button class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><div>Друзья</div></button>
@@ -245,7 +229,6 @@
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
   </div>
 
-  <!-- Модальное окно создания стола -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px;">Создать игровой стол</h3>
@@ -497,6 +480,7 @@
 
     function submitCreateTable() {
       closeCreateTableModal();
+      // Отправляем создание стола. Создатель уже автоматически внутри стола на сервере!
       socket.emit('create_table', {
         mode: selectedGameMode,
         deckSize: selectedDeckSize,
@@ -506,21 +490,32 @@
       });
     }
 
+    // ИСПРАВЛЕНИЕ: При создании стола мы просто переходим в экран игры, не дергая join_table повторно
     socket.on('table_created', (data) => {
       const tId = (typeof data === 'string') ? data : (data?.tableId || data?.id || data?.roomId);
-      if (tId) joinTable(tId);
-      else socket.emit('get_lobbies');
+      if (tId) {
+        currentGameId = tId;
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById('game-view').classList.add('active');
+        document.getElementById('turn-indicator').innerText = 'Стол создан. Ожидание второго игрока...';
+        
+        const primaryBtn = document.getElementById('action-btn-primary');
+        if (primaryBtn) {
+          primaryBtn.style.display = 'inline-block';
+          primaryBtn.disabled = false;
+          primaryBtn.innerText = 'Готов!';
+        }
+      } else {
+        socket.emit('get_lobbies');
+      }
     });
 
-    // Оптимизированный вход в стол без ошибок блокировки комнаты
+    // Функция для ВТОРОГО игрока, который нажимает "Войти" из списка лобби
     function joinTable(tableId) {
       if (!tableId) return;
       currentGameId = tableId;
       
       socket.emit('join_table', { tableId: tableId, gameId: tableId, telegram_id: telegramId, first_name: firstName });
-      socket.emit('join_room', tableId);
-      socket.emit('join', { gameId: tableId, tableId: tableId, telegram_id: telegramId });
-      socket.emit('get_game_state', { gameId: tableId, telegram_id: telegramId });
 
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view').classList.add('active');
