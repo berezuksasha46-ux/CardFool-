@@ -12,7 +12,6 @@
     :root {
       --bg-main: #0b0614;
       --bg-card: #150b26;
-      --table-felt: #132a1c;
       --accent-gold: #f59e0b;
       --accent-gold-gradient: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
       --text-main: #ffffff;
@@ -163,7 +162,6 @@
       object-fit: cover;
     }
 
-    /* Игровой стол (Дурак Онлайн Style) */
     .poker-table {
       background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%);
       border: 2px solid #2d5a3c;
@@ -312,7 +310,7 @@
 </head>
 <body>
 
-  <!-- Верхняя шапка -->
+  <!-- Шапка -->
   <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
@@ -326,7 +324,7 @@
     </div>
   </div>
 
-  <!-- 1. Вкладка Лобби -->
+  <!-- Вкладка Лобби -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="font-size: 22px;">Игровые столы</h2>
@@ -337,32 +335,30 @@
     </div>
   </div>
 
-  <!-- 2. Вкладка Друзья -->
+  <!-- Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
-    
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
       <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎁 Реферальная система</div>
       <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
-        Приглашайте друзей. После перехода по вашей ссылке они добавятся в ваш список друзей!
+        Приглашайте друзей по вашей личной ссылке. После перехода они автоматически добавляются в друзья!
       </div>
       <button class="btn" style="width: 100%;" onclick="copyReferralLink()">Скопировать реферальную ссылку</button>
     </div>
-
     <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; margin-top: 20px;">Ваши друзья (<span id="friends-count">0</span>)</div>
     <div id="friends-list-container">
       <div style="text-align: center; color: var(--text-muted); margin-top: 30px;">У вас пока нет друзей. Поделитесь ссылкой!</div>
     </div>
   </div>
 
-  <!-- 3. Вкладка Игра (Интерфейс «Дурак Онлайн») -->
+  <!-- Вкладка Игра -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <div id="opponent-avatar" class="avatar-container" style="width: 32px; height: 32px; font-size: 12px;">O</div>
         <div>
           <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Соперник</div>
-          <div style="font-size: 11px; color: var(--text-muted);">Карт: <span id="opponent-card-count">6</span></div>
+          <div style="font-size: 11px; color: var(--text-muted);">Карт: <span id="opponent-card-count">0</span></div>
         </div>
       </div>
       <div style="background: var(--bg-card); padding: 4px 10px; border-radius: 8px; font-size: 12px; border: 1px solid var(--border-color);">
@@ -374,21 +370,20 @@
       <div id="timer-bar" style="width: 100%; height: 100%; background: var(--accent-gold); transition: width 0.3s linear;"></div>
     </div>
 
-    <!-- Покерный зелёный стол -->
     <div class="poker-table">
-      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold);">Загрузка...</div>
+      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold);">Ожидание игроков...</div>
       <div id="table-cards-slot" style="display: flex; gap: 12px; min-height: 110px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 10px 0;"></div>
       <div style="display: flex; gap: 10px; justify-content: center;">
-        <button id="action-btn-primary" class="btn" style="display: none; padding: 8px 16px; font-size: 13px;" onclick="handleGameAction('bito')">Бито</button>
+        <button id="action-btn-primary" class="btn" style="display: none; padding: 8px 16px; font-size: 13px;" onclick="sendReady()">Готов!</button>
         <button id="action-btn-secondary" class="btn btn-secondary" style="display: none; padding: 8px 16px; font-size: 13px;" onclick="handleGameAction('take')">Взять</button>
       </div>
     </div>
 
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 6px;">Ваши карты (нажмите на карту для хода):</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 6px;">Ваши карты:</div>
     <div id="my-hand-container" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; min-height: 95px;"></div>
   </div>
 
-  <!-- 4. Вкладка Лидеры -->
+  <!-- Вкладка Лидеры -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров</h2>
     <div id="leaderboard-list">
@@ -396,10 +391,9 @@
     </div>
   </div>
 
-  <!-- 5. Вкладка Профиль -->
+  <!-- Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
-    
     <div class="card-box">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
         <div style="display: flex; align-items: center; gap: 12px;">
@@ -413,7 +407,6 @@
           Уровень <span id="profile-level">1</span>
         </div>
       </div>
-
       <div style="margin-top: 14px;">
         <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted);">
           <span>Прогресс до Ур. <span id="next-level-num">2</span></span>
@@ -423,7 +416,6 @@
           <div id="level-progress-bar" class="progress-bar-fill"></div>
         </div>
       </div>
-
       <div id="level-reward-box" style="margin-top: 14px; display: none;">
         <button class="btn" style="width: 100%; font-size: 14px; padding: 10px;" onclick="claimLevelReward()">Забрать бонус уровня (+10 ⭐)</button>
       </div>
@@ -477,7 +469,6 @@
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 18px; font-size: 20px;">Создать игровой стол</h3>
-      
       <div style="margin-bottom: 16px;">
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Режим игры:</div>
         <div style="display: flex; gap: 10px;">
@@ -485,7 +476,6 @@
           <button id="mode-perevodnoy" class="option-btn" onclick="selectMode('perevodnoy')" style="flex: 1;">Переводной</button>
         </div>
       </div>
-
       <div style="margin-bottom: 16px;">
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Колода:</div>
         <div style="display: flex; gap: 10px;">
@@ -493,7 +483,6 @@
           <button id="deck-24" class="option-btn" onclick="selectDeck(24)" style="flex: 1;">24 карты</button>
         </div>
       </div>
-
       <div style="margin-bottom: 22px;">
         <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ставка (звезды):</div>
         <div style="display: flex; gap: 8px;">
@@ -503,7 +492,6 @@
           <button class="option-btn" onclick="selectStake(100, this)">100 ⭐</button>
         </div>
       </div>
-
       <div style="display: flex; gap: 12px;">
         <button class="btn btn-secondary" style="flex: 1;" onclick="closeCreateTableModal()">Отмена</button>
         <button class="btn" style="flex: 1;" onclick="submitCreateTable()">Создать</button>
@@ -619,9 +607,7 @@
       } else if (tabId === 'friends') {
         const container = document.getElementById('friends-list-container');
         container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка списка друзей...</div>';
-        
         socket.emit('get_friends', { telegram_id: telegramId });
-        
         setTimeout(() => {
           if (container.innerHTML.includes('Загрузка')) {
             container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">У вас пока нет друзей в игре. Пригласите первого!</div>';
@@ -634,7 +620,6 @@
       const container = document.getElementById('friends-list-container');
       const countEl = document.getElementById('friends-count');
       if (!container) return;
-
       container.innerHTML = '';
       const friends = data.friends || [];
       countEl.innerText = friends.length;
@@ -703,7 +688,6 @@
       });
     }
 
-    // Список лобби
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
@@ -721,7 +705,6 @@
 
         const badge = isMy ? '<div class="my-table-badge">Ваш стол</div>' : '';
         const mode = table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной';
-        
         const btn = isMy 
           ? `<button class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="openGameRoom('${table.id}')">Вернуться в стол</button>` 
           : `<button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>`;
@@ -764,7 +747,6 @@
       el.classList.add('selected');
     }
 
-    // Создание стола
     function submitCreateTable() {
       socket.emit('create_table', {
         mode: selectedGameMode,
@@ -775,11 +757,9 @@
       closeCreateTableModal();
     }
 
-    // После создания мгновенно открывается игровая комната
     socket.on('table_created', (data) => {
       if (data && data.tableId) {
-        currentGameId = data.tableId;
-        openGameRoom(data.tableId);
+        joinTable(data.tableId);
       } else {
         socket.emit('get_lobbies');
       }
@@ -788,13 +768,17 @@
     function joinTable(tableId) {
       currentGameId = tableId;
       socket.emit('join_table', { tableId: tableId, telegram_id: telegramId });
+      socket.emit('join_room', tableId);
+      socket.emit('join', { gameId: tableId, telegram_id: telegramId });
       openGameRoom(tableId);
     }
 
     function openGameRoom(tableId) {
+      currentGameId = tableId;
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view').classList.add('active');
-      document.getElementById('turn-indicator').innerText = 'Ожидание игроков...';
+      socket.emit('get_game_state', { gameId: tableId, telegram_id: telegramId });
+      document.getElementById('turn-indicator').innerText = 'Ожидание второго игрока...';
       showReadyButton();
     }
 
@@ -802,6 +786,7 @@
       const primaryBtn = document.getElementById('action-btn-primary');
       if (primaryBtn) {
         primaryBtn.style.display = 'inline-block';
+        primaryBtn.disabled = false;
         primaryBtn.innerText = 'Готов!';
         primaryBtn.onclick = sendReady;
       }
@@ -809,15 +794,15 @@
 
     function sendReady() {
       isReady = true;
-      socket.emit('player_ready', { gameId: currentGameId, telegram_id: telegramId });
       const primaryBtn = document.getElementById('action-btn-primary');
       if (primaryBtn) {
         primaryBtn.innerText = 'Ожидание соперника...';
         primaryBtn.disabled = true;
       }
+      socket.emit('player_ready', { gameId: currentGameId, telegram_id: telegramId });
+      socket.emit('ready', { gameId: currentGameId, telegram_id: telegramId });
     }
 
-    // Обновление состояния матча
     socket.on('game_state', (state) => {
       currentGameId = state.gameId || state.id || currentGameId;
 
@@ -962,4 +947,5 @@
       }
     }
   </script>
-
+</body>
+</html>
