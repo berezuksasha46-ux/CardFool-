@@ -71,6 +71,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
       return inserted;
     } else if (error) throw error;
 
+    // СТРОГОЕ ПРАВИЛО: Фиксируем unique_id раз и навсегда
     const updatePayload = {};
     if (!data.unique_id) {
       data.unique_id = generateUniqueId();
@@ -92,7 +93,6 @@ async function dbGetOrCreateUser(telegramId, userData) {
 
     return data;
   } catch (err) {
-    console.warn('Supabase error, switching to memory fallback:', err.message);
     useMemoryFallback = true;
     return dbGetOrCreateUser(cleanId, userData);
   }
@@ -169,7 +169,6 @@ io.on('connection', (socket) => {
 
   socket.on('get_lobbies', () => { emitLobbies(socket); });
 
-  // Дополнительный сокет для стабильной загрузки таблицы лидеров
   socket.on('get_leaderboard', async () => {
     const list = await dbGetLeaderboard();
     socket.emit('leaderboard_data', list);
