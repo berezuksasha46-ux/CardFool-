@@ -19,19 +19,24 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let useMemoryFallback = false;
 const memoryUsers = new Map();
+const memoryFriends = new Map(); // telegram_id -> Set of friend_telegram_ids
 
 async function dbGetOrCreateUser(telegramId, userData) {
+  const uniqueId = Math.floor(100000 + Math.random() * 900000).toString();
+
   if (useMemoryFallback) {
     if (!memoryUsers.has(telegramId)) {
       memoryUsers.set(telegramId, {
         telegram_id: telegramId,
+        unique_id: uniqueId,
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 0, // Строго фиксированный баланс по умолчанию
+        stars_balance: 50,
         wins: 0,
         losses: 0,
         level: 1,
+        claimed_level: 1,
         last_daily_claim: null,
         referrer_id: userData.referrer_id || null
       });
@@ -44,13 +49,15 @@ async function dbGetOrCreateUser(telegramId, userData) {
     if (error && error.code === 'PGRST116') {
       const newUser = {
         telegram_id: telegramId,
+        unique_id: uniqueId,
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 0, // Строго 0 без скачков
+        stars_balance: 50,
         wins: 0,
         losses: 0,
         level: 1,
+        claimed_level: 1,
         last_daily_claim: null,
         referrer_id: userData.referrer_id || null
       };
@@ -86,7 +93,7 @@ async function dbGetLeaderboard() {
     return Array.from(memoryUsers.values()).sort((a, b) => b.wins - a.wins).slice(0, 50);
   }
   try {
-    const { data, error } = await supabase.from('users').select('telegram_id, username, first_name, photo_url, stars_balance, wins, level').order('wins', { ascending: false }).limit(50);
+    const { data, error } = await supabase.from('users').select('telegram_id, unique_id, username, first_name, photo_url, stars_balance, wins, level').order('wins', { ascending: false }).limit(50);
     if (error) throw error;
     return data;
   } catch (err) {
@@ -125,12 +132,93 @@ io.on('connection', (socket) => {
     if (!telegram_id) return;
     currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url, referrer_id });
     socket._telegram_id = telegram_id;
+
+    if (referrer_id && !currentUser.referrer_id && Number(referrer_id) !== Number(telegram_id)) {
+      await dbUpdateUser(telegram_id, { referrer_id: Number(referrer_id) });
+      const refUser = await dbGetOrCreateUser(Number(referrer_id), {});
+      if (refUser) {
+        await dbUpdateUser(Number(referrer_id), { stars_balance: (refUser.stars_balance || 0) + 10 });
+      }
+    }
+
     socket.emit('auth_success', currentUser);
     emitLobbies();
   });
 
   socket.on('set_socket_user', (telegram_id) => { socket._telegram_id = telegram_id; });
   socket.on('get_lobbies', () => { emitLobbies(socket); });
+
+  socket.on('get_friends', async (data) => {
+    const tId = data?.telegram_id || currentUser?.telegram_id;
+    if (!tId) return;
+
+    if (useMemoryFallback) {
+      const friendIds = memoryFriends.get(tId) || new Set();
+      const friendsList = [];
+      for (let fId of friendIds) {
+        if (memoryUsers.has(fId)) friendsList.push(memoryUsers.get(fId));
+      }
+      socket.emit('friends_list', { friends: friendsList });
+      return;
+    }
+
+    try {
+      const { data: friends } = await supabase.from('users').select('*').eq('referrer_id', Number(tId));
+      socket.emit('friends_list', { friends: friends || [] });
+    } catch (e) {
+      socket.emit('friends_list', { friends: [] });
+    }
+  });
+
+  socket.on('add_friend_by_unique_id', async (data) => {
+    const { uniqueId } = data;
+    if (!currentUser || !uniqueId) return;
+
+    let targetUser = null;
+    if (useMemoryFallback) {
+      for (let u of memoryUsers.values()) {
+        if (u.unique_id === uniqueId) { targetUser = u; break; }
+      }
+    } else {
+      const { data } = await supabase.from('users').select('*').eq('unique_id', uniqueId).single();
+      targetUser = data;
+    }
+
+    if (!targetUser) {
+      socket.emit('error_message', 'Игрок с таким ID не найден!');
+      return;
+    }
+
+    if (String(targetUser.telegram_id) === String(currentUser.telegram_id)) {
+      socket.emit('error_message', 'Нельзя добавить самого себя!');
+      return;
+    }
+
+    if (useMemoryFallback) {
+      if (!memoryFriends.has(currentUser.telegram_id)) memoryFriends.set(currentUser.telegram_id, new Set());
+      memoryFriends.get(currentUser.telegram_id).add(targetUser.telegram_id);
+    } else {
+      await dbUpdateUser(targetUser.telegram_id, { referrer_id: currentUser.telegram_id });
+    }
+
+    socket.emit('error_message', `Игрок ${targetUser.first_name || targetUser.username} успешно добавлен в друзья!`);
+    socket.emit('friends_list', { friends: [targetUser] });
+  });
+
+  socket.on('claim_daily', async () => {
+    if (!currentUser) return;
+    const now = new Date();
+    const lastClaim = currentUser.last_daily_claim ? new Date(currentUser.last_daily_claim) : null;
+    if (lastClaim && (now - lastClaim) < 24 * 60 * 60 * 1000) {
+      socket.emit('daily_error', { message: 'Ежедневный бонус уже получен сегодня!' });
+      return;
+    }
+    currentUser.stars_balance = (currentUser.stars_balance || 0) + 10;
+    currentUser.last_daily_claim = now.toISOString();
+    await dbUpdateUser(currentUser.telegram_id, { stars_balance: currentUser.stars_balance, last_daily_claim: currentUser.last_daily_claim });
+    socket.emit('auth_success', currentUser);
+    socket.emit('daily_success', { stars_balance: currentUser.stars_balance });
+  });
 
   socket.on('create_table', async (config) => {
     if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
