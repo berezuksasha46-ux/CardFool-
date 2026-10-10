@@ -25,6 +25,7 @@ function generateUniqueId() {
 
 async function dbGetOrCreateUser(telegramId, userData) {
   const cleanName = userData.first_name || (userData.username ? userData.username.split('@')[0] : 'Игрок');
+  const photoUrl = userData.photo_url || null;
 
   if (useMemoryFallback) {
     if (!memoryUsers.has(telegramId)) {
@@ -33,13 +34,17 @@ async function dbGetOrCreateUser(telegramId, userData) {
         unique_id: generateUniqueId(),
         username: userData.username || cleanName,
         first_name: cleanName,
-        photo_url: userData.photo_url || null,
+        photo_url: photoUrl,
         stars_balance: 50,
         wins: 0,
         losses: 0,
         level: 1,
         last_daily_claim: null
       });
+    } else {
+      const u = memoryUsers.get(telegramId);
+      if (photoUrl) u.photo_url = photoUrl;
+      if (cleanName) u.first_name = cleanName;
     }
     return memoryUsers.get(telegramId);
   }
@@ -53,7 +58,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
         unique_id: generateUniqueId(),
         username: userData.username || cleanName,
         first_name: cleanName,
-        photo_url: userData.photo_url || null,
+        photo_url: photoUrl,
         stars_balance: 50,
         wins: 0,
         losses: 0,
@@ -65,11 +70,23 @@ async function dbGetOrCreateUser(telegramId, userData) {
       return inserted;
     } else if (error) throw error;
 
-    // Жестко фиксируем ID, если он пустой
+    // ЖЕСТКОЕ ПРАВИЛО: Сохраняем зафиксированный unique_id навсегда
+    const updatePayload = {};
     if (!data.unique_id) {
-      const fixedId = generateUniqueId();
-      await supabase.from('users').update({ unique_id: fixedId }).eq('telegram_id', telegramId);
-      data.unique_id = fixedId;
+      data.unique_id = generateUniqueId();
+      updatePayload.unique_id = data.unique_id;
+    }
+    if (photoUrl && data.photo_url !== photoUrl) {
+      data.photo_url = photoUrl;
+      updatePayload.photo_url = photoUrl;
+    }
+    if (cleanName && data.first_name !== cleanName) {
+      data.first_name = cleanName;
+      updatePayload.first_name = cleanName;
+    }
+
+    if (Object.keys(updatePayload).length > 0) {
+      await supabase.from('users').update(updatePayload).eq('telegram_id', telegramId);
     }
 
     return data;
@@ -146,6 +163,7 @@ io.on('connection', (socket) => {
   socket.on('set_socket_user', (telegram_id) => { socket._telegram_id = telegram_id; });
   socket.on('get_lobbies', () => { emitLobbies(socket); });
 
+  // Система друзей
   socket.on('get_friends', async (data) => {
     const tId = data?.telegram_id || currentUser?.telegram_id;
     if (!tId) return;
@@ -178,7 +196,7 @@ io.on('connection', (socket) => {
     if (!currentUser || !uniqueId) return;
 
     try {
-      const { data: targetUser, error } = await supabase.from('users').select('*').eq('unique_id', uniqueId).single();
+      const { data: targetUser, error } = await supabase.from('users').select('*').eq('unique_id', String(uniqueId).trim()).single();
       if (error || !targetUser) {
         socket.emit('error_message', 'Игрок с таким ID не найден!');
         return;
@@ -191,7 +209,7 @@ io.on('connection', (socket) => {
 
       const { data: existingFriend } = await supabase.from('friends').select('*').eq('user_id', currentUser.telegram_id).eq('friend_id', targetUser.telegram_id).single();
       if (existingFriend) {
-        socket.emit('error_message', 'Вы уже друзья с этим игроком!');
+        socket.emit('error_message', 'Вы уже друзья!');
         return;
       }
 
@@ -201,7 +219,7 @@ io.on('connection', (socket) => {
 
       socket.emit('error_message', `Заявка отправлена игроку ${targetUser.first_name || targetUser.username}!`);
     } catch (e) {
-      socket.emit('error_message', 'Ошибка при отправке заявки.');
+      socket.emit('error_message', 'Ошибка отправки заявки.');
     }
   });
 
@@ -260,6 +278,7 @@ io.on('connection', (socket) => {
       id: tableId,
       hostId: String(currentUser.telegram_id),
       hostName: currentUser.first_name || currentUser.username,
+      hostPhoto: currentUser.photo_url || null,
       mode: mode || 'podkidnoy',
       deckSize: Number(deckSize) || 36,
       stake: currentStake,
@@ -290,7 +309,7 @@ io.on('connection', (socket) => {
     }
 
     if (!table) {
-      socket.emit('error_message', 'Стол не найден или уже закрыт!');
+      socket.emit('error_message', 'Стол не найден!');
       return;
     }
 
@@ -331,8 +350,8 @@ io.on('connection', (socket) => {
       deck,
       trumpCard,
       players: [
-        { id: String(hostUser.telegram_id), name: hostUser.first_name || hostUser.username, level: hostUser.level || 1, hand: p1Hand, socketId: null },
-        { id: String(currentUser.telegram_id), name: currentUser.first_name || currentUser.username, level: currentUser.level || 1, hand: p2Hand, socketId: socket.id }
+        { id: String(hostUser.telegram_id), name: hostUser.first_name || hostUser.username, photoUrl: hostUser.photo_url, level: hostUser.level || 1, hand: p1Hand, socketId: null },
+        { id: String(currentUser.telegram_id), name: currentUser.first_name || currentUser.username, photoUrl: currentUser.photo_url, level: currentUser.level || 1, hand: p2Hand, socketId: socket.id }
       ],
       attackerIndex: 0,
       defenderIndex: 1,
@@ -378,7 +397,7 @@ function broadcastGameState(game) {
         deckCount: game.deck.length,
         trumpCard: game.trumpCard,
         tableCards: game.tableCards,
-        players: game.players.map(p => ({ name: p.name, handCount: p.hand.length }))
+        players: game.players.map(p => ({ name: p.name, photoUrl: p.photoUrl, handCount: p.hand.length }))
       });
       sock.emit('your_hand', player.hand);
       sock.emit('is_turn_data', {
