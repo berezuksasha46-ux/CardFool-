@@ -73,10 +73,11 @@
       display: flex;
       justify-content: center;
       align-items: flex-end;
-      padding: 15px 10px 20px 10px;
+      padding: 15px 5px 20px 5px;
       min-height: 130px;
       position: relative;
-      overflow: visible;
+      overflow: hidden;
+      width: 100%;
     }
     .card-item {
       width: 68px;
@@ -96,10 +97,8 @@
       user-select: none;
       position: relative;
       transition: transform 0.2s ease, z-index 0.2s;
-      margin-left: -12px;
       flex-shrink: 0;
     }
-    .card-item:first-child { margin-left: 0; }
     .card-item:hover, .card-item.selected {
       z-index: 100 !important;
       transform: translateY(-18px) scale(1.08) !important;
@@ -139,7 +138,7 @@
       background: rgba(0, 0, 0, 0.85); z-index: 2000; align-items: center; justify-content: center; padding: 20px;
     }
     .modal.active { display: flex; }
-    .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 20px; padding: 22px; border: 1px solid var(--border-color); }
+    .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 20px; padding: 22px; border: 1px solid var(--border-color); text-align: center; }
     .option-btn { background: #1e1033; border: 1px solid var(--border-color); color: #fff; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; }
     .option-btn.selected { background: var(--accent-gold-gradient); color: #000; font-weight: bold; border-color: transparent; }
   </style>
@@ -266,6 +265,15 @@
     </div>
     <button class="btn" style="width: 100%; margin-bottom: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
   </div>
+  <!-- Модальное окно окончания игры с начислением приза -->
+  <div id="game-over-modal" class="modal">
+    <div class="modal-content">
+      <h2 id="game-over-title" style="font-size: 24px; margin-bottom: 10px; color: var(--accent-gold);">Победа!</h2>
+      <p id="game-over-text" style="font-size: 15px; color: var(--text-muted); margin-bottom: 20px;">Вы выиграли партию и получили звезды!</p>
+      <button class="btn" style="width: 100%;" onclick="closeGameOverModal()">В лобби</button>
+    </div>
+  </div>
+
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
     <button class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><div>Друзья</div></button>
@@ -318,7 +326,7 @@
     const initDataUnsafe = tg?.initDataUnsafe || {};
     const telegramId = String(initDataUnsafe.user?.id || 12345);
     const username = initDataUnsafe.user?.username || 'User_' + telegramId;
-    const firstName = initDataUnsafe.user?.first_name || 'Игрок';
+    const firstName = initDataUnsafe.user?.first_name || username.split('@')[0];
 
     socket.emit('set_socket_user', telegramId);
     socket.emit('auth', { telegram_id: telegramId, username, first_name: firstName });
@@ -548,19 +556,27 @@
       });
     }
 
+    // Автоматическое уплотнение карт в руке, чтобы они никогда не выходили за края
     function renderMyHand() {
       const container = document.getElementById('my-hand-container');
       if (!container) return;
       container.innerHTML = '';
       const totalCards = myHandCards.length;
 
+      let marginLeft = -12;
+      if (totalCards > 6) {
+        marginLeft = -12 - (totalCards - 6) * 6; // Чем больше карт, тем плотнее они заходят друг за друга
+        if (marginLeft < -48) marginLeft = -48; // Ограничение плотности
+      }
+
       myHandCards.forEach((card, index) => {
         const cardEl = document.createElement('div');
         cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''}`;
+        if (index > 0) cardEl.style.marginLeft = `${marginLeft}px`;
         
         const centerOffset = index - (totalCards - 1) / 2;
-        const angle = centerOffset * 2;
-        const translateY = Math.abs(centerOffset) * 2;
+        const angle = centerOffset * 1.5;
+        const translateY = Math.abs(centerOffset) * 1.5;
 
         cardEl.style.transform = `translateY(${translateY}px) rotate(${angle}deg)`;
         
@@ -615,6 +631,29 @@
     }
 
     function handleGameAction(actionType) { socket.emit('game_action', { gameId: currentGameId, action: actionType }); }
+
+    // Обработка окончания игры и показ модального окна с призом
+    socket.on('game_over', (data) => {
+      isGamePlaying = false;
+      currentGameId = null;
+      const modal = document.getElementById('game-over-modal');
+      const title = document.getElementById('game-over-title');
+      const text = document.getElementById('game-over-text');
+
+      if (data.won) {
+        title.innerText = 'Победа! 🎉';
+        text.innerText = `Вы выиграли партию и получили +${data.prize} ⭐ (с учетом комиссии 10%)!`;
+      } else {
+        title.innerText = 'Поражение 😔';
+        text.innerText = 'К сожалению, вы проиграли эту партию.';
+      }
+      modal.classList.add('active');
+    });
+
+    function closeGameOverModal() {
+      document.getElementById('game-over-modal').classList.remove('active');
+      switchTab('lobbies', document.querySelector('.nav-item'));
+    }
     
     async function loadLeaderboard() {
       try {
