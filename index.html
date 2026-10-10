@@ -130,6 +130,7 @@
         <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="header-unique-id">------</span> | Ур. <span id="header-level">1</span></div>
       </div>
     </div>
+    <!-- Возвращен недостающий id для баланса звезд -->
     <div style="background: rgba(251, 191, 36, 0.12); padding: 6px 14px; border-radius: 20px; color: var(--accent-gold); font-weight: bold;">
       ⭐ <span id="header-stars">0</span>
     </div>
@@ -143,7 +144,6 @@
     <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div></div>
   </div>
 
-  <!-- Вкладка Друзья с добавлением по ID -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%); margin-bottom: 16px;">
@@ -197,7 +197,6 @@
 
   <div id="leaderboard-view" class="view"><h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров</h2><div id="leaderboard-list"></div></div>
   
-  <!-- Полноценный профиль со всеми характеристиками -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     <div class="card-box" style="margin-bottom: 14px;">
@@ -223,7 +222,6 @@
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
   </div>
 
-  <!-- Модальное окно создания стола с полными настройками (Колода 24/36 и Ставки) -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px;">Создать игровой стол</h3>
@@ -449,4 +447,4 @@
       const container = document.getElementById('leaderboard-list');
       container.innerHTML = '';
       list.forEach((u, i) => {
-        container.innerHTML += `<div class=
+        container.innerHTML += `<div class="table-card"><span>#${i+1} ${u.first_name || u.username} (ID: ${u.unique_id || '---'})</span><span style="color:var(--accent-gold);">⭐
