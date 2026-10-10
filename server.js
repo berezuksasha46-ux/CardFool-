@@ -18,24 +18,23 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let useMemoryFallback = false;
 const memoryUsers = new Map();
-const memoryFriends = new Map();
 
 function generateUniqueId() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 async function dbGetOrCreateUser(telegramId, userData) {
-  const generatedId = generateUniqueId();
+  const cleanName = userData.first_name || (userData.username ? userData.username.split('@')[0] : 'Игрок');
 
   if (useMemoryFallback) {
     if (!memoryUsers.has(telegramId)) {
       memoryUsers.set(telegramId, {
         telegram_id: telegramId,
-        unique_id: generatedId,
-        username: userData.username || 'Player',
-        first_name: userData.first_name || 'Gamer',
+        unique_id: generateUniqueId(),
+        username: userData.username || cleanName,
+        first_name: cleanName,
         photo_url: userData.photo_url || null,
-        stars_balance: 10,
+        stars_balance: 50,
         wins: 0,
         losses: 0,
         level: 1,
@@ -50,11 +49,11 @@ async function dbGetOrCreateUser(telegramId, userData) {
     if (error && error.code === 'PGRST116') {
       const newUser = {
         telegram_id: telegramId,
-        unique_id: generatedId,
-        username: userData.username || 'Player',
-        first_name: userData.first_name || 'Gamer',
+        unique_id: generateUniqueId(),
+        username: userData.username || cleanName,
+        first_name: cleanName,
         photo_url: userData.photo_url || null,
-        stars_balance: 10,
+        stars_balance: 50,
         wins: 0,
         losses: 0,
         level: 1,
@@ -65,9 +64,11 @@ async function dbGetOrCreateUser(telegramId, userData) {
       return inserted;
     } else if (error) throw error;
 
+    // Если ID уже есть в базе — жестко закрепляем его и больше никогда не меняем
     if (!data.unique_id) {
-      data.unique_id = generatedId;
-      await dbUpdateUser(telegramId, { unique_id: generatedId });
+      const fixedId = generateUniqueId();
+      await dbUpdateUser(telegramId, { unique_id: fixedId });
+      data.unique_id = fixedId;
     }
 
     return data;
@@ -223,7 +224,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Выход из не начатой комнаты (Удаление стола)
   socket.on('leave_waiting_table', (tableId) => {
     if (!currentUser) return;
     const table = tables.get(tableId);
@@ -278,7 +278,6 @@ io.on('connection', (socket) => {
     const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
     const table = tables.get(tableId);
 
-    // Если игра идет, переподключаем
     if (activeGames.has(tableId)) {
       const existingGame = activeGames.get(tableId);
       const player = existingGame.players.find(p => String(p.id) === String(currentUser.telegram_id));
@@ -294,7 +293,6 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Если создатель нажимает на свой же стол в списке
     if (String(table.hostId) === String(currentUser.telegram_id)) {
       socket.emit('table_created', tableId);
       return;
@@ -305,12 +303,20 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Снимаем ставки со счетов обоих игроков сразу при старте игры
+    const hostUser = await dbGetOrCreateUser(table.hostId, {});
+    
+    hostUser.stars_balance = Math.max(0, (hostUser.stars_balance || 0) - table.stake);
+    currentUser.stars_balance = Math.max(0, (currentUser.stars_balance || 0) - table.stake);
+
+    await dbUpdateUser(hostUser.telegram_id, { stars_balance: hostUser.stars_balance });
+    await dbUpdateUser(currentUser.telegram_id, { stars_balance: currentUser.stars_balance });
+
     table.status = 'playing';
     const deck = createDeck(table.deckSize);
     const trumpCard = deck[deck.length - 1];
     const p1Hand = deck.splice(0, 6);
     const p2Hand = deck.splice(0, 6);
-    const hostUser = await dbGetOrCreateUser(table.hostId, {});
 
     const gameState = {
       gameId: tableId,
@@ -333,10 +339,12 @@ io.on('connection', (socket) => {
       if (String(s._telegram_id) === String(hostUser.telegram_id)) {
         gameState.players[0].socketId = s.id;
         s.join(tableId);
+        s.emit('auth_success', hostUser);
       }
     }
 
     socket.join(tableId);
+    socket.emit('auth_success', currentUser);
     activeGames.set(tableId, gameState);
     tables.delete(tableId);
     emitLobbies();
@@ -384,6 +392,52 @@ function replenishHands(game) {
   });
 }
 
+async function checkGameEnd(game) {
+  if (game.deck.length > 0) return;
+
+  const p0Empty = game.players[0].hand.length === 0;
+  const p1Empty = game.players[1].hand.length === 0;
+
+  if (p0Empty || p1Empty) {
+    game.status = 'ended';
+    let winnerIdx = p0Empty ? 0 : 1;
+    let loserIdx = p0Empty ? 1 : 0;
+
+    const winner = game.players[winnerIdx];
+    const loser = game.players[loserIdx];
+
+    // Расчет банка: ставка * 2 минус 10% комиссии
+    const totalPot = game.stake * 2;
+    const prize = Math.round(totalPot * 0.9);
+
+    // Обновляем статистику в БД
+    const wUser = await dbGetOrCreateUser(winner.id, {});
+    const lUser = await dbGetOrCreateUser(loser.id, {});
+
+    wUser.stars_balance = (wUser.stars_balance || 0) + prize;
+    wUser.wins = (wUser.wins || 0) + 1;
+    lUser.losses = (lUser.losses || 0) + 1;
+
+    await dbUpdateUser(wUser.telegram_id, { stars_balance: wUser.stars_balance, wins: wUser.wins });
+    await dbUpdateUser(lUser.telegram_id, { losses: lUser.losses });
+
+    // Оповещаем игроков об окончании партии
+    const wSock = io.sockets.sockets.get(winner.socketId);
+    const lSock = io.sockets.sockets.get(loser.socketId);
+
+    if (wSock) {
+      wSock.emit('game_over', { won: true, prize, stars_balance: wUser.stars_balance });
+      wSock.emit('auth_success', wUser);
+    }
+    if (lSock) {
+      lSock.emit('game_over', { won: false, prize: 0, stars_balance: lUser.stars_balance });
+      lSock.emit('auth_success', lUser);
+    }
+
+    activeGames.delete(game.gameId);
+  }
+}
+
 async function handleGameAction(socket, data) {
   const { gameId, action, cardId } = data;
   const game = activeGames.get(gameId);
@@ -417,6 +471,7 @@ async function handleGameAction(socket, data) {
       hand.splice(cardIndex, 1);
       game.tableCards.push({ attack: card, defend: null });
       broadcastGameState(game);
+      await checkGameEnd(game);
     } 
     else if (isDefender) {
       const activeAttack = game.tableCards.find(tc => !tc.defend);
@@ -429,6 +484,7 @@ async function handleGameAction(socket, data) {
         hand.splice(cardIndex, 1);
         activeAttack.defend = card;
         broadcastGameState(game);
+        await checkGameEnd(game);
       }
     }
   }
@@ -440,6 +496,7 @@ async function handleGameAction(socket, data) {
       game.attackerIndex = game.defenderIndex;
       game.defenderIndex = temp;
       broadcastGameState(game);
+      await checkGameEnd(game);
     }
   }
   else if (action === 'take' && isDefender) {
@@ -452,6 +509,7 @@ async function handleGameAction(socket, data) {
     game.tableCards = [];
     replenishHands(game);
     broadcastGameState(game);
+    await checkGameEnd(game);
   }
 }
 
