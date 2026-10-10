@@ -329,10 +329,19 @@
           photo_url: initData.photo_url || null
         };
       }
+      
+      // Фикс проблемы со сменой ID при тестировании в обычном браузере:
+      // Сохраняем постоянный ID в localStorage устройства
+      let savedId = localStorage.getItem('cardfool_test_id');
+      if (!savedId) {
+        savedId = 'user_' + Math.floor(100000 + Math.random() * 900000);
+        localStorage.setItem('cardfool_test_id', savedId);
+      }
+
       return {
-        telegram_id: '1234567',
-        username: 'TestUser',
-        first_name: 'Тест Игрок',
+        telegram_id: savedId,
+        username: 'TestUser_' + savedId.slice(-4),
+        first_name: 'Игрок (' + savedId.slice(-4) + ')',
         photo_url: null
       };
     }
@@ -706,34 +715,53 @@
       switchTab('lobbies', document.querySelector('.nav-item'));
     }
     
+    // Исправленная загрузка таблицы лидеров (поддержка и API и сокетов)
     async function loadLeaderboard() {
+      const container = document.getElementById('leaderboard-list');
+      if (!container) return;
+      container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка лидеров...</div>';
+
       try {
         const res = await fetch('/api/leaderboard');
+        if (!res.ok) throw new Error('HTTP error');
         const list = await res.json();
-        const container = document.getElementById('leaderboard-list');
-        if (!container) return;
-        container.innerHTML = '';
-        if (list.length === 0) {
-          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Пока нет лидеров</div>';
-          return;
-        }
-        list.forEach((u, i) => {
-          const avatarStyle = u.photo_url ? `style="background-image: url('${u.photo_url}');"` : '';
-          const avatarText = u.photo_url ? '' : (u.first_name || u.username).charAt(0).toUpperCase();
+        renderLeaderboard(list);
+      } catch (e) {
+        // Запасной вариант через сокеты, если REST-запрос не прошел
+        socket.emit('get_leaderboard');
+      }
+    }
 
-          container.innerHTML += `
-            <div class="table-card">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
-                <div>
-                  <div style="font-weight:bold;">#${i+1} ${u.first_name || u.username}</div>
-                  <div style="font-size:11px; color:var(--text-muted);">ID: ${u.unique_id || '---'}</div>
-                </div>
+    socket.on('leaderboard_data', (list) => {
+      renderLeaderboard(list);
+    });
+
+    function renderLeaderboard(list) {
+      const container = document.getElementById('leaderboard-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!list || list.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Пока нет лидеров</div>';
+        return;
+      }
+
+      list.forEach((u, i) => {
+        const avatarStyle = u.photo_url ? `style="background-image: url('${u.photo_url}');"` : '';
+        const avatarText = u.photo_url ? '' : (u.first_name || u.username).charAt(0).toUpperCase();
+
+        container.innerHTML += `
+          <div class="table-card">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
+              <div>
+                <div style="font-weight:bold;">#${i+1} ${u.first_name || u.username}</div>
+                <div style="font-size:11px; color:var(--text-muted);">ID: ${u.unique_id || '---'}</div>
               </div>
-              <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${u.stars_balance}</span>
-            </div>`;
-        });
-      } catch (e) { console.error(e); }
+            </div>
+            <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${u.stars_balance || 0}</span>
+          </div>`;
+      });
     }
 
     function claimDailyBonus() { socket.emit('claim_daily'); }
