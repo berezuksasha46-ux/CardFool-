@@ -35,6 +35,8 @@
     }
     .btn:active { transform: scale(0.97); }
     .btn-secondary { background: #23163d; color: #fff; border: 1px solid var(--border-color); box-shadow: none; }
+    .btn-success { background: var(--success); color: #fff; padding: 6px 12px; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; }
+    .btn-danger { background: var(--danger); color: #fff; padding: 6px 12px; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; }
 
     .card-box, .table-card {
       background: var(--bg-card); border-radius: 16px; padding: 16px;
@@ -143,21 +145,30 @@
     <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div></div>
   </div>
 
-  <!-- Вкладка Друзья -->
+  <!-- Вкладка Друзья с входящими заявками -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
+    
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%); margin-bottom: 16px;">
       <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">➕ Добавить в друзья по ID</div>
       <div style="display: flex; gap: 8px; margin-top: 10px;">
         <input type="text" id="friend-id-input" placeholder="Введите 6-значный ID" style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 14px;">
-        <button class="btn" style="padding: 10px 16px;" onclick="addFriendById()">Добавить</button>
+        <button class="btn" style="padding: 10px 16px;" onclick="addFriendById()">Запрос</button>
       </div>
     </div>
+
+    <!-- Блок входящих заявок -->
+    <div id="requests-section" style="display: none; margin-bottom: 20px;">
+      <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; color: var(--accent-gold);">📥 Входящие заявки (<span id="requests-count">0</span>)</div>
+      <div id="requests-list-container"></div>
+    </div>
+
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
       <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎁 Реферальная система</div>
       <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Приглашайте друзей по вашей личной ссылке (+10 ⭐).</div>
       <button class="btn" style="width: 100%;" onclick="copyReferralLink()">Скопировать реферальную ссылку</button>
     </div>
+
     <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; margin-top: 20px;">Ваши друзья (<span id="friends-count">0</span>)</div>
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div></div>
   </div>
@@ -202,7 +213,7 @@
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка лидеров...</div></div>
   </div>
   
-  <!-- Вкладка Профиль с винрейтом и ID -->
+  <!-- Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     <div class="card-box" style="margin-bottom: 14px;">
@@ -310,20 +321,53 @@
       else if (tabId === 'leaderboard') loadLeaderboard();
     }
 
+    // Обработка списков друзей и входящих заявок
     socket.on('friends_list', (data) => {
-      const container = document.getElementById('friends-list-container');
-      const countEl = document.getElementById('friends-count');
-      if (!container) return;
-      container.innerHTML = '';
+      const friendsContainer = document.getElementById('friends-list-container');
+      const friendsCountEl = document.getElementById('friends-count');
+      const requestsContainer = document.getElementById('requests-list-container');
+      const requestsCountEl = document.getElementById('requests-count');
+      const requestsSection = document.getElementById('requests-section');
+
+      if (!friendsContainer) return;
+
+      // 1. Отрисовка друзей
+      friendsContainer.innerHTML = '';
       const friends = data.friends || [];
-      if (countEl) countEl.innerText = friends.length;
+      if (friendsCountEl) friendsCountEl.innerText = friends.length;
       if (friends.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 20px;">У вас пока нет друзей в игре.</div>';
-        return;
+        friendsContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 10px;">Список друзей пуст</div>';
+      } else {
+        friends.forEach(f => {
+          friendsContainer.innerHTML += `<div class="table-card"><div><div style="font-weight:bold;">${f.first_name || f.username}</div><div style="font-size:12px; color:var(--text-muted);">ID: ${f.unique_id || '---'}</div></div><div style="color:var(--success); font-weight:bold; font-size:13px;">В друзьях</div></div>`;
+        });
       }
-      friends.forEach(f => {
-        container.innerHTML += `<div class="table-card"><div><div style="font-weight:bold;">${f.first_name || f.username}</div><div style="font-size:12px; color:var(--text-muted);">ID: ${f.unique_id || '---'}</div></div><div style="color:var(--success); font-weight:bold; font-size:13px;">В друзьях</div></div>`;
-      });
+
+      // 2. Отрисовка входящих заявок
+      if (requestsContainer && requestsSection) {
+        requestsContainer.innerHTML = '';
+        const requests = data.requests || [];
+        if (requestsCountEl) requestsCountEl.innerText = requests.length;
+
+        if (requests.length === 0) {
+          requestsSection.style.display = 'none';
+        } else {
+          requestsSection.style.display = 'block';
+          requests.forEach(req => {
+            requestsContainer.innerHTML += `
+              <div class="table-card">
+                <div>
+                  <div style="font-weight:bold;">${req.first_name || req.username}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">ID: ${req.unique_id || '---'}</div>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn-success" onclick="respondRequest('${req.telegram_id}', 'accept')">Принять</button>
+                  <button class="btn-danger" onclick="respondRequest('${req.telegram_id}', 'reject')">Отклонить</button>
+                </div>
+              </div>`;
+          });
+        }
+      }
     });
 
     function addFriendById() {
@@ -333,6 +377,10 @@
       if (!uId) { alert('Введите ID друга!'); return; }
       socket.emit('add_friend_by_unique_id', { uniqueId: uId });
       input.value = '';
+    }
+
+    function respondRequest(senderId, action) {
+      socket.emit('respond_friend_request', { senderId: Number(senderId), action });
     }
 
     function copyReferralLink() {
@@ -441,7 +489,6 @@
         const angle = (index - (totalCards - 1) / 2) * 3;
         cardEl.style.transform = `rotate(${angle}deg)`;
         cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:20px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
-        // Передаем уникальный id карты, чтобы сервер точно знал, какую карту бросили
         cardEl.onclick = () => socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardId: card.id });
         container.appendChild(cardEl);
       });
