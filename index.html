@@ -99,7 +99,6 @@
 </head>
 <body>
 
-  <!-- Шапка -->
   <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
@@ -113,7 +112,6 @@
     </div>
   </div>
 
-  <!-- Вкладка Столы -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="font-size: 22px;">Игровые столы</h2>
@@ -124,7 +122,6 @@
     </div>
   </div>
 
-  <!-- Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
@@ -140,7 +137,6 @@
     </div>
   </div>
 
-  <!-- Вкладка Игра -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -159,7 +155,7 @@
       <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold);">Ожидание второго игрока...</div>
       <div id="table-cards-slot" style="display: flex; gap: 12px; min-height: 110px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 10px 0;"></div>
       <div style="display: flex; gap: 10px; justify-content: center;">
-        <button id="action-btn-primary" class="btn" style="padding: 10px 20px;" onclick="sendReady()">Готов!</button>
+        <button id="action-btn-primary" class="btn" style="display: none; padding: 10px 20px;" onclick="handleGameAction('bito')">Бито</button>
         <button id="action-btn-secondary" class="btn btn-secondary" style="display: none; padding: 10px 20px;" onclick="handleGameAction('take')">Взять</button>
       </div>
     </div>
@@ -168,13 +164,11 @@
     <div id="my-hand-container" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; min-height: 95px;"></div>
   </div>
 
-  <!-- Вкладка Лидеры -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров</h2>
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted);">Загрузка...</div></div>
   </div>
 
-  <!-- Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     <div class="card-box">
@@ -189,18 +183,6 @@
         <div style="background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); padding: 6px 12px; border-radius: 10px; font-weight: bold; font-size: 14px;">
           Уровень <span id="profile-level">1</span>
         </div>
-      </div>
-      <div style="margin-top: 14px;">
-        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted);">
-          <span>Прогресс до Ур. <span id="next-level-num">2</span></span>
-          <span><span id="wins-in-level">0</span> / 15 побед</span>
-        </div>
-        <div class="progress-bar-bg">
-          <div id="level-progress-bar" class="progress-bar-fill"></div>
-        </div>
-      </div>
-      <div id="level-reward-box" style="margin-top: 14px; display: none;">
-        <button class="btn" style="width: 100%; font-size: 14px; padding: 10px;" onclick="claimLevelReward()">Забрать бонус уровня (+10 ⭐)</button>
       </div>
     </div>
 
@@ -227,8 +209,6 @@
       <button class="btn" style="width: 100%; margin-bottom: 12px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
     </div>
   </div>
-
-  <!-- Нижняя панель навигации -->
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
     <button class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><div>Друзья</div></button>
@@ -236,7 +216,6 @@
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
   </div>
 
-  <!-- Модальное окно создания стола -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px;">Создать игровой стол</h3>
@@ -269,6 +248,7 @@
       </div>
     </div>
   </div>
+
   <script>
     const BOT_USERNAME = "GOCardFoolbot";
 
@@ -321,7 +301,6 @@
 
     function updateProfileUI(user) {
       const starsBalance = (user.stars_balance !== undefined && user.stars_balance !== null) ? Number(user.stars_balance) : 0;
-
       document.getElementById('header-stars').innerText = starsBalance;
       document.getElementById('header-level').innerText = user.level || 1;
       document.getElementById('header-name').innerText = user.first_name || user.username;
@@ -329,12 +308,6 @@
       document.getElementById('profile-name').innerText = user.first_name || user.username;
       document.getElementById('profile-id').innerText = user.telegram_id || telegramId;
       document.getElementById('profile-stars').innerText = starsBalance + ' ⭐';
-      
-      const headerAvatarEl = document.getElementById('header-avatar');
-      if (headerAvatarEl) headerAvatarEl.outerHTML = `<div id="header-avatar" style="display:inline-block;">${renderUserAvatar(user, 40)}</div>`;
-      
-      const profileAvatarEl = document.getElementById('profile-avatar');
-      if (profileAvatarEl) profileAvatarEl.outerHTML = `<div id="profile-avatar" style="display:inline-block;">${renderUserAvatar(user, 50)}</div>`;
 
       const wins = user.wins || 0;
       const losses = user.losses || 0;
@@ -344,21 +317,6 @@
       document.getElementById('stat-wins').innerText = wins;
       document.getElementById('stat-losses').innerText = losses;
       document.getElementById('stat-winrate').innerText = winrate + '%';
-
-      const calculatedLevel = Math.floor(wins / 15) + 1;
-      const winsInLevel = wins % 15;
-      const progressPercent = Math.round((winsInLevel / 15) * 100);
-
-      document.getElementById('profile-level').innerText = calculatedLevel;
-      document.getElementById('next-level-num').innerText = calculatedLevel + 1;
-      document.getElementById('wins-in-level').innerText = winsInLevel;
-      document.getElementById('level-progress-bar').style.width = progressPercent + '%';
-
-      if (calculatedLevel > (user.claimed_level || 1)) {
-        document.getElementById('level-reward-box').style.display = 'block';
-      } else {
-        document.getElementById('level-reward-box').style.display = 'none';
-      }
     }
 
     function switchTab(tabId, el) {
@@ -376,63 +334,6 @@
       }
     }
 
-    socket.on('friends_list', (data) => {
-      const container = document.getElementById('friends-list-container');
-      const countEl = document.getElementById('friends-count');
-      if (!container) return;
-      container.innerHTML = '';
-      const friends = data.friends || [];
-      countEl.innerText = friends.length;
-
-      if (friends.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">У вас пока нет друзей в игре. Пригласите первого!</div>';
-        return;
-      }
-
-      friends.forEach(friend => {
-        const item = document.createElement('div');
-        item.className = 'table-card';
-        item.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 12px;">
-            ${renderUserAvatar(friend, 40)}
-            <div>
-              <div style="font-weight: bold; font-size: 15px;">${friend.first_name || friend.username}</div>
-              <div style="font-size: 12px; color: var(--text-muted);">Побед: ${friend.wins || 0} | Уровень: ${friend.level || 1}</div>
-            </div>
-          </div>
-          <div style="font-size: 12px; color: var(--success); font-weight: bold;">В друзьях</div>
-        `;
-        container.appendChild(item);
-      });
-    });
-
-    function claimDailyBonus() { socket.emit('claim_daily', { telegram_id: telegramId }); }
-    socket.on('daily_success', (data) => {
-      alert(`🎉 Вы получили ежедневный бонус +10 ⭐!`);
-      if (currentUser) {
-        currentUser.stars_balance = data.stars_balance !== undefined ? data.stars_balance : (Number(currentUser.stars_balance) + 10);
-        updateProfileUI(currentUser);
-      }
-    });
-    socket.on('daily_error', (data) => { alert(data.message || 'Ежедневный бонус уже получен сегодня!'); });
-
-    function claimLevelReward() { socket.emit('claim_level_reward', { telegram_id: telegramId }); }
-    socket.on('level_reward_success', (data) => {
-      alert(`⭐ Награда получена: +10 звёзд!`);
-      if (currentUser) {
-        currentUser.stars_balance = data.stars_balance || (Number(currentUser.stars_balance) + 10);
-        currentUser.claimed_level = data.claimed_level;
-        updateProfileUI(currentUser);
-      }
-    });
-
-    function copyReferralLink() {
-      const refLink = `https://t.me/${BOT_USERNAME}/app?startapp=${telegramId}`;
-      navigator.clipboard.writeText(refLink).then(() => {
-        alert('📋 Реферальная ссылка скопирована в буфер обмена!');
-      }).catch(() => { prompt('Скопируйте реферальную ссылку:', refLink); });
-    }
-
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
@@ -444,22 +345,19 @@
       }
 
       data.tables.forEach(table => {
-        const hostId = table.hostId || table.host_id || table.creatorId;
+        const hostId = table.hostId || table.host_id;
         const isMy = String(hostId) === String(telegramId);
         const card = document.createElement('div');
         card.className = isMy ? 'table-card my-table' : 'table-card';
-
         const badge = isMy ? '<div class="my-table-badge">Ваш стол</div>' : '';
-        const tableId = table.id || table.tableId || table.roomId;
-        const mode = table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной';
 
         card.innerHTML = `
           <div>
             ${badge}
-            <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName || table.name || 'Игрока'}</div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${mode} • ${table.deckSize || 36} карт • ⭐ ${table.stake || 10}</div>
+            <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName || 'Игрока'}</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">${table.mode} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
           </div>
-          <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${tableId}')">Войти</button>
+          <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>
         `;
         container.appendChild(card);
       });
@@ -497,67 +395,32 @@
       });
     }
 
-    // Обработка успешного создания стола (для хоста)
-    socket.on('table_created', (data) => {
-      const tId = (typeof data === 'string') ? data : (data?.tableId || data?.id || data?.roomId);
-      if (tId) {
-        currentGameId = tId;
-        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-        document.getElementById('game-view').classList.add('active');
-        document.getElementById('turn-indicator').innerText = 'Стол создан. Ожидание второго игрока...';
-        
-        const primaryBtn = document.getElementById('action-btn-primary');
-        if (primaryBtn) {
-          primaryBtn.style.display = 'inline-block';
-          primaryBtn.disabled = false;
-          primaryBtn.innerText = 'Готов!';
-        }
-      } else {
-        socket.emit('get_lobbies');
-      }
+    socket.on('table_created', (tableId) => {
+      joinTable(tableId);
     });
 
-    // Функция для входа второго игрока из лобби
     function joinTable(tableId) {
       if (!tableId) return;
       currentGameId = tableId;
-      
-      socket.emit('join_table', { tableId: tableId, gameId: tableId, telegram_id: telegramId, first_name: firstName });
+      socket.emit('join_table', tableId);
 
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view').classList.add('active');
-      document.getElementById('turn-indicator').innerText = 'Подключено к столу. Ожидание соперника...';
-      
-      const primaryBtn = document.getElementById('action-btn-primary');
-      if (primaryBtn) {
-        primaryBtn.style.display = 'inline-block';
-        primaryBtn.disabled = false;
-        primaryBtn.innerText = 'Готов!';
-      }
+      document.getElementById('turn-indicator').innerText = 'Подключено! Ожидание хода...';
     }
 
-    function sendReady() {
-      socket.emit('player_ready', { gameId: currentGameId, tableId: currentGameId, telegram_id: telegramId });
-      const btn = document.getElementById('action-btn-primary');
-      if (btn) {
-        btn.innerText = 'Ожидание соперника...';
-        btn.disabled = true;
-      }
-    }
-
-    // Синхронизация состояния игры в реальном времени для обоих игроков
     socket.on('game_state', (state) => {
       if (!state) return;
-      currentGameId = state.gameId || state.id || currentGameId;
+      currentGameId = state.gameId || currentGameId;
 
       const players = state.players || [];
-      const opponent = players.find(p => String(p.id || p.telegram_id) !== String(telegramId)) || { name: 'Ожидание второго игрока...', handCount: 0 };
+      const opponent = players.find(p => p.name !== firstName) || players[1] || { name: 'Соперник', handCount: 0 };
       
-      document.getElementById('opponent-name').innerText = opponent.name || opponent.first_name || 'Соперник';
-      document.getElementById('opponent-card-count').innerText = opponent.handCount !== undefined ? opponent.handCount : (opponent.hand ? opponent.hand.length : 0);
+      document.getElementById('opponent-name').innerText = opponent.name || 'Соперник';
+      document.getElementById('opponent-card-count').innerText = opponent.handCount !== undefined ? opponent.handCount : 0;
       document.getElementById('deck-count').innerText = state.deckCount !== undefined ? state.deckCount : 36;
       
-      const trump = state.trumpCard || state.trump || '♠';
+      const trump = state.trumpCard || '♠';
       const trumpSuit = typeof trump === 'object' ? trump.suit : trump;
       const trumpView = document.getElementById('deck-card-view');
       trumpView.innerText = trumpSuit;
@@ -566,7 +429,7 @@
       const tableSlot = document.getElementById('table-cards-slot');
       if (tableSlot) {
         tableSlot.innerHTML = '';
-        const cardsOnTable = state.tableCards || state.table || [];
+        const cardsOnTable = state.tableCards || [];
         cardsOnTable.forEach(pair => {
           const pairDiv = document.createElement('div');
           pairDiv.className = 'card-pair';
@@ -615,9 +478,7 @@
       socket.emit('game_action', {
         gameId: currentGameId,
         action: 'play_card',
-        cardIndex: index,
-        card: myHandCards[index],
-        telegram_id: telegramId
+        cardIndex: index
       });
     }
 
@@ -636,25 +497,22 @@
       }
       
       if (primaryBtn) {
-        primaryBtn.disabled = false;
         primaryBtn.style.display = isMyTurn ? 'inline-block' : 'none';
         primaryBtn.innerText = 'Бито';
-        primaryBtn.onclick = () => handleGameAction('bito');
       }
 
       if (secondaryBtn) {
         secondaryBtn.style.display = isMyTurn ? 'inline-block' : 'none';
         secondaryBtn.innerText = 'Взять';
-        secondaryBtn.onclick = () => handleGameAction('take');
       }
     });
 
     function handleGameAction(actionType) {
-      socket.emit('game_action', { gameId: currentGameId, action: actionType, telegram_id: telegramId });
+      socket.emit('game_action', { gameId: currentGameId, action: actionType });
     }
 
     socket.on('game_over', (data) => {
-      alert(`🏆 Игра окончена! Победитель: ${data.winnerName || 'Игрок'}. Выигрыш: +${data.prize || 10} ⭐`);
+      alert(`🏆 Игра окончена! Победитель: ${data.winnerName}. Награда: +${data.prize} ⭐`);
       switchTab('lobbies');
     });
 
@@ -686,6 +544,10 @@
         console.error(e);
       }
     }
+
+    function claimDailyBonus() { socket.emit('claim_daily'); }
+    socket.on('daily_success', (data) => { alert('🎉 Ежедневный бонус получен (+10 ⭐)!'); });
+    socket.on('daily_error', (data) => { alert(data.message); });
   </script>
 </body>
 </html>
