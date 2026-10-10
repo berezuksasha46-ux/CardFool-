@@ -31,7 +31,7 @@
     body {
       background-color: var(--bg-main);
       color: var(--text-main);
-      padding-bottom: 80px;
+      padding-bottom: 90px;
     }
 
     .view {
@@ -114,13 +114,13 @@
       bottom: 0;
       left: 0;
       right: 0;
-      background: rgba(21, 11, 38, 0.95);
+      background: rgba(21, 11, 38, 0.98);
       backdrop-filter: blur(10px);
       display: flex;
       justify-content: space-around;
       padding: 10px 0;
       border-top: 1px solid var(--border-color);
-      z-index: 100;
+      z-index: 1000;
     }
 
     .nav-item {
@@ -271,7 +271,7 @@
       bottom: 0;
       background: rgba(0, 0, 0, 0.85);
       backdrop-filter: blur(5px);
-      z-index: 200;
+      z-index: 2000;
       align-items: center;
       justify-content: center;
       padding: 20px;
@@ -424,7 +424,81 @@
 
     <div class="stats-grid">
       <div class="stat-card">
-        <div class
+        <div class="stat-label">Победы</div>
+        <div class="stat-value" id="stat-wins">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Поражения</div>
+        <div class="stat-value" id="stat-losses">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Винрейт</div>
+        <div class="stat-value" id="stat-winrate">0%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Звезды баланс</div>
+        <div class="stat-value" id="profile-stars">0 ⭐</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 16px;">
+      <button class="btn" style="width: 100%; margin-bottom: 12px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
+    </div>
+  </div>
+
+  <!-- Нижняя навигационная панель -->
+  <div class="nav-bar">
+    <button class="nav-item active" onclick="switchTab('lobbies', this)">
+      <div class="nav-icon">🎲</div>
+      <div>Столы</div>
+    </button>
+    <button class="nav-item" onclick="switchTab('friends', this)">
+      <div class="nav-icon">👥</div>
+      <div>Друзья</div>
+    </button>
+    <button class="nav-item" onclick="switchTab('leaderboard', this)">
+      <div class="nav-icon">🏆</div>
+      <div>Лидеры</div>
+    </button>
+    <button class="nav-item" onclick="switchTab('profile', this)">
+      <div class="nav-icon">👤</div>
+      <div>Профиль</div>
+    </button>
+  </div>
+
+  <!-- Модальное окно создания стола -->
+  <div id="create-table-modal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 18px; font-size: 20px;">Создать игровой стол</h3>
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Режим игры:</div>
+        <div style="display: flex; gap: 10px;">
+          <button id="mode-podkidnoy" class="option-btn selected" onclick="selectMode('podkidnoy')" style="flex: 1;">Подкидной</button>
+          <button id="mode-perevodnoy" class="option-btn" onclick="selectMode('perevodnoy')" style="flex: 1;">Переводной</button>
+        </div>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Колода:</div>
+        <div style="display: flex; gap: 10px;">
+          <button id="deck-36" class="option-btn selected" onclick="selectDeck(36)" style="flex: 1;">36 карт</button>
+          <button id="deck-24" class="option-btn" onclick="selectDeck(24)" style="flex: 1;">24 карты</button>
+        </div>
+      </div>
+      <div style="margin-bottom: 22px;">
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ставка (звезды):</div>
+        <div style="display: flex; gap: 8px;">
+          <button class="option-btn selected" onclick="selectStake(10, this)">10 ⭐</button>
+          <button class="option-btn" onclick="selectStake(25, this)">25 ⭐</button>
+          <button class="option-btn" onclick="selectStake(50, this)">50 ⭐</button>
+          <button class="option-btn" onclick="selectStake(100, this)">100 ⭐</button>
+        </div>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="closeCreateTableModal()">Отмена</button>
+        <button class="btn" style="flex: 1;" onclick="submitCreateTable()">Создать</button>
+      </div>
+    </div>
+  </div>
   <script>
     const BOT_USERNAME = "GOCardFoolbot";
 
@@ -454,7 +528,6 @@
     const urlParams = new URLSearchParams(window.location.search);
     const referrerId = urlParams.get('startapp') || null;
 
-    // Авторизация
     socket.emit('set_socket_user', telegramId);
     socket.emit('auth', {
       telegram_id: telegramId,
@@ -616,7 +689,6 @@
       });
     }
 
-    // Отображение столов в лобби
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
@@ -678,7 +750,6 @@
 
     function submitCreateTable() {
       closeCreateTableModal();
-      // Отправляем запросы на создание под всеми стандартными именами событий бэкенда
       socket.emit('create_table', {
         mode: selectedGameMode,
         deckSize: selectedDeckSize,
@@ -695,7 +766,6 @@
       });
     }
 
-    // Обработка успешного создания стола от сервера
     socket.on('table_created', handleTableCreated);
     socket.on('room_created', handleTableCreated);
     socket.on('game_created', handleTableCreated);
@@ -709,7 +779,6 @@
       }
     }
 
-    // Укрепленный метод входа в стол и комнату
     function joinTable(tableId) {
       if (!tableId) return;
       currentGameId = tableId;
@@ -746,7 +815,6 @@
       socket.emit('ready', { gameId: currentGameId, telegram_id: telegramId });
     }
 
-    // Синхронизация состояния игры
     socket.on('game_state', (state) => {
       if (!state) return;
       currentGameId = state.gameId || state.id || currentGameId;
