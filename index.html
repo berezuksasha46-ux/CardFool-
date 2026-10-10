@@ -22,22 +22,22 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 90px; }
+    body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 90px; overflow-x: hidden; }
 
-    .view { display: none; padding: 16px; }
+    .view { display: none; padding: 14px; }
     .view.active { display: block; }
 
     .btn {
       background: var(--accent-gold-gradient);
-      color: #000; border: none; padding: 14px 28px;
-      font-weight: bold; font-size: 16px; border-radius: 14px; cursor: pointer;
-      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
+      color: #000; border: none; padding: 12px 24px;
+      font-weight: bold; font-size: 15px; border-radius: 12px; cursor: pointer;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
     }
     .btn:active { transform: scale(0.97); }
     .btn-secondary { background: #23163d; color: #fff; border: 1px solid var(--border-color); box-shadow: none; }
 
     .card-box, .table-card {
-      background: var(--bg-card); border-radius: 16px; padding: 18px;
+      background: var(--bg-card); border-radius: 16px; padding: 16px;
       margin-bottom: 14px; border: 1px solid var(--border-color);
     }
     .table-card { display: flex; justify-content: space-between; align-items: center; }
@@ -63,50 +63,50 @@
 
     .poker-table {
       background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%);
-      border: 2px solid #2d5a3c; border-radius: 20px; padding: 14px;
-      min-height: 310px; display: flex; flex-direction: column; justify-content: space-between;
-      position: relative; overflow: hidden;
+      border: 2px solid #2d5a3c; border-radius: 18px; padding: 12px;
+      min-height: 290px; display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; overflow: hidden; width: 100%;
     }
 
-    /* Реалистичные карты в руке (крупные, объемные с тенью) */
+    /* Карты в руке: аккуратные, с объемом и без вылетов */
     .card-item {
-      width: 70px; height: 105px; background: linear-gradient(145deg, #ffffff, #f0f0f0); color: #111;
+      width: 62px; height: 92px; background: linear-gradient(145deg, #ffffff, #f0f0f0); color: #111;
       border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;
-      padding: 6px; font-weight: bold; font-size: 15px; 
-      box-shadow: 0 8px 20px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.8);
+      padding: 5px; font-weight: bold; font-size: 14px; 
+      box-shadow: 0 6px 15px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.9);
       cursor: pointer; border: 2px solid rgba(0,0,0,0.1); transition: transform 0.2s, border-color 0.2s;
       user-select: none; flex-shrink: 0;
     }
     .card-item.red { color: var(--danger); }
-    .card-item.selected { transform: translateY(-16px) scale(1.05); border-color: var(--accent-gold); box-shadow: 0 12px 25px rgba(245,158,11,0.4); }
+    .card-item.selected { transform: translateY(-12px) scale(1.04); border-color: var(--accent-gold); box-shadow: 0 10px 20px rgba(245,158,11,0.4); }
 
-    /* Уменьшенные карты на игровом столе */
+    /* Уменьшенные карты на игровом столе, чтобы не обрезались */
     .table-card-item {
-      width: 52px; height: 78px; background: #ffffff; color: #111;
+      width: 48px; height: 70px; background: #ffffff; color: #111;
       border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between;
-      padding: 4px; font-weight: bold; font-size: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      padding: 3px; font-weight: bold; font-size: 11px; box-shadow: 0 3px 8px rgba(0,0,0,0.4);
       border: 1px solid #ccc; user-select: none;
     }
     .table-card-item.red { color: var(--danger); }
 
-    .card-pair { position: relative; width: 60px; height: 88px; }
-    .card-pair .defend-card { position: absolute; top: 10px; left: 10px; z-index: 2; }
+    .card-pair { position: relative; width: 56px; height: 82px; margin: 4px; }
+    .card-pair .defend-card { position: absolute; top: 8px; left: 8px; z-index: 2; }
 
-    /* Визуальная колода с козырем сбоку */
+    /* Колода с козырем сбоку */
     .deck-side-container {
-      position: absolute; right: 12px; top: 12px;
+      position: absolute; right: 10px; top: 10px;
       display: flex; align-items: center; gap: 4px;
-      background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.1); font-size: 12px;
+      background: rgba(0,0,0,0.35); padding: 4px 8px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1); font-size: 11px; z-index: 5;
     }
     .deck-stack {
-      width: 32px; height: 46px; background: #23163d; border-radius: 4px; border: 1px solid var(--accent-gold);
-      position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      width: 28px; height: 40px; background: #23163d; border-radius: 4px; border: 1px solid var(--accent-gold);
+      position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
     }
     .trump-preview {
-      position: absolute; bottom: -4px; right: -8px; width: 28px; height: 40px; background: #fff; border-radius: 3px;
-      display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.4); border: 1px solid #999;
+      position: absolute; bottom: -3px; right: -6px; width: 24px; height: 34px; background: #fff; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4); border: 1px solid #999;
     }
 
     .modal {
@@ -120,7 +120,7 @@
   </style>
 </head>
 <body>
-  <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
+  <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
       <div>
@@ -159,11 +159,11 @@
   </div>
 
   <div id="game-view" class="view">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <div id="opponent-avatar" class="avatar-container" style="width: 32px; height: 32px; font-size: 12px;">O</div>
         <div>
-          <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Ожидание соперника...</div>
+          <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Соперник</div>
           <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
         </div>
       </div>
@@ -173,7 +173,7 @@
       <!-- Колода и козырь сбоку -->
       <div class="deck-side-container">
         <div style="text-align: right; line-height: 1.1;">
-          <div style="font-size: 10px; color: var(--text-muted);">Колода</div>
+          <div style="font-size: 9px; color: var(--text-muted);">Колода</div>
           <div style="font-weight: bold;" id="deck-count">36</div>
         </div>
         <div class="deck-stack">
@@ -181,18 +181,19 @@
         </div>
       </div>
 
-      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 15px; color: var(--accent-gold); margin-top: 4px;">Ожидание второго игрока...</div>
-      <div id="table-cards-slot" style="display: flex; gap: 14px; min-height: 110px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 10px 0;"></div>
+      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold); margin-top: 2px;">Ожидание игрока...</div>
       
-      <!-- Увеличенные кнопки Бито / Взять подняты выше -->
-      <div style="display: flex; gap: 16px; justify-content: center; margin-bottom: 8px;">
-        <button id="action-btn-primary" class="btn" style="display: none; min-width: 130px;" onclick="handleGameAction('bito')">Бито</button>
-        <button id="action-btn-secondary" class="btn btn-secondary" style="display: none; min-width: 130px;" onclick="handleGameAction('take')">Взять</button>
+      <div id="table-cards-slot" style="display: flex; gap: 8px; min-height: 100px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 6px 0;"></div>
+      
+      <!-- Кнопки Бито / Взять по очереди по центру под картами -->
+      <div style="display: flex; justify-content: center; margin-bottom: 4px; min-height: 48px;">
+        <button id="action-btn-bito" class="btn" style="display: none; min-width: 140px; padding: 10px 20px;" onclick="handleGameAction('bito')">Бито</button>
+        <button id="action-btn-take" class="btn btn-secondary" style="display: none; min-width: 140px; padding: 10px 20px; border-color: var(--accent-gold);" onclick="handleGameAction('take')">Взять</button>
       </div>
     </div>
 
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 14px; margin-bottom: 6px;">Ваши карты:</div>
-    <div id="my-hand-container" style="display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; min-height: 125px;"></div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 4px;">Ваши карты:</div>
+    <div id="my-hand-container" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 4px; min-height: 115px; width: 100%;"></div>
   </div>
 
   <div id="leaderboard-view" class="view">
@@ -282,8 +283,6 @@
   </div>
 
   <script>
-    const BOT_USERNAME = "GOCardFoolbot";
-
     let tg = window.Telegram?.WebApp;
     if (tg && tg.expand) { tg.expand(); } 
     else { tg = { initDataUnsafe: { user: { id: Math.floor(Math.random() * 1000000), username: "User", first_name: "Игрок" } } }; }
@@ -296,6 +295,8 @@
     let currentGameId = null;
     let myHandCards = [];
     let isMyTurnFlag = false;
+    let isMyAttackTurn = false;
+    let tableHasCards = false;
     let selectedCardIndex = null;
 
     const initDataUnsafe = tg.initDataUnsafe || {};
@@ -396,6 +397,8 @@
       trumpView.innerText = trumpSuit;
       trumpView.style.color = ['♥', '♦'].includes(trumpSuit) ? '#ef4444' : '#111';
 
+      tableHasCards = (state.tableCards || []).length > 0;
+
       const tableSlot = document.getElementById('table-cards-slot');
       if (tableSlot) {
         tableSlot.innerHTML = '';
@@ -405,18 +408,19 @@
           if (pair.attack) {
             const attCard = document.createElement('div');
             attCard.className = `table-card-item ${['♥','♦'].includes(pair.attack.suit) ? 'red' : ''}`;
-            attCard.innerHTML = `<span>${pair.attack.rank}</span><span style="font-size:16px; text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span>`;
+            attCard.innerHTML = `<span>${pair.attack.rank}</span><span style="font-size:14px; text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span>`;
             pairDiv.appendChild(attCard);
           }
           if (pair.defend) {
             const defCard = document.createElement('div');
             defCard.className = `table-card-item defend-card ${['♥','♦'].includes(pair.defend.suit) ? 'red' : ''}`;
-            defCard.innerHTML = `<span>${pair.defend.rank}</span><span style="font-size:16px; text-align:center;">${pair.defend.suit}</span><span style="transform: rotate(180deg);">${pair.defend.rank}</span>`;
+            defCard.innerHTML = `<span>${pair.defend.rank}</span><span style="font-size:14px; text-align:center;">${pair.defend.suit}</span><span style="transform: rotate(180deg);">${pair.defend.rank}</span>`;
             pairDiv.appendChild(defCard);
           }
           tableSlot.appendChild(pairDiv);
         });
       }
+      updateActionButtonsVisibility();
     });
 
     socket.on('your_hand', (hand) => { myHandCards = hand || []; renderMyHand(); });
@@ -429,7 +433,7 @@
         const cardEl = document.createElement('div');
         const isSelected = selectedCardIndex === index;
         cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''} ${isSelected ? 'selected' : ''}`;
-        cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:22px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
+        cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:20px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
         cardEl.onclick = () => {
           selectedCardIndex = index;
           renderMyHand();
@@ -439,14 +443,49 @@
       });
     }
 
+    socket.on('is_turn_data', (data) => {
+      isMyTurnFlag = data.isMyTurn;
+      isMyAttackTurn = data.isAttacker;
+      selectedCardIndex = null;
+      renderMyHand();
+
+      document.getElementById('turn-indicator').innerText = isMyTurnFlag ? (isMyAttackTurn ? 'Ваш ход (Атака)!' : 'Ваш ход (Защита)!') : 'Ход соперника...';
+      updateActionButtonsVisibility();
+    });
+
     socket.on('is_my_turn', (isMyTurn) => {
       isMyTurnFlag = isMyTurn;
+      isMyAttackTurn = isMyTurn; 
       selectedCardIndex = null;
       renderMyHand();
       document.getElementById('turn-indicator').innerText = isMyTurn ? 'Ваш ход!' : 'Ход соперника...';
-      document.getElementById('action-btn-primary').style.display = isMyTurn ? 'inline-block' : 'none';
-      document.getElementById('action-btn-secondary').style.display = isMyTurn ? 'inline-block' : 'none';
+      updateActionButtonsVisibility();
     });
+
+    function updateActionButtonsVisibility() {
+      const bitoBtn = document.getElementById('action-btn-bito');
+      const takeBtn = document.getElementById('action-btn-take');
+
+      if (!isMyTurnFlag) {
+        bitoBtn.style.display = 'none';
+        takeBtn.style.display = 'none';
+        return;
+      }
+
+      // Если игрок атакует и на столе есть карты, которые отбиты -> показывать «Бито»
+      if (isMyAttackTurn && tableHasCards) {
+        bitoBtn.style.display = 'inline-block';
+        takeBtn.style.display = 'none';
+      } 
+      // Если игрок защищается и на столе есть неотбитая карта -> показывать «Взять»
+      else if (!isMyAttackTurn && tableHasCards) {
+        bitoBtn.style.display = 'none';
+        takeBtn.style.display = 'inline-block';
+      } else {
+        bitoBtn.style.display = 'none';
+        takeBtn.style.display = 'none';
+      }
+    }
 
     function handleGameAction(actionType) { socket.emit('game_action', { gameId: currentGameId, action: actionType }); }
     socket.on('game_over', (data) => { alert(`🏆 Победитель: ${data.winnerName}! Приз: +${data.prize} ⭐`); switchTab('lobbies'); });
