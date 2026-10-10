@@ -55,7 +55,6 @@
     .nav-item.active { color: var(--accent-gold); }
     .nav-icon { font-size: 20px; margin-bottom: 2px; }
 
-    /* Стилизованные Telegram аватарки */
     .avatar-container {
       width: 42px; height: 42px; background: var(--accent-gold-gradient);
       color: #000; border-radius: 50%; display: flex; align-items: center;
@@ -158,7 +157,6 @@
     </div>
   </div>
 
-  <!-- Вкладка Столы -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="font-size: 22px;">Игровые столы</h2>
@@ -180,7 +178,6 @@
     <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div></div>
   </div>
 
-  <!-- Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     
@@ -207,7 +204,6 @@
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div></div>
   </div>
 
-  <!-- Вкладка Игровой процесс -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -241,13 +237,11 @@
     </div>
   </div>
 
-  <!-- Вкладка Лидеры -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров</h2>
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка лидеров...</div></div>
   </div>
   
-  <!-- Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     <div class="card-box" style="margin-bottom: 14px;">
@@ -316,21 +310,43 @@
 
   <script>
     let tg = window.Telegram?.WebApp;
-    if (tg && tg.expand) tg.expand();
+    if (tg) {
+      tg.ready();
+      if (tg.expand) tg.expand();
+    }
 
     const socket = io({ transports: ['websocket', 'polling'] });
     let currentUser = null, selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
     let currentGameId = null, isGamePlaying = false;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
-    const initDataUnsafe = tg?.initDataUnsafe || {};
-    const telegramId = String(initDataUnsafe.user?.id || 12345);
-    const username = initDataUnsafe.user?.username || 'User_' + telegramId;
-    const firstName = initDataUnsafe.user?.first_name || username.split('@')[0];
-    const photoUrl = initDataUnsafe.user?.photo_url || null;
+    function getTelegramUserData() {
+      const initData = tg?.initDataUnsafe?.user;
+      if (initData && initData.id) {
+        return {
+          telegram_id: String(initData.id),
+          username: initData.username || 'User_' + initData.id,
+          first_name: initData.first_name || (initData.username ? initData.username : 'Игрок'),
+          photo_url: initData.photo_url || null
+        };
+      }
+      return {
+        telegram_id: '1234567',
+        username: 'TestUser',
+        first_name: 'Тест Игрок',
+        photo_url: null
+      };
+    }
 
-    socket.emit('set_socket_user', telegramId);
-    socket.emit('auth', { telegram_id: telegramId, username, first_name: firstName, photo_url: photoUrl });
+    const userData = getTelegramUserData();
+
+    function authenticate() {
+      socket.emit('set_socket_user', userData.telegram_id);
+      socket.emit('auth', userData);
+    }
+
+    socket.on('connect', () => { authenticate(); });
+    authenticate();
 
     socket.on('auth_success', (user) => {
       currentUser = user;
@@ -385,7 +401,7 @@
       if (el) el.classList.add('active');
 
       if (tabId === 'lobbies') socket.emit('get_lobbies');
-      else if (tabId === 'friends') socket.emit('get_friends', { telegram_id: telegramId });
+      else if (tabId === 'friends') socket.emit('get_friends', { telegram_id: userData.telegram_id });
       else if (tabId === 'leaderboard') loadLeaderboard();
     }
 
@@ -468,7 +484,7 @@
     }
 
     function copyReferralLink() {
-      const refLink = `https://t.me/GOCardFoolbot/app?startapp=${currentUser?.unique_id || telegramId}`;
+      const refLink = `https://t.me/GOCardFoolbot/app?startapp=${currentUser?.unique_id || userData.telegram_id}`;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(refLink).then(() => alert('📋 Реферальная ссылка скопирована!')).catch(() => prompt('Скопируйте ссылку:', refLink));
       } else {
@@ -486,7 +502,7 @@
 
       if (data.tables && data.tables.length > 0) {
         data.tables.forEach(table => {
-          const isMy = String(table.hostId) === String(telegramId);
+          const isMy = String(table.hostId) === String(userData.telegram_id);
           if (isMy) {
             hasMyWaitingTable = true;
             currentGameId = table.id;
@@ -529,7 +545,7 @@
 
     function submitCreateTable() {
       closeCreateTableModal();
-      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: telegramId, first_name: firstName, photo_url: photoUrl });
+      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: userData.telegram_id, first_name: userData.first_name, photo_url: userData.photo_url });
     }
 
     socket.on('table_created', (tId) => {
@@ -549,7 +565,7 @@
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view')?.classList.add('active');
 
-      const opponent = (state.players || []).find(p => p.name !== firstName) || { name: 'Соперник', handCount: 0, photoUrl: null };
+      const opponent = (state.players || []).find(p => p.name !== userData.first_name) || { name: 'Соперник', handCount: 0, photoUrl: null };
       document.getElementById('opponent-name').innerText = opponent.name || 'Соперник';
       document.getElementById('opponent-card-count').innerText = opponent.handCount || 0;
       setAvatarElement('opponent-avatar', opponent.photoUrl, opponent.name);
@@ -681,17 +697,4 @@
         text.innerText = `Вы выиграли партию и получили +${data.prize} ⭐ (с учетом комиссии 10%)!`;
       } else {
         title.innerText = 'Поражение 😔';
-        text.innerText = 'К сожалению, вы проиграли эту партию.';
-      }
-      modal.classList.add('active');
-    });
-
-    function closeGameOverModal() {
-      document.getElementById('game-over-modal').classList.remove('active');
-      switchTab('lobbies', document.querySelector('.nav-item'));
-    }
-    
-    async function loadLeaderboard() {
-      try {
-        const res = await fetch('/api/leaderboard');
-        const list = await res.jso
+        text.innerText
