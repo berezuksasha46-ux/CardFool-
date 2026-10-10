@@ -70,7 +70,6 @@ async function dbGetOrCreateUser(telegramId, userData) {
       return inserted;
     } else if (error) throw error;
 
-    // ЖЕСТКОЕ ПРАВИЛО: Сохраняем зафиксированный unique_id навсегда
     const updatePayload = {};
     if (!data.unique_id) {
       data.unique_id = generateUniqueId();
@@ -163,7 +162,6 @@ io.on('connection', (socket) => {
   socket.on('set_socket_user', (telegram_id) => { socket._telegram_id = telegram_id; });
   socket.on('get_lobbies', () => { emitLobbies(socket); });
 
-  // Система друзей
   socket.on('get_friends', async (data) => {
     const tId = data?.telegram_id || currentUser?.telegram_id;
     if (!tId) return;
@@ -254,6 +252,7 @@ io.on('connection', (socket) => {
       emitLobbies();
     }
   });
+
   socket.on('create_table', async (config) => {
     if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
     if (!currentUser) return;
@@ -329,7 +328,6 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Списание ставок
     hostUser.stars_balance = Math.max(0, (hostUser.stars_balance || 0) - table.stake);
     currentUser.stars_balance = Math.max(0, (currentUser.stars_balance || 0) - table.stake);
 
@@ -384,7 +382,6 @@ io.on('connection', (socket) => {
     targetSocket.emit('lobbies_list', { tables: Array.from(tables.values()) });
   }
 });
-
 function broadcastGameState(game) {
   game.players.forEach((player, idx) => {
     const isAttacker = game.attackerIndex === idx;
