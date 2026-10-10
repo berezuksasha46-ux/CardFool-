@@ -7,9 +7,7 @@ const cors = require('cors');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: "*" }
-});
+const io = new Server(server, { cors: { origin: "*" } });
 
 app.use(cors());
 app.use(express.json());
@@ -30,7 +28,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 100,
+        stars_balance: 0, // Строго фиксированный баланс по умолчанию
         wins: 0,
         losses: 0,
         level: 1,
@@ -49,7 +47,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 100,
+        stars_balance: 0, // Строго 0 без скачков
         wins: 0,
         losses: 0,
         level: 1,
@@ -131,18 +129,11 @@ io.on('connection', (socket) => {
     emitLobbies();
   });
 
-  socket.on('set_socket_user', (telegram_id) => {
-    socket._telegram_id = telegram_id;
-  });
-
-  socket.on('get_lobbies', () => {
-    emitLobbies(socket);
-  });
+  socket.on('set_socket_user', (telegram_id) => { socket._telegram_id = telegram_id; });
+  socket.on('get_lobbies', () => { emitLobbies(socket); });
 
   socket.on('create_table', async (config) => {
-    if (!currentUser && socket._telegram_id) {
-      currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
-    }
+    if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
     if (!currentUser) return;
 
     const { mode, deckSize, stake } = config;
@@ -169,9 +160,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join_table', async (data) => {
-    if (!currentUser && socket._telegram_id) {
-      currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
-    }
+    if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
     if (!currentUser) return;
 
     const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
@@ -179,8 +168,7 @@ io.on('connection', (socket) => {
 
     if (activeGames.has(tableId)) {
       socket.join(tableId);
-      const game = activeGames.get(tableId);
-      broadcastGameState(game);
+      broadcastGameState(activeGames.get(tableId));
       return;
     }
 
@@ -200,17 +188,14 @@ io.on('connection', (socket) => {
     }
 
     table.status = 'playing';
-    const gameId = tableId;
-
     const deck = createDeck(table.deckSize);
     const trumpCard = deck[deck.length - 1];
     const p1Hand = deck.splice(0, 6);
     const p2Hand = deck.splice(0, 6);
-
     const hostUser = await dbGetOrCreateUser(table.hostId, {});
 
     const gameState = {
-      gameId,
+      gameId: tableId,
       tableId,
       mode: table.mode,
       stake: table.stake,
@@ -229,28 +214,24 @@ io.on('connection', (socket) => {
     for (let s of io.sockets.sockets.values()) {
       if (s._telegram_id == hostUser.telegram_id) {
         gameState.players[0].socketId = s.id;
-        s.join(gameId);
+        s.join(tableId);
       }
     }
 
-    socket.join(gameId);
-    activeGames.set(gameId, gameState);
+    socket.join(tableId);
+    activeGames.set(tableId, gameState);
     tables.delete(tableId);
     emitLobbies();
-
     broadcastGameState(gameState);
   });
 
   socket.on('game_action', async (data) => {
-    if (!currentUser && socket._telegram_id) {
-      currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
-    }
+    if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
     handleGameAction(socket, data);
   });
 
   async function emitLobbies(targetSocket = io) {
-    const list = Array.from(tables.values());
-    targetSocket.emit('lobbies_list', { tables: list });
+    targetSocket.emit('lobbies_list', { tables: Array.from(tables.values()) });
   }
 });
 
@@ -274,11 +255,11 @@ function broadcastGameState(game) {
 
   if (sock1) {
     sock1.emit('your_hand', p1.hand);
-    sock1.emit('is_my_turn', game.attackerIndex === 0);
+    sock1.emit('is_turn_data', { isMyTurn: game.attackerIndex === 0 || game.defenderIndex === 0, isAttacker: game.attackerIndex === 0 });
   }
   if (sock2) {
     sock2.emit('your_hand', p2.hand);
-    sock2.emit('is_my_turn', game.attackerIndex === 1);
+    sock2.emit('is_turn_data', { isMyTurn: game.attackerIndex === 1 || game.defenderIndex === 1, isAttacker: game.attackerIndex === 1 });
   }
 }
 
@@ -294,79 +275,61 @@ async function handleGameAction(socket, data) {
   const isDefender = game.defenderIndex === playerIdx;
   const card = game.players[playerIdx].hand[cardIndex];
 
-  // 1. Атака / Подкидывание
   if (action === 'play_card' && isAttacker) {
     if (!card) return;
-    
-    // Если на столе уже есть карты, проверяем возможность подкидывания
     if (game.tableCards.length > 0) {
       const ranksOnTable = new Set();
       game.tableCards.forEach(tc => {
         ranksOnTable.add(tc.attack.rank);
         if (tc.defend) ranksOnTable.add(tc.defend.rank);
       });
-      if (!ranksOnTable.has(card.rank)) {
-        socket.emit('error_message', 'Эту карту нельзя подкинуть!');
-        return;
-      }
+      if (!ranksOnTable.has(card.rank)) return;
     }
 
     game.players[playerIdx].hand.splice(cardIndex, 1);
     game.tableCards.push({ attack: card, defend: null });
+    const temp = game.attackerIndex;
+    game.attackerIndex = game.defenderIndex;
+    game.defenderIndex = temp;
 
     broadcastGameState(game);
-    checkWin(game);
   } 
-  // 2. Защита / Перевод
   else if (action === 'play_card' && isDefender) {
     if (!card) return;
     const activeAttack = game.tableCards.find(tc => !tc.defend);
     if (!activeAttack) return;
 
-    // Проверка на перевод (если режим переводной и на столе еще не начали отбиваться)
     const canTransfer = game.mode === 'perevodnoy' && game.tableCards.length === 1 && !activeAttack.defend && card.rank === activeAttack.attack.rank;
-
     if (canTransfer) {
       game.players[playerIdx].hand.splice(cardIndex, 1);
       game.tableCards.push({ attack: card, defend: null });
-      // Меняем роли местами (теперь бывший защитник сам становится защищающимся)
       const temp = game.attackerIndex;
       game.attackerIndex = game.defenderIndex;
       game.defenderIndex = temp;
-
       broadcastGameState(game);
       return;
     }
 
-    // Обычное отбивание карты
     const isValid = (card.suit === activeAttack.attack.suit && card.value > activeAttack.attack.value) ||
                     (card.suit === game.trumpCard.suit && activeAttack.attack.suit !== game.trumpCard.suit);
 
     if (isValid) {
       game.players[playerIdx].hand.splice(cardIndex, 1);
       activeAttack.defend = card;
-
-      broadcastGameState(game);
-      checkWin(game);
-    } else {
-      socket.emit('error_message', 'Этой картой побить нельзя!');
-    }
-  }
-  // 3. Бито (атакующий завершает ход, если всё отбито)
-  else if (action === 'bito' && isAttacker) {
-    if (game.tableCards.length > 0 && game.tableCards.every(tc => tc.defend)) {
-      game.tableCards = [];
-      refillHands(game);
-      // Меняем роли: защищавшийся теперь атакует первым
       const temp = game.attackerIndex;
       game.attackerIndex = game.defenderIndex;
       game.defenderIndex = temp;
-
       broadcastGameState(game);
-      checkWin(game);
     }
   }
-  // 4. Взять (защищающийся забирает карты)
+  else if (action === 'bito') {
+    if (game.tableCards.length > 0 && game.tableCards.every(tc => tc.defend)) {
+      game.tableCards = [];
+      while (game.players[0].hand.length < 6 && game.deck.length > 0) game.players[0].hand.push(game.deck.pop());
+      while (game.players[1].hand.length < 6 && game.deck.length > 0) game.players[1].hand.push(game.deck.pop());
+      broadcastGameState(game);
+    }
+  }
   else if (action === 'take' && isDefender) {
     const cardsToTake = [];
     game.tableCards.forEach(tc => {
@@ -375,61 +338,11 @@ async function handleGameAction(socket, data) {
     });
     game.players[playerIdx].hand.push(...cardsToTake);
     game.tableCards = [];
-    refillHands(game);
-
-    // После того как защитник взял, ход переходит к игроку слева от него (атакующий остается прежним или меняется право хода)
+    while (game.players[0].hand.length < 6 && game.deck.length > 0) game.players[0].hand.push(game.deck.pop());
+    while (game.players[1].hand.length < 6 && game.deck.length > 0) game.players[1].hand.push(game.deck.pop());
     broadcastGameState(game);
-    checkWin(game);
   }
 }
 
-function refillHands(game) {
-  while (game.players[game.attackerIndex].hand.length < 6 && game.deck.length > 0) {
-    game.players[game.attackerIndex].hand.push(game.deck.pop());
-  }
-  while (game.players[game.defenderIndex].hand.length < 6 && game.deck.length > 0) {
-    game.players[game.defenderIndex].hand.push(game.deck.pop());
-  }
-}
-
-async function checkWin(game) {
-  if (game.deck.length === 0) {
-    const p0Empty = game.players[0].hand.length === 0;
-    const p1Empty = game.players[1].hand.length === 0;
-
-    if (p0Empty || p1Empty) {
-      game.status = 'finished';
-      const winner = p0Empty ? game.players[0] : game.players[1];
-      const loser = p0Empty ? game.players[1] : game.players[0];
-
-      const winnerUser = await dbGetOrCreateUser(winner.id, {});
-      const loserUser = await dbGetOrCreateUser(loser.id, {});
-
-      const totalPot = game.stake * 2;
-      const prize = totalPot * 0.9; // 10% комиссия
-
-      await dbUpdateUser(winner.id, {
-        stars_balance: (winnerUser.stars_balance || 0) + Math.floor(prize),
-        wins: (winnerUser.wins || 0) + 1,
-        level: Math.floor(((winnerUser.wins || 0) + 1) / 5) + 1
-      });
-
-      await dbUpdateUser(loser.id, {
-        losses: (loserUser.losses || 0) + 1
-      });
-
-      io.to(game.gameId).emit('game_over', { winnerName: winner.name, prize: Math.floor(prize) });
-      activeGames.delete(game.gameId);
-    }
-  }
-}
-
-app.get('/api/leaderboard', async (req, res) => {
-  const lb = await dbGetLeaderboard();
-  res.json(lb);
-});
-
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`CardFool server running on port ${PORT}`);
-});
+app.get('/api/leaderboard', async (req, res) => { res.json(await dbGetLeaderboard()); });
+server.listen(3000, () => { console.log('Server running on port 3000'); });
