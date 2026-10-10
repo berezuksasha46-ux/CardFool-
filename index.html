@@ -560,11 +560,12 @@ tg.expand();
 
     // Авторизация
     const initDataUnsafe = tg.initDataUnsafe || {};
-    const telegramId = initDataUnsafe.user?.id || Math.floor(Math.random() * 1000000);
-    const username = initDataUnsafe.user?.username || 'User_' + telegramId;
-    const firstName = initDataUnsafe.user?.first_name || 'Игрок';
-    const urlParams = new URLSearchParams(window.location.search);
-    const referrerId = urlParams.get('startapp') || null;
+const telegramId = initDataUnsafe.user?.id || Math.floor(Math.random() * 1000000);
+const username = initDataUnsafe.user?.username || 'User_' + telegramId;
+const firstName = initDataUnsafe.user?.first_name || 'Игрок';
+const urlParams = new URLSearchParams(window.location.search);
+const referrerId = urlParams.get('startapp') || null;
+
 
     socket.emit('set_socket_user', telegramId);
     socket.emit('auth', {
