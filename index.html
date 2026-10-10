@@ -546,37 +546,7 @@
 
   </script>
 
-   const tg = window.Telegram.WebApp;
-tg.expand();
-
-
-    const socket = io();
-    let currentUser = null;
-    let selectedGameMode = 'podkidnoy';
-    let selectedDeckSize = 36;
-    let selectedStake = 10;
-    let currentGameId = null;
-    let myHandCards = [];
-    let isMyTurnFlag = false;
-
-    // Авторизация
-    const initDataUnsafe = tg.initDataUnsafe || {};
-const telegramId = initDataUnsafe.user?.id || Math.floor(Math.random() * 1000000);
-const username = initDataUnsafe.user?.username || 'User_' + telegramId;
-const firstName = initDataUnsafe.user?.first_name || 'Игрок';
-const urlParams = new URLSearchParams(window.location.search);
-const referrerId = urlParams.get('startapp') || null;
-
-
-    socket.emit('set_socket_user', telegramId);
-    socket.emit('auth', {
-      telegram_id: telegramId,
-      username: username,
-      first_name: firstName,
-      referrer_id: referrerId
-    });
-
-    socket.on('auth_success', (user) => {
+socket.on('auth_success', (user) => {
       currentUser = user;
       document.getElementById('header-stars').innerText = user.stars_balance;
       document.getElementById('header-level').innerText = user.level || 1;
