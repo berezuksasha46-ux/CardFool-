@@ -6,7 +6,8 @@
   <title>CardFool - 1v1 Дурак</title>
   
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Надежная публичная CDN-ссылка на Socket.io клиент, чтобы он гарантированно загружался -->
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
   
   <style>
     :root {
@@ -59,7 +60,6 @@
       color: #000; border-radius: 50%; display: flex; align-items: center;
       justify-content: center; font-weight: bold; overflow: hidden; flex-shrink: 0;
     }
-    .avatar-container img { width: 100%; height: 100%; object-fit: cover; }
 
     .poker-table {
       background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%);
@@ -130,7 +130,6 @@
         <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="header-unique-id">------</span> | Ур. <span id="header-level">1</span></div>
       </div>
     </div>
-    <!-- Возвращен недостающий id для баланса звезд -->
     <div style="background: rgba(251, 191, 36, 0.12); padding: 6px 14px; border-radius: 20px; color: var(--accent-gold); font-weight: bold;">
       ⭐ <span id="header-stars">0</span>
     </div>
@@ -355,7 +354,7 @@
 
     function submitCreateTable() {
       closeCreateTableModal();
-      socket.emit('create_table', { mode: selectedGameMode, deckSize: selectedDeckSize, stake: selectedStake, telegram_id: telegramId, first_name: firstName });
+      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: telegramId, first_name: firstName });
     }
     socket.on('table_created', (tId) => joinTable(tId));
     function joinTable(tId) {
@@ -447,4 +446,5 @@
       const container = document.getElementById('leaderboard-list');
       container.innerHTML = '';
       list.forEach((u, i) => {
-        container.innerHTML += `<div class="table-card"><span>#${i+1} ${u.first_name || u.username} (ID: ${u.unique_id || '---'})</span><span style="color:var(--accent-gold);">⭐
+        container.innerHTML += `<div class="table-card"><span>#${i+1} ${u.first_name || u.username} (ID: ${u.unique_id || '---'})</span><span style="color:var(--accent-gold);">⭐ ${u.stars_balance}</span></div>`;
+     
