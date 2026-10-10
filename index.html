@@ -529,6 +529,7 @@
     let myHandCards = [];
     let isMyTurnFlag = false;
     let selectedCardIndex = null;
+    let isReady = false;
 
     const initDataUnsafe = tg.initDataUnsafe || {};
     const telegramId = initDataUnsafe.user?.id || Math.floor(Math.random() * 1000000);
@@ -660,7 +661,6 @@
       });
     });
 
-    // Ежедневный бонус с ровным начислением +10 ⭐
     function claimDailyBonus() {
       socket.emit('claim_daily', { telegram_id: telegramId });
     }
@@ -672,8 +672,6 @@
           currentUser.stars_balance = data.stars_balance;
         } else if (data.new_balance !== undefined) {
           currentUser.stars_balance = data.new_balance;
-        } else {
-          currentUser.stars_balance = Number(currentUser.stars_balance || 0) + 10;
         }
         updateProfileUI(currentUser);
       }
@@ -705,7 +703,7 @@
       });
     }
 
-    // Отображение столов и исправление входа
+    // Список лобби
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
@@ -717,14 +715,15 @@
       }
 
       data.tables.forEach(table => {
-        const isMy = String(table.hostId) === String(data.currentUserId || telegramId);
+        const isMy = String(table.hostId) === String(telegramId);
         const card = document.createElement('div');
         card.className = isMy ? 'table-card my-table' : 'table-card';
 
         const badge = isMy ? '<div class="my-table-badge">Ваш стол</div>' : '';
         const mode = table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной';
+        
         const btn = isMy 
-          ? `<button class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="joinTable('${table.id}')">Войти в стол</button>` 
+          ? `<button class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="openGameRoom('${table.id}')">Вернуться в стол</button>` 
           : `<button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>`;
 
         card.innerHTML = `
@@ -765,45 +764,71 @@
       el.classList.add('selected');
     }
 
+    // Создание стола
     function submitCreateTable() {
       socket.emit('create_table', {
         mode: selectedGameMode,
         deckSize: selectedDeckSize,
-        stake: selectedStake
+        stake: selectedStake,
+        telegram_id: telegramId
       });
       closeCreateTableModal();
     }
 
+    // После создания мгновенно открывается игровая комната
     socket.on('table_created', (data) => {
-      socket.emit('get_lobbies');
       if (data && data.tableId) {
-        joinTable(data.tableId);
+        currentGameId = data.tableId;
+        openGameRoom(data.tableId);
+      } else {
+        socket.emit('get_lobbies');
       }
     });
 
     function joinTable(tableId) {
+      currentGameId = tableId;
       socket.emit('join_table', { tableId: tableId, telegram_id: telegramId });
-      socket.emit('join_room', tableId);
+      openGameRoom(tableId);
     }
 
-    // Логика игры «Дурак Онлайн»
-    socket.on('game_state', (state) => {
-      currentGameId = state.gameId || state.id;
+    function openGameRoom(tableId) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view').classList.add('active');
+      document.getElementById('turn-indicator').innerText = 'Ожидание игроков...';
+      showReadyButton();
+    }
 
-      const opponent = (state.players || []).find(p => String(p.id) !== String(telegramId)) || { name: 'Соперник', handCount: 6 };
-      document.getElementById('opponent-name').innerText = opponent.name || opponent.first_name || 'Соперник';
-      document.getElementById('opponent-card-count').innerText = opponent.handCount !== undefined ? opponent.handCount : 6;
-      document.getElementById('deck-count').innerText = state.deckCount !== undefined ? state.deckCount : 36;
+    function showReadyButton() {
+      const primaryBtn = document.getElementById('action-btn-primary');
+      if (primaryBtn) {
+        primaryBtn.style.display = 'inline-block';
+        primaryBtn.innerText = 'Готов!';
+        primaryBtn.onclick = sendReady;
+      }
+    }
+
+    function sendReady() {
+      isReady = true;
+      socket.emit('player_ready', { gameId: currentGameId, telegram_id: telegramId });
+      const primaryBtn = document.getElementById('action-btn-primary');
+      if (primaryBtn) {
+        primaryBtn.innerText = 'Ожидание соперника...';
+        primaryBtn.disabled = true;
+      }
+    }
+
+    // Обновление состояния матча
+    socket.on('game_state', (state) => {
+      currentGameId = state.gameId || state.id || currentGameId;
+
+      const opponent = (state.players || []).find(p => String(p.id) !== String(telegramId)) || { name: 'Ожидание второго игрока...', handCount: 0 };
+      document.getElementById('opponent-name').innerText = opponent.name || opponent.first_name || 'Ожидание...';
+      document.getElementById('opponent-card-count').innerText = opponent.handCount !== undefined ? opponent.handCount : 0;
+      document.getElementById('deck-count').innerText = state.deckCount !== undefined ? state.deckCount : (state.deckSize || 36);
       
       const trumpSuit = state.trumpCard?.suit || state.trumpSuit || '♠';
       document.getElementById('deck-card-view').innerText = trumpSuit;
-      if (['♥', '♦'].includes(trumpSuit)) {
-        document.getElementById('deck-card-view').style.color = '#dc2626';
-      } else {
-        document.getElementById('deck-card-view').style.color = '#ffffff';
-      }
+      document.getElementById('deck-card-view').style.color = ['♥', '♦'].includes(trumpSuit) ? '#dc2626' : '#ffffff';
 
       const tableSlot = document.getElementById('table-cards-slot');
       tableSlot.innerHTML = '';
@@ -870,13 +895,26 @@
       renderMyHand();
 
       const indicator = document.getElementById('turn-indicator');
+      const primaryBtn = document.getElementById('action-btn-primary');
+      const secondaryBtn = document.getElementById('action-btn-secondary');
+
       if (indicator) {
-        indicator.innerText = isMyTurn ? 'Ваш ход! Выберите карту' : 'Ход соперника...';
+        indicator.innerText = isMyTurn ? 'Ваш ход!' : 'Ход соперника...';
         indicator.style.color = isMyTurn ? 'var(--success)' : 'var(--accent-gold)';
       }
       
-      document.getElementById('action-btn-primary').style.display = isMyTurn ? 'inline-block' : 'none';
-      document.getElementById('action-btn-secondary').style.display = isMyTurn ? 'inline-block' : 'none';
+      if (primaryBtn) {
+        primaryBtn.disabled = false;
+        primaryBtn.style.display = isMyTurn ? 'inline-block' : 'none';
+        primaryBtn.innerText = 'Бито';
+        primaryBtn.onclick = () => handleGameAction('bito');
+      }
+
+      if (secondaryBtn) {
+        secondaryBtn.style.display = isMyTurn ? 'inline-block' : 'none';
+        secondaryBtn.innerText = 'Взять';
+        secondaryBtn.onclick = () => handleGameAction('take');
+      }
     });
 
     socket.on('timer_update', (sec) => {
@@ -891,7 +929,7 @@
     }
 
     socket.on('game_over', (data) => {
-      alert(` Игра окончена! Победитель: ${data.winnerName || 'Игрок'}. Выигрыш: +${data.prize || 10} ⭐`);
+      alert(`🏆 Игра окончена! Победитель: ${data.winnerName || 'Игрок'}. Выигрыш: +${data.prize || 10} ⭐`);
       switchTab('lobbies');
     });
 
@@ -924,5 +962,4 @@
       }
     }
   </script>
-</body>
-</html>
+
