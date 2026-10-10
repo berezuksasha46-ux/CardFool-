@@ -19,7 +19,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 let useMemoryFallback = false;
 const memoryUsers = new Map();
 const memoryFriends = new Map();
-const memoryRequests = new Map();
 
 function generateUniqueId() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -92,6 +91,20 @@ async function dbUpdateUser(telegramId, updateFields) {
     return dbUpdateUser(telegramId, updateFields);
   }
 }
+
+async function dbGetLeaderboard() {
+  if (useMemoryFallback) {
+    return Array.from(memoryUsers.values()).sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 50);
+  }
+  try {
+    const { data, error } = await supabase.from('users').select('telegram_id, unique_id, username, first_name, photo_url, stars_balance, wins, losses, level').order('wins', { ascending: false }).limit(50);
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    useMemoryFallback = true;
+    return dbGetLeaderboard();
+  }
+}
 const tables = new Map();
 const activeGames = new Map();
 
@@ -130,13 +143,11 @@ io.on('connection', (socket) => {
   socket.on('set_socket_user', (telegram_id) => { socket._telegram_id = telegram_id; });
   socket.on('get_lobbies', () => { emitLobbies(socket); });
 
-  // Получение друзей и входящих заявок
   socket.on('get_friends', async (data) => {
     const tId = data?.telegram_id || currentUser?.telegram_id;
     if (!tId) return;
 
     try {
-      // 1. Друзья
       const { data: relations } = await supabase.from('friends').select('friend_id').eq('user_id', tId);
       let friendsList = [];
       if (relations && relations.length > 0) {
@@ -145,7 +156,6 @@ io.on('connection', (socket) => {
         friendsList = fData || [];
       }
 
-      // 2. Входящие заявки
       const { data: reqs } = await supabase.from('friend_requests').select('sender_id').eq('receiver_id', tId).eq('status', 'pending');
       let requestsList = [];
       if (reqs && reqs.length > 0) {
@@ -160,7 +170,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Отправка запроса в друзья по Unique ID
   socket.on('add_friend_by_unique_id', async (data) => {
     const { uniqueId } = data;
     if (!currentUser || !uniqueId) return;
@@ -177,14 +186,12 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Проверяем, не друзья ли уже
       const { data: existingFriend } = await supabase.from('friends').select('*').eq('user_id', currentUser.telegram_id).eq('friend_id', targetUser.telegram_id).single();
       if (existingFriend) {
         socket.emit('error_message', 'Вы уже друзья с этим игроком!');
         return;
       }
 
-      // Создаем заявку
       await supabase.from('friend_requests').upsert([
         { sender_id: currentUser.telegram_id, receiver_id: targetUser.telegram_id, status: 'pending' }
       ], { onConflict: ['sender_id', 'receiver_id'] });
@@ -195,20 +202,17 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Ответ на заявку (принять / отклонить)
   socket.on('respond_friend_request', async (data) => {
-    const { senderId, action } = data; // action: 'accept' или 'reject'
+    const { senderId, action } = data;
     if (!currentUser || !senderId) return;
 
     try {
       if (action === 'accept') {
-        // Добавляем друг другу связь в таблицу friends
         await supabase.from('friends').insert([
           { user_id: currentUser.telegram_id, friend_id: senderId },
           { user_id: senderId, friend_id: currentUser.telegram_id }
         ]);
       }
-      // Удаляем заявку
       await supabase.from('friend_requests').delete().eq('sender_id', senderId).eq('receiver_id', currentUser.telegram_id);
 
       socket.emit('error_message', action === 'accept' ? 'Заявка принята!' : 'Заявка отклонена.');
@@ -269,8 +273,12 @@ io.on('connection', (socket) => {
     const table = tables.get(tableId);
 
     if (activeGames.has(tableId)) {
+      const existingGame = activeGames.get(tableId);
+      const player = existingGame.players.find(p => String(p.id) === String(currentUser.telegram_id));
+      if (player) player.socketId = socket.id;
+      
       socket.join(tableId);
-      broadcastGameState(activeGames.get(tableId));
+      broadcastGameState(existingGame);
       return;
     }
 
@@ -279,8 +287,9 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (table.hostId === currentUser.telegram_id) {
+    if (String(table.hostId) === String(currentUser.telegram_id)) {
       socket.join(tableId);
+      socket.emit('error_message', 'Ожидаем подключения второго игрока...');
       return;
     }
 
@@ -314,7 +323,7 @@ io.on('connection', (socket) => {
     };
 
     for (let s of io.sockets.sockets.values()) {
-      if (s._telegram_id == hostUser.telegram_id) {
+      if (String(s._telegram_id) === String(hostUser.telegram_id)) {
         gameState.players[0].socketId = s.id;
         s.join(tableId);
       }
