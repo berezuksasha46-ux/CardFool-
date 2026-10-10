@@ -767,7 +767,7 @@
 
     function joinTable(tableId) {
       currentGameId = tableId;
-      socket.emit('join_table', { tableId: tableId, telegram_id: telegramId });
+      socket.emit('join_table', { tableId: tableId, telegram_id: telegramId, first_name: firstName });
       socket.emit('join_room', tableId);
       socket.emit('join', { gameId: tableId, telegram_id: telegramId });
       openGameRoom(tableId);
