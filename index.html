@@ -22,9 +22,9 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 80px; overflow-x: hidden; }
+    body { background-color: var(--bg-main); color: var(--text-main); padding-bottom: 90px; overflow-x: hidden; }
 
-    .view { display: none; padding: 10px; }
+    .view { display: none; padding: 14px; }
     .view.active { display: block; }
 
     .btn {
@@ -36,107 +36,232 @@
     .btn:active { transform: scale(0.97); }
     .btn-secondary { background: #23163d; color: #fff; border: 1px solid var(--border-color); box-shadow: none; }
 
-    .table-card { display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 14px; border-radius: 12px; margin-bottom: 10px; }
-    .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(21, 11, 38, 0.98); display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid var(--border-color); z-index: 1000; }
+    .card-box, .table-card {
+      background: var(--bg-card); border-radius: 16px; padding: 16px;
+      margin-bottom: 14px; border: 1px solid var(--border-color);
+    }
+    .table-card { display: flex; justify-content: space-between; align-items: center; }
+    .table-card.my-table { border-color: var(--accent-gold); background: linear-gradient(135deg, rgba(21, 11, 38, 1) 0%, rgba(45, 27, 14, 0.4) 100%); }
+    .my-table-badge { font-size: 11px; background: rgba(251, 191, 36, 0.15); color: var(--accent-gold); padding: 3px 8px; border-radius: 6px; margin-bottom: 6px; display: inline-block; font-weight: bold; }
+
+    .nav-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(21, 11, 38, 0.98); backdrop-filter: blur(10px);
+      display: flex; justify-content: space-around; padding: 10px 0;
+      border-top: 1px solid var(--border-color); z-index: 1000;
+    }
     .nav-item { color: var(--text-muted); text-align: center; font-size: 11px; cursor: pointer; background: none; border: none; }
     .nav-item.active { color: var(--accent-gold); }
+    .nav-icon { font-size: 20px; margin-bottom: 2px; }
 
-    .avatar-container { width: 36px; height: 36px; background: var(--accent-gold-gradient); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .avatar-container {
+      width: 40px; height: 40px; background: var(--accent-gold-gradient);
+      color: #000; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-weight: bold; overflow: hidden; flex-shrink: 0;
+    }
 
-    /* Поле стола уменьшено по высоте для подтягивания карт вверх */
     .poker-table {
       background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%);
-      border: 2px solid #2d5a3c; border-radius: 16px; padding: 10px;
-      min-height: 230px; display: flex; flex-direction: column; justify-content: space-between;
+      border: 2px solid #2d5a3c; border-radius: 18px; padding: 12px;
+      min-height: 250px; display: flex; flex-direction: column; justify-content: space-between;
       position: relative; overflow: hidden; width: 100%;
     }
 
-    /* Карты игрока подняты выше */
     #my-hand-container {
       display: flex; justify-content: center; align-items: center;
-      padding: 5px 0 0 0; min-height: 110px; position: relative; margin-top: 2px;
+      padding: 10px 0; min-height: 115px; position: relative;
     }
     .card-item {
       width: 62px; height: 92px; background: linear-gradient(145deg, #ffffff, #f0f0f0); color: #111;
       border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;
-      padding: 4px; font-weight: bold; font-size: 13px; 
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer; border: 1px solid rgba(0,0,0,0.2);
-      position: relative; transition: transform 0.2s, z-index 0.2s; margin-left: -20px;
+      padding: 5px; font-weight: bold; font-size: 14px; 
+      box-shadow: 0 6px 15px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.9);
+      cursor: pointer; border: 2px solid rgba(0,0,0,0.1); user-select: none;
+      position: relative; transition: transform 0.2s, z-index 0.2s;
+      margin-left: -20px;
     }
     .card-item:first-child { margin-left: 0; }
-    .card-item:hover { z-index: 10; transform: translateY(-12px) scale(1.05); }
+    .card-item:hover, .card-item.selected { z-index: 10; transform: translateY(-14px) scale(1.05); border-color: var(--accent-gold); }
     .card-item.red { color: var(--danger); }
 
-    .table-card-item { width: 46px; height: 68px; background: #fff; color: #111; border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between; padding: 3px; font-size: 11px; font-weight: bold; border: 1px solid #ccc; }
+    .table-card-item {
+      width: 46px; height: 68px; background: #ffffff; color: #111;
+      border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between;
+      padding: 3px; font-weight: bold; font-size: 11px; box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      border: 1px solid #ccc; user-select: none;
+    }
     .table-card-item.red { color: var(--danger); }
     .card-pair { position: relative; width: 54px; height: 78px; margin: 3px; }
     .card-pair .defend-card { position: absolute; top: 8px; left: 8px; z-index: 2; }
 
-    .deck-side-container { position: absolute; right: 8px; top: 8px; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.35); padding: 4px 6px; border-radius: 8px; font-size: 11px; z-index: 5; }
-    .deck-stack { width: 26px; height: 38px; background: #23163d; border-radius: 4px; border: 1px solid var(--accent-gold); position: relative; }
-    .trump-preview { position: absolute; bottom: -3px; right: -6px; width: 22px; height: 32px; background: #fff; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 1px solid #999; }
+    .deck-side-container {
+      position: absolute; right: 10px; top: 10px;
+      display: flex; align-items: center; gap: 4px;
+      background: rgba(0,0,0,0.35); padding: 4px 8px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1); font-size: 11px; z-index: 5;
+    }
+    .deck-stack {
+      width: 26px; height: 38px; background: #23163d; border-radius: 4px; border: 1px solid var(--accent-gold);
+      position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    }
+    .trump-preview {
+      position: absolute; bottom: -3px; right: -6px; width: 22px; height: 32px; background: #fff; border-radius: 3px;
+      display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4); border: 1px solid #999;
+    }
+
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85); z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal.active { display: flex; }
+    .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 20px; padding: 22px; border: 1px solid var(--border-color); }
+    .option-btn { background: #1e1033; border: 1px solid var(--border-color); color: #fff; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-size: 13px; }
+    .option-btn.selected { background: var(--accent-gold-gradient); color: #000; font-weight: bold; border-color: transparent; }
   </style>
 </head>
 <body>
-  <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
-    <div style="display: flex; align-items: center; gap: 10px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
+    <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
       <div>
-        <div id="header-name" style="font-weight: bold; font-size: 14px;">Игрок</div>
-        <div style="font-size: 11px; color: var(--text-muted);">ID: <span id="header-unique-id">------</span></div>
+        <div id="header-name" style="font-weight: bold; font-size: 15px;">Игрок</div>
+        <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="header-unique-id">------</span> | Ур. <span id="header-level">1</span></div>
       </div>
     </div>
-    <div style="background: rgba(251, 191, 36, 0.12); padding: 4px 12px; border-radius: 16px; color: var(--accent-gold); font-weight: bold; font-size: 13px;">
+    <div style="background: rgba(251, 191, 36, 0.12); padding: 6px 14px; border-radius: 20px; color: var(--accent-gold); font-weight: bold;">
       ⭐ <span id="header-stars">0</span>
     </div>
   </div>
 
+  <!-- Вкладка Столы -->
   <div id="lobbies-view" class="view active">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <h2 style="font-size: 20px;">Столы</h2>
-      <button class="btn" style="padding: 8px 14px; font-size: 13px;" onclick="openCreateTableModal()">Создать стол</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h2 style="font-size: 22px;">Игровые столы</h2>
+      <button class="btn" style="padding: 10px 18px; font-size: 14px;" onclick="openCreateTableModal()">Создать стол</button>
     </div>
-    <div id="tables-container"></div>
+    <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div></div>
   </div>
 
+  <!-- Вкладка Друзья -->
+  <div id="friends-view" class="view">
+    <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
+    <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%); margin-bottom: 16px;">
+      <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">➕ Добавить в друзья по ID</div>
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <input type="text" id="friend-id-input" placeholder="Введите 6-значный ID" style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 14px;">
+        <button class="btn" style="padding: 10px 16px;" onclick="addFriendById()">Добавить</button>
+      </div>
+    </div>
+    <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
+      <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎁 Реферальная система</div>
+      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Приглашайте друзей по вашей личной ссылке (+10 ⭐).</div>
+      <button class="btn" style="width: 100%;" onclick="copyReferralLink()">Скопировать реферальную ссылку</button>
+    </div>
+    <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; margin-top: 20px;">Ваши друзья (<span id="friends-count">0</span>)</div>
+    <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div></div>
+  </div>
+
+  <!-- Вкладка Игровой процесс -->
   <div id="game-view" class="view">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <div id="opponent-avatar" class="avatar-container" style="width: 28px; height: 28px; font-size: 11px;">O</div>
+        <div id="opponent-avatar" class="avatar-container" style="width: 32px; height: 32px; font-size: 12px;">O</div>
         <div>
-          <div id="opponent-name" style="font-weight: bold; font-size: 13px;">Соперник</div>
-          <div style="font-size: 10px; color: var(--text-muted);">Карт: <span id="opponent-card-count">0</span></div>
+          <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Соперник</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
         </div>
       </div>
     </div>
 
-    <!-- Игровой стол -->
     <div class="poker-table">
       <div class="deck-side-container">
-        <div style="text-align: right; line-height: 1;">
-          <div style="font-size: 8px; color: var(--text-muted);">Колода</div>
+        <div style="text-align: right; line-height: 1.1;">
+          <div style="font-size: 9px; color: var(--text-muted);">Колода</div>
           <div style="font-weight: bold;" id="deck-count">36</div>
         </div>
         <div class="deck-stack"><div id="deck-card-view" class="trump-preview">♠</div></div>
       </div>
 
-      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 13px; color: var(--accent-gold);">Ожидание игрока...</div>
-      <div id="table-cards-slot" style="display: flex; gap: 6px; min-height: 80px; justify-content: center; align-items: center; flex-wrap: wrap;"></div>
+      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold); margin-top: 2px;">Ожидание игрока...</div>
+      <div id="table-cards-slot" style="display: flex; gap: 8px; min-height: 80px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 4px 0;"></div>
     </div>
 
-    <!-- Карты в руке (подняты ближе к столу) -->
-    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Ваши карты:</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px; margin-bottom: 2px;">Ваши карты:</div>
     <div id="my-hand-container"></div>
 
-    <!-- Кнопки Бито / Взять перемещены ПОД карты в самый низ -->
-    <div style="display: flex; justify-content: center; margin-top: 8px; min-height: 40px;">
+    <!-- Кнопки Бито / Взять СТРОГО ПОД картами внизу -->
+    <div style="display: flex; justify-content: center; margin-top: 10px; min-height: 42px;">
       <button id="action-btn-bito" class="btn" style="display: none; min-width: 150px; padding: 10px;" onclick="handleGameAction('bito')">Бито</button>
       <button id="action-btn-take" class="btn btn-secondary" style="display: none; min-width: 150px; padding: 10px; border-color: var(--accent-gold);" onclick="handleGameAction('take')">Взять</button>
     </div>
   </div>
 
+  <!-- Вкладка Лидеры -->
+  <div id="leaderboard-view" class="view">
+    <h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров</h2>
+    <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка лидеров...</div></div>
+  </div>
+  
+  <!-- Вкладка Профиль -->
+  <div id="profile-view" class="view">
+    <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
+    <div class="card-box" style="margin-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
+        <div id="profile-avatar" class="avatar-container" style="width: 50px; height: 50px; font-size: 20px;">U</div>
+        <div>
+          <div style="font-size: 18px; font-weight: bold;" id="profile-name">Игрок</div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Уникальный ID: <span id="profile-unique-id" style="color: var(--accent-gold); font-weight: bold;">------</span></div>
+        </div>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px;">
+      <div class="card-box" style="text-align: center; margin-bottom: 0;"><div style="font-size: 12px; color: var(--text-muted);">Победы</div><div style="font-size: 18px; font-weight: bold; color: var(--accent-gold);" id="stat-wins">0</div></div>
+      <div class="card-box" style="text-align: center; margin-bottom: 0;"><div style="font-size: 12px; color: var(--text-muted);">Поражения</div><div style="font-size: 18px; font-weight: bold; color: var(--accent-gold);" id="stat-losses">0</div></div>
+    </div>
+    <button class="btn" style="width: 100%; margin-bottom: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
+  </div>
+
+  <!-- Нижняя панель навигации со ВСЕМИ вкладками -->
   <div class="nav-bar">
-    <button class="nav-item active" onclick="switchTab('lobbies', this)"><div style="font-size: 18px;">🎲</div><div>Столы</div></button>
+    <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
+    <button class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><div>Друзья</div></button>
+    <button class="nav-item" onclick="switchTab('leaderboard', this)"><div class="nav-icon">🏆</div><div>Лидеры</div></button>
+    <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
+  </div>
+
+  <!-- Модальное окно создания стола (с колодой 24/36 и ставками) -->
+  <div id="create-table-modal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 16px; font-size: 20px;">Создать игровой стол</h3>
+      <div style="margin-bottom: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Режим игры:</div>
+        <div style="display: flex; gap: 8px;">
+          <button id="mode-podkidnoy" class="option-btn selected" onclick="selectMode('podkidnoy')" style="flex: 1;">Подкидной</button>
+          <button id="mode-perevodnoy" class="option-btn" onclick="selectMode('perevodnoy')" style="flex: 1;">Переводной</button>
+        </div>
+      </div>
+      <div style="margin-bottom: 12px;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Колода:</div>
+        <div style="display: flex; gap: 8px;">
+          <button id="deck-36" class="option-btn selected" onclick="selectDeck(36)" style="flex: 1;">36 карт</button>
+          <button id="deck-24" class="option-btn" onclick="selectDeck(24)" style="flex: 1;">24 карты</button>
+        </div>
+      </div>
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Ставка:</div>
+        <div style="display: flex; gap: 6px;">
+          <button class="option-btn selected" onclick="selectStake(10, this)" style="flex: 1;">10 ⭐</button>
+          <button class="option-btn" onclick="selectStake(25, this)" style="flex: 1;">25 ⭐</button>
+          <button class="option-btn" onclick="selectStake(50, this)" style="flex: 1;">50 ⭐</button>
+          <button class="option-btn" onclick="selectStake(100, this)" style="flex: 1;">100 ⭐</button>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="closeCreateTableModal()">Отмена</button>
+        <button class="btn" style="flex: 1;" onclick="submitCreateTable()">Создать</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -144,7 +269,8 @@
     if (tg && tg.expand) tg.expand();
 
     const socket = io({ transports: ['websocket', 'polling'] });
-    let currentUser = null, currentGameId = null, myHandCards = [], currentTrumpSuit = '♠';
+    let currentUser = null, selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10, currentGameId = null;
+    let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
     const initDataUnsafe = tg?.initDataUnsafe || {};
     const telegramId = initDataUnsafe.user?.id || 12345;
@@ -157,55 +283,130 @@
     socket.on('auth_success', (user) => {
       currentUser = user;
       document.getElementById('header-stars').innerText = user.stars_balance || 0;
+      document.getElementById('header-level').innerText = user.level || 1;
       document.getElementById('header-name').innerText = user.first_name || user.username;
       document.getElementById('header-unique-id').innerText = user.unique_id || '------';
+      document.getElementById('profile-name').innerText = user.first_name || user.username;
+      document.getElementById('profile-unique-id').innerText = user.unique_id || '------';
+      document.getElementById('stat-wins').innerText = user.wins || 0;
+      document.getElementById('stat-losses').innerText = user.losses || 0;
     });
+
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      const target = document.getElementById(tabId + '-view');
+      if (target) target.classList.add('active');
+      if (el) el.classList.add('active');
+
+      if (tabId === 'lobbies') socket.emit('get_lobbies');
+      else if (tabId === 'friends') socket.emit('get_friends', { telegram_id: telegramId });
+      else if (tabId === 'leaderboard') loadLeaderboard();
+    }
+
+    socket.on('friends_list', (data) => {
+      const container = document.getElementById('friends-list-container');
+      const countEl = document.getElementById('friends-count');
+      if (!container) return;
+      container.innerHTML = '';
+      const friends = data.friends || [];
+      if (countEl) countEl.innerText = friends.length;
+      if (friends.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 20px;">У вас пока нет друзей в игре.</div>';
+        return;
+      }
+      friends.forEach(f => {
+        container.innerHTML += `<div class="table-card"><div><div style="font-weight:bold;">${f.first_name || f.username}</div><div style="font-size:12px; color:var(--text-muted);">ID: ${f.unique_id || '---'}</div></div><div style="color:var(--success); font-weight:bold; font-size:13px;">В друзьях</div></div>`;
+      });
+    });
+
+    function addFriendById() {
+      const input = document.getElementById('friend-id-input');
+      if (!input) return;
+      const uId = input.value.trim();
+      if (!uId) { alert('Введите ID друга!'); return; }
+      socket.emit('add_friend_by_unique_id', { uniqueId: uId });
+      input.value = '';
+    }
+
+    function copyReferralLink() {
+      const refLink = `https://t.me/GOCardFoolbot/app?startapp=${currentUser?.unique_id || telegramId}`;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(refLink).then(() => alert('📋 Реферальная ссылка скопирована!')).catch(() => prompt('Скопируйте ссылку:', refLink));
+      } else {
+        prompt('Скопируйте ссылку:', refLink);
+      }
+    }
 
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
       container.innerHTML = '';
-      (data.tables || []).forEach(table => {
+      if (!data.tables || data.tables.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div>';
+        return;
+      }
+      data.tables.forEach(table => {
+        const isMy = String(table.hostId) === String(telegramId);
         container.innerHTML += `
-          <div class="table-card">
+          <div class="table-card ${isMy ? 'my-table' : ''}">
             <div>
-              <div style="font-weight: bold;">Стол от ${table.hostName}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">${table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной'} • ⭐ ${table.stake}</div>
+              ${isMy ? '<div class="my-table-badge">Ваш стол</div>' : ''}
+              <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName}</div>
+              <div style="font-size: 12px; color: var(--text-muted);">${table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной'} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
             </div>
-            <button class="btn" style="padding: 6px 12px; font-size: 12px;" onclick="joinTable('${table.id}')">Войти</button>
+            <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>
           </div>`;
       });
     });
 
+    function openCreateTableModal() { document.getElementById('create-table-modal')?.classList.add('active'); }
+    function closeCreateTableModal() { document.getElementById('create-table-modal')?.classList.remove('active'); }
+    function selectMode(m) { selectedGameMode = m; document.getElementById('mode-podkidnoy')?.classList.toggle('selected', m==='podkidnoy'); document.getElementById('mode-perevodnoy')?.classList.toggle('selected', m==='perevodnoy'); }
+    function selectDeck(s) { selectedDeckSize = s; document.getElementById('deck-36')?.classList.toggle('selected', s===36); document.getElementById('deck-24')?.classList.toggle('selected', s===24); }
+    function selectStake(st, el) { selectedStake = st; el.parentElement?.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected')); el.classList.add('selected'); }
+
+    function submitCreateTable() {
+      closeCreateTableModal();
+      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: telegramId, first_name: firstName });
+    }
+
+    socket.on('table_created', (tId) => joinTable(tId));
     function joinTable(tId) {
       currentGameId = tId;
       socket.emit('join_table', tId);
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.getElementById('game-view').classList.add('active');
+      document.getElementById('game-view')?.classList.add('active');
     }
 
     socket.on('game_state', (state) => {
       if (!state) return;
       const opponent = (state.players || []).find(p => p.name !== firstName) || { name: 'Соперник', handCount: 0 };
-      document.getElementById('opponent-name').innerText = opponent.name;
-      document.getElementById('opponent-card-count').innerText = opponent.handCount;
-      document.getElementById('deck-count').innerText = state.deckCount;
+      document.getElementById('opponent-name').innerText = opponent.name || 'Соперник';
+      document.getElementById('opponent-card-count').innerText = opponent.handCount || 0;
+      document.getElementById('deck-count').innerText = state.deckCount ?? 36;
       
       const trump = state.trumpCard || '♠';
       currentTrumpSuit = typeof trump === 'object' ? trump.suit : trump;
       const trumpView = document.getElementById('deck-card-view');
-      trumpView.innerText = currentTrumpSuit;
-      trumpView.style.color = ['♥', '♦'].includes(currentTrumpSuit) ? '#ef4444' : '#111';
+      if (trumpView) {
+        trumpView.innerText = currentTrumpSuit;
+        trumpView.style.color = ['♥', '♦'].includes(currentTrumpSuit) ? '#ef4444' : '#111';
+      }
 
+      tableHasCards = (state.tableCards || []).length > 0;
       const tableSlot = document.getElementById('table-cards-slot');
-      tableSlot.innerHTML = '';
-      (state.tableCards || []).forEach(pair => {
-        let pairDiv = document.createElement('div');
-        pairDiv.className = 'card-pair';
-        if (pair.attack) pairDiv.innerHTML += `<div class="table-card-item ${['♥','♦'].includes(pair.attack.suit)?'red':''}"><span>${pair.attack.rank}</span><span style="text-align:center;">${pair.attack.suit}</span></div>`;
-        if (pair.defend) pairDiv.innerHTML += `<div class="table-card-item defend-card ${['♥','♦'].includes(pair.defend.suit)?'red':''}"><span>${pair.defend.rank}</span><span style="text-align:center;">${pair.defend.suit}</span></div>`;
-        tableSlot.appendChild(pairDiv);
-      });
+      if (tableSlot) {
+        tableSlot.innerHTML = '';
+        (state.tableCards || []).forEach(pair => {
+          let pairDiv = document.createElement('div');
+          pairDiv.className = 'card-pair';
+          if (pair.attack) pairDiv.innerHTML += `<div class="table-card-item ${['♥','♦'].includes(pair.attack.suit)?'red':''}"><span>${pair.attack.rank}</span><span style="text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span></div>`;
+          if (pair.defend) pairDiv.innerHTML += `<div class="table-card-item defend-card ${['♥','♦'].includes(pair.defend.suit)?'red':''}"><span>${pair.defend.rank}</span><span style="text-align:center;">${pair.defend.suit}</span><span style="transform: rotate(180deg);">${pair.defend.rank}</span></div>`;
+          tableSlot.appendChild(pairDiv);
+        });
+      }
+      updateActionButtonsVisibility();
     });
 
     socket.on('your_hand', (hand) => {
@@ -225,27 +426,43 @@
 
     function renderMyHand() {
       const container = document.getElementById('my-hand-container');
+      if (!container) return;
       container.innerHTML = '';
+      const totalCards = myHandCards.length;
       myHandCards.forEach((card, index) => {
         const cardEl = document.createElement('div');
         cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''}`;
-        const angle = (index - (myHandCards.length - 1) / 2) * 3;
+        const angle = (index - (totalCards - 1) / 2) * 3;
         cardEl.style.transform = `rotate(${angle}deg)`;
-        cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:18px; text-align:center;">${card.suit}</span>`;
+        cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:20px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
         cardEl.onclick = () => socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardIndex: index });
         container.appendChild(cardEl);
       });
     }
 
     socket.on('is_turn_data', (data) => {
-      document.getElementById('turn-indicator').innerText = data.isMyTurn ? (data.isAttacker ? 'Ваш ход (Атака)' : 'Ваш ход (Защита)') : 'Ход соперника...';
-      document.getElementById('action-btn-bito').style.display = (data.isMyTurn && data.isAttacker) ? 'inline-block' : 'none';
-      document.getElementById('action-btn-take').style.display = (data.isMyTurn && !data.isAttacker) ? 'inline-block' : 'none';
+      isMyTurnFlag = data.isMyTurn;
+      isMyAttackTurn = data.isAttacker;
+      const indicator = document.getElementById('turn-indicator');
+      if (indicator) indicator.innerText = isMyTurnFlag ? (isMyAttackTurn ? 'Ваш ход (Атака)!' : 'Ваш ход (Защита)!') : 'Ход соперника...';
+      updateActionButtonsVisibility();
     });
 
-    function handleGameAction(actionType) {
-      socket.emit('game_action', { gameId: currentGameId, action: actionType });
-    }
-  </script>
-</body>
-</html>
+    function updateActionButtonsVisibility() {
+      const bitoBtn = document.getElementById('action-btn-bito');
+      const takeBtn = document.getElementById('action-btn-take');
+      if (!bitoBtn || !takeBtn) return;
+
+      if (!isMyTurnFlag) { 
+        bitoBtn.style.display = 'none'; 
+        takeBtn.style.display = 'none'; 
+        return; 
+      }
+      
+      if (isMyAttackTurn && tableHasCards) { 
+        bitoBtn.style.display = 'inline-block'; 
+        takeBtn.style.display = 'none'; 
+      } 
+      else if (!isMyAttackTurn && tableHasCards) { 
+        bitoBtn.style.display = 'none'; 
+        takeBtn.sty
