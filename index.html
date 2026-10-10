@@ -70,20 +70,42 @@
     }
 
     #my-hand-container {
-      display: flex; justify-content: center; align-items: center;
-      padding: 10px 0; min-height: 115px; position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding: 15px 10px 20px 10px;
+      min-height: 130px;
+      position: relative;
+      overflow: visible;
     }
     .card-item {
-      width: 62px; height: 92px; background: linear-gradient(145deg, #ffffff, #f0f0f0); color: #111;
-      border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;
-      padding: 5px; font-weight: bold; font-size: 14px; 
+      width: 68px;
+      height: 102px;
+      background: linear-gradient(145deg, #ffffff, #f0f0f0);
+      color: #111;
+      border-radius: 9px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 6px;
+      font-weight: bold;
+      font-size: 15px;
       box-shadow: 0 6px 15px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.9);
-      cursor: pointer; border: 2px solid rgba(0,0,0,0.1); user-select: none;
-      position: relative; transition: transform 0.2s, z-index 0.2s;
-      margin-left: -20px;
+      cursor: pointer;
+      border: 2px solid rgba(0,0,0,0.1);
+      user-select: none;
+      position: relative;
+      transition: transform 0.2s ease, z-index 0.2s;
+      margin-left: -12px;
+      flex-shrink: 0;
     }
     .card-item:first-child { margin-left: 0; }
-    .card-item:hover, .card-item.selected { z-index: 10; transform: translateY(-14px) scale(1.05); border-color: var(--accent-gold); }
+    .card-item:hover, .card-item.selected {
+      z-index: 100 !important;
+      transform: translateY(-18px) scale(1.08) !important;
+      border-color: var(--accent-gold);
+      box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4);
+    }
     .card-item.red { color: var(--danger); }
 
     .table-card-item {
@@ -143,7 +165,6 @@
       <button class="btn" style="padding: 10px 18px; font-size: 14px;" onclick="openCreateTableModal()">Создать стол</button>
     </div>
 
-    <!-- Блок если вы прямо сейчас ожидаете в столе -->
     <div id="my-waiting-table-box" style="display: none;" class="card-box">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -186,7 +207,7 @@
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div></div>
   </div>
 
-  <!-- Вкладка Игровой процесс (Во время игры выходить НЕЛЬЗЯ) -->
+  <!-- Вкладка Игровой процесс -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -328,7 +349,6 @@
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
-      // Если возврат в столы и идет игра -> сразу открываем игровой стол
       if (tabId === 'lobbies' && isGamePlaying) {
         document.getElementById('game-view')?.classList.add('active');
         if (el) el.classList.add('active');
@@ -412,7 +432,6 @@
       }
     }
 
-    // Отображение списка столов
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       const myWaitingBox = document.getElementById('my-waiting-table-box');
@@ -479,7 +498,6 @@
       socket.emit('join_table', tId);
     }
 
-    // Включается при старте/ходе игры (крестик пропадает, выйти нельзя)
     socket.on('game_state', (state) => {
       if (!state) return;
       isGamePlaying = true;
@@ -535,12 +553,29 @@
       if (!container) return;
       container.innerHTML = '';
       const totalCards = myHandCards.length;
+
       myHandCards.forEach((card, index) => {
         const cardEl = document.createElement('div');
         cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''}`;
-        const angle = (index - (totalCards - 1) / 2) * 3;
-        cardEl.style.transform = `rotate(${angle}deg)`;
-        cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:20px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
+        
+        const centerOffset = index - (totalCards - 1) / 2;
+        const angle = centerOffset * 2;
+        const translateY = Math.abs(centerOffset) * 2;
+
+        cardEl.style.transform = `translateY(${translateY}px) rotate(${angle}deg)`;
+        
+        cardEl.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; line-height: 1;">
+            <span>${card.rank}</span>
+            <span style="font-size: 11px;">${card.suit}</span>
+          </div>
+          <div style="font-size: 22px; text-align: center; margin: 2px 0;">${card.suit}</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; line-height: 1; transform: rotate(180deg);">
+            <span>${card.rank}</span>
+            <span style="font-size: 11px;">${card.suit}</span>
+          </div>
+        `;
+
         cardEl.onclick = () => socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardId: card.id });
         container.appendChild(cardEl);
       });
