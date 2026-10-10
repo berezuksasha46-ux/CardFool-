@@ -43,7 +43,6 @@
       margin-bottom: 14px; border: 1px solid var(--border-color);
     }
     .table-card { display: flex; justify-content: space-between; align-items: center; }
-    .table-card.my-table { border-color: var(--accent-gold); background: linear-gradient(135deg, rgba(21, 11, 38, 1) 0%, rgba(45, 27, 14, 0.4) 100%); }
     .my-table-badge { font-size: 11px; background: rgba(251, 191, 36, 0.15); color: var(--accent-gold); padding: 3px 8px; border-radius: 6px; margin-bottom: 6px; display: inline-block; font-weight: bold; }
 
     .nav-bar {
@@ -56,10 +55,12 @@
     .nav-item.active { color: var(--accent-gold); }
     .nav-icon { font-size: 20px; margin-bottom: 2px; }
 
+    /* Стилизованные Telegram аватарки */
     .avatar-container {
-      width: 40px; height: 40px; background: var(--accent-gold-gradient);
+      width: 42px; height: 42px; background: var(--accent-gold-gradient);
       color: #000; border-radius: 50%; display: flex; align-items: center;
       justify-content: center; font-weight: bold; overflow: hidden; flex-shrink: 0;
+      background-size: cover; background-position: center; border: 2px solid rgba(255, 255, 255, 0.1);
     }
 
     .poker-table {
@@ -210,7 +211,7 @@
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <div id="opponent-avatar" class="avatar-container" style="width: 32px; height: 32px; font-size: 12px;">O</div>
+        <div id="opponent-avatar" class="avatar-container" style="width: 36px; height: 36px; font-size: 14px;">O</div>
         <div>
           <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Соперник</div>
           <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
@@ -251,7 +252,7 @@
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     <div class="card-box" style="margin-bottom: 14px;">
       <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 12px;">
-        <div id="profile-avatar" class="avatar-container" style="width: 50px; height: 50px; font-size: 20px;">U</div>
+        <div id="profile-avatar" class="avatar-container" style="width: 54px; height: 54px; font-size: 22px;">U</div>
         <div>
           <div style="font-size: 18px; font-weight: bold;" id="profile-name">Игрок</div>
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Уникальный ID: <span id="profile-unique-id" style="color: var(--accent-gold); font-weight: bold;">------</span></div>
@@ -326,26 +327,43 @@
     const telegramId = String(initDataUnsafe.user?.id || 12345);
     const username = initDataUnsafe.user?.username || 'User_' + telegramId;
     const firstName = initDataUnsafe.user?.first_name || username.split('@')[0];
+    const photoUrl = initDataUnsafe.user?.photo_url || null;
 
     socket.emit('set_socket_user', telegramId);
-    socket.emit('auth', { telegram_id: telegramId, username, first_name: firstName });
+    socket.emit('auth', { telegram_id: telegramId, username, first_name: firstName, photo_url: photoUrl });
 
     socket.on('auth_success', (user) => {
       currentUser = user;
       updateProfileData(user);
     });
 
+    function setAvatarElement(elementId, photoUrl, fallbackText) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      if (photoUrl) {
+        el.style.backgroundImage = `url('${photoUrl}')`;
+        el.innerText = '';
+      } else {
+        el.style.backgroundImage = 'none';
+        el.innerText = (fallbackText || 'U').charAt(0).toUpperCase();
+      }
+    }
+
     function updateProfileData(user) {
       const uId = user.unique_id || '------';
+      const name = user.first_name || user.username;
+      
       document.getElementById('header-stars').innerText = user.stars_balance || 0;
       document.getElementById('header-level').innerText = user.level || 1;
-      document.getElementById('header-name').innerText = user.first_name || user.username;
+      document.getElementById('header-name').innerText = name;
       document.getElementById('header-unique-id').innerText = uId;
+      setAvatarElement('header-avatar', user.photo_url, name);
       
-      document.getElementById('profile-name').innerText = user.first_name || user.username;
+      document.getElementById('profile-name').innerText = name;
       document.getElementById('profile-unique-id').innerText = uId;
       document.getElementById('stat-wins').innerText = user.wins || 0;
       document.getElementById('stat-losses').innerText = user.losses || 0;
+      setAvatarElement('profile-avatar', user.photo_url, name);
       
       const totalGames = (user.wins || 0) + (user.losses || 0);
       const winrate = totalGames > 0 ? Math.round(((user.wins || 0) / totalGames) * 100) : 0;
@@ -387,7 +405,20 @@
         friendsContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 10px;">Список друзей пуст</div>';
       } else {
         friends.forEach(f => {
-          friendsContainer.innerHTML += `<div class="table-card"><div><div style="font-weight:bold;">${f.first_name || f.username}</div><div style="font-size:12px; color:var(--text-muted);">ID: ${f.unique_id || '---'}</div></div><div style="color:var(--success); font-weight:bold; font-size:13px;">В друзьях</div></div>`;
+          const avatarStyle = f.photo_url ? `style="background-image: url('${f.photo_url}');"` : '';
+          const avatarText = f.photo_url ? '' : (f.first_name || f.username).charAt(0).toUpperCase();
+
+          friendsContainer.innerHTML += `
+            <div class="table-card">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
+                <div>
+                  <div style="font-weight:bold;">${f.first_name || f.username}</div>
+                  <div style="font-size:12px; color:var(--text-muted);">ID: ${f.unique_id || '---'}</div>
+                </div>
+              </div>
+              <div style="color:var(--success); font-weight:bold; font-size:13px;">В друзьях</div>
+            </div>`;
         });
       }
 
@@ -401,11 +432,17 @@
         } else {
           requestsSection.style.display = 'block';
           requests.forEach(req => {
+            const avatarStyle = req.photo_url ? `style="background-image: url('${req.photo_url}');"` : '';
+            const avatarText = req.photo_url ? '' : (req.first_name || req.username).charAt(0).toUpperCase();
+
             requestsContainer.innerHTML += `
               <div class="table-card">
-                <div>
-                  <div style="font-weight:bold;">${req.first_name || req.username}</div>
-                  <div style="font-size:11px; color:var(--text-muted);">ID: ${req.unique_id || '---'}</div>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
+                  <div>
+                    <div style="font-weight:bold;">${req.first_name || req.username}</div>
+                    <div style="font-size:11px; color:var(--text-muted);">ID: ${req.unique_id || '---'}</div>
+                  </div>
                 </div>
                 <div style="display: flex; gap: 6px;">
                   <button class="btn-success" onclick="respondRequest('${req.telegram_id}', 'accept')">Принять</button>
@@ -492,7 +529,7 @@
 
     function submitCreateTable() {
       closeCreateTableModal();
-      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: telegramId, first_name: firstName });
+      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: telegramId, first_name: firstName, photo_url: photoUrl });
     }
 
     socket.on('table_created', (tId) => {
@@ -512,9 +549,11 @@
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view')?.classList.add('active');
 
-      const opponent = (state.players || []).find(p => p.name !== firstName) || { name: 'Соперник', handCount: 0 };
+      const opponent = (state.players || []).find(p => p.name !== firstName) || { name: 'Соперник', handCount: 0, photoUrl: null };
       document.getElementById('opponent-name').innerText = opponent.name || 'Соперник';
       document.getElementById('opponent-card-count').innerText = opponent.handCount || 0;
+      setAvatarElement('opponent-avatar', opponent.photoUrl, opponent.name);
+
       document.getElementById('deck-count').innerText = state.deckCount ?? 36;
       
       const trump = state.trumpCard || '♠';
@@ -655,24 +694,4 @@
     async function loadLeaderboard() {
       try {
         const res = await fetch('/api/leaderboard');
-        const list = await res.json();
-        const container = document.getElementById('leaderboard-list');
-        if (!container) return;
-        container.innerHTML = '';
-        if (list.length === 0) {
-          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Пока нет лидеров</div>';
-          return;
-        }
-        list.forEach((u, i) => {
-          container.innerHTML += `<div class="table-card"><span>#${i+1} ${u.first_name || u.username} (ID: ${u.unique_id || '---'})</span><span style="color:var(--accent-gold);">⭐ ${u.stars_balance}</span></div>`;
-        });
-      } catch (e) { console.error(e); }
-    }
-
-    function claimDailyBonus() { socket.emit('claim_daily'); }
-    socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
-    socket.on('daily_error', (d) => alert(d.message));
-    socket.on('error_message', (msg) => alert(msg));
-  </script>
-</body>
-</html>
+        const list = await res.jso
