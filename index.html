@@ -254,55 +254,84 @@
     </div>
   </div>
 
-  <script>
+   
+     <script>
+    // Защита от падений, если Telegram WebApp не загрузился
     let tg = window.Telegram?.WebApp;
-    if (tg && tg.expand) tg.expand();
-    else tg = { initDataUnsafe: { user: { id: 12345, username: "User", first_name: "Игрок" } } };
+    if (tg && tg.expand) {
+      tg.expand();
+    } else {
+      window.Telegram = { WebApp: { initDataUnsafe: { user: { id: 12345, username: "TestUser", first_name: "Тестер" } }, expand: () => {} } };
+    }
 
-    const socket = io();
+    // Подключение Socket.io с защитой от сбоев соединения
+    let socket;
+    try {
+      socket = io({
+        transports: ['websocket', 'polling'], // Разрешаем все типы транспорта для надежности
+        reconnectionAttempts: 5
+      });
+    } catch (e) {
+      console.error("Ошибка инициализации Socket.io:", e);
+    }
+
     let currentUser = null, selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10, currentGameId = null;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
-    const initDataUnsafe = tg.initDataUnsafe || {};
+    const initDataUnsafe = window.Telegram.WebApp.initDataUnsafe || {};
     const telegramId = initDataUnsafe.user?.id || 12345;
     const username = initDataUnsafe.user?.username || 'User_' + telegramId;
     const firstName = initDataUnsafe.user?.first_name || 'Игрок';
 
-    socket.emit('set_socket_user', telegramId);
-    socket.emit('auth', { telegram_id: telegramId, username, first_name: firstName });
+    if (socket) {
+      socket.emit('set_socket_user', telegramId);
+      socket.emit('auth', { telegram_id: telegramId, username, first_name: firstName });
 
-    socket.on('auth_success', (user) => { currentUser = user; updateProfileUI(user); });
+      socket.on('auth_success', (user) => { 
+        currentUser = user; 
+        updateProfileUI(user); 
+      });
+
+      socket.on('error_message', (msg) => { alert(msg); });
+    }
 
     function updateProfileUI(user) {
-      document.getElementById('header-stars').innerText = user.stars_balance || 0;
-      document.getElementById('header-level').innerText = user.level || 1;
-      document.getElementById('header-name').innerText = user.first_name || user.username;
-      document.getElementById('header-unique-id').innerText = user.unique_id || '------';
-      
-      document.getElementById('profile-name').innerText = user.first_name || user.username;
-      document.getElementById('profile-unique-id').innerText = user.unique_id || '------';
-      document.getElementById('stat-wins').innerText = user.wins || 0;
-      document.getElementById('stat-losses').innerText = user.losses || 0;
+      try {
+        document.getElementById('header-stars').innerText = user.stars_balance || 0;
+        document.getElementById('header-level').innerText = user.level || 1;
+        document.getElementById('header-name').innerText = user.first_name || user.username;
+        document.getElementById('header-unique-id').innerText = user.unique_id || '------';
+        
+        document.getElementById('profile-name').innerText = user.first_name || user.username;
+        document.getElementById('profile-unique-id').innerText = user.unique_id || '------';
+        document.getElementById('stat-wins').innerText = user.wins || 0;
+        document.getElementById('stat-losses').innerText = user.losses || 0;
+      } catch (err) {
+        console.warn("Ошибка обновления UI профиля:", err);
+      }
     }
 
     function switchTab(tabId, el) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById(tabId + '-view').classList.add('active');
+      
+      const targetView = document.getElementById(tabId + '-view');
+      if (targetView) targetView.classList.add('active');
       if (el) el.classList.add('active');
 
-      if (tabId === 'lobbies') socket.emit('get_lobbies');
-      else if (tabId === 'friends') socket.emit('get_friends', { telegram_id: telegramId });
-      else if (tabId === 'leaderboard') loadLeaderboard();
+      if (socket) {
+        if (tabId === 'lobbies') socket.emit('get_lobbies');
+        else if (tabId === 'friends') socket.emit('get_friends', { telegram_id: telegramId });
+      }
     }
 
-    socket.on('friends_list', (data) => {
+    socket?.on('friends_list', (data) => {
       const container = document.getElementById('friends-list-container');
       const countEl = document.getElementById('friends-count');
       if (!container) return;
       container.innerHTML = '';
       const friends = data.friends || [];
-      countEl.innerText = friends.length;
+      if (countEl) countEl.innerText = friends.length;
       if (friends.length === 0) {
         container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 20px;">У вас пока нет друзей в игре.</div>';
         return;
@@ -313,18 +342,24 @@
     });
 
     function addFriendById() {
-      const uId = document.getElementById('friend-id-input').value.trim();
+      const input = document.getElementById('friend-id-input');
+      if (!input) return;
+      const uId = input.value.trim();
       if (!uId) { alert('Введите ID друга!'); return; }
-      socket.emit('add_friend_by_unique_id', { uniqueId: uId });
-      document.getElementById('friend-id-input').value = '';
+      socket?.emit('add_friend_by_unique_id', { uniqueId: uId });
+      input.value = '';
     }
 
     function copyReferralLink() {
       const refLink = `https://t.me/GOCardFoolbot/app?startapp=${currentUser?.unique_id || telegramId}`;
-      navigator.clipboard.writeText(refLink).then(() => alert('📋 Реферальная ссылка скопирована!')).catch(() => prompt('Скопируйте ссылку:', refLink));
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(refLink).then(() => alert('📋 Реферальная ссылка скопирована!')).catch(() => prompt('Скопируйте ссылку:', refLink));
+      } else {
+        prompt('Скопируйте ссылку:', refLink);
+      }
     }
 
-    socket.on('lobbies_list', (data) => {
+    socket?.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
       container.innerHTML = '';
@@ -346,25 +381,49 @@
       });
     });
 
-    function openCreateTableModal() { document.getElementById('create-table-modal').classList.add('active'); }
-    function closeCreateTableModal() { document.getElementById('create-table-modal').classList.remove('active'); }
-    function selectMode(m) { selectedGameMode = m; document.getElementById('mode-podkidnoy').classList.toggle('selected', m==='podkidnoy'); document.getElementById('mode-perevodnoy').classList.toggle('selected', m==='perevodnoy'); }
-    function selectDeck(s) { selectedDeckSize = s; document.getElementById('deck-36').classList.toggle('selected', s===36); document.getElementById('deck-24').classList.toggle('selected', s===24); }
-    function selectStake(st, el) { selectedStake = st; el.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected')); el.classList.add('selected'); }
+    function openCreateTableModal() { 
+      const modal = document.getElementById('create-table-modal');
+      if (modal) modal.classList.add('active'); 
+    }
+    
+    function closeCreateTableModal() { 
+      const modal = document.getElementById('create-table-modal');
+      if (modal) modal.classList.remove('active'); 
+    }
+
+    function selectMode(m) { 
+      selectedGameMode = m; 
+      document.getElementById('mode-podkidnoy')?.classList.toggle('selected', m==='podkidnoy'); 
+      document.getElementById('mode-perevodnoy')?.classList.toggle('selected', m==='perevodnoy'); 
+    }
+
+    function selectDeck(s) { 
+      selectedDeckSize = s; 
+      document.getElementById('deck-36')?.classList.toggle('selected', s===36); 
+      document.getElementById('deck-24')?.classList.toggle('selected', s===24); 
+    }
+
+    function selectStake(st, el) { 
+      selectedStake = st; 
+      el.parentElement?.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected')); 
+      el.classList.add('selected'); 
+    }
 
     function submitCreateTable() {
       closeCreateTableModal();
-      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: telegramId, first_name: firstName });
-    }
-    socket.on('table_created', (tId) => joinTable(tId));
-    function joinTable(tId) {
-      currentGameId = tId;
-      socket.emit('join_table', tId);
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.getElementById('game-view').classList.add('active');
+      socket?.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: telegramId, first_name: firstName });
     }
 
-    socket.on('game_state', (state) => {
+    socket?.on('table_created', (tId) => joinTable(tId));
+
+    function joinTable(tId) {
+      currentGameId = tId;
+      socket?.emit('join_table', tId);
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('game-view')?.classList.add('active');
+    }
+
+    socket?.on('game_state', (state) => {
       if (!state) return;
       const opponent = (state.players || []).find(p => p.name !== firstName) || { name: 'Соперник', handCount: 0 };
       document.getElementById('opponent-name').innerText = opponent.name || 'Соперник';
@@ -374,23 +433,27 @@
       const trump = state.trumpCard || '♠';
       currentTrumpSuit = typeof trump === 'object' ? trump.suit : trump;
       const trumpView = document.getElementById('deck-card-view');
-      trumpView.innerText = currentTrumpSuit;
-      trumpView.style.color = ['♥', '♦'].includes(currentTrumpSuit) ? '#ef4444' : '#111';
+      if (trumpView) {
+        trumpView.innerText = currentTrumpSuit;
+        trumpView.style.color = ['♥', '♦'].includes(currentTrumpSuit) ? '#ef4444' : '#111';
+      }
 
       tableHasCards = (state.tableCards || []).length > 0;
       const tableSlot = document.getElementById('table-cards-slot');
-      tableSlot.innerHTML = '';
-      (state.tableCards || []).forEach(pair => {
-        let pairDiv = document.createElement('div');
-        pairDiv.className = 'card-pair';
-        if (pair.attack) pairDiv.innerHTML += `<div class="table-card-item ${['♥','♦'].includes(pair.attack.suit)?'red':''}"><span>${pair.attack.rank}</span><span style="text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span></div>`;
-        if (pair.defend) pairDiv.innerHTML += `<div class="table-card-item defend-card ${['♥','♦'].includes(pair.defend.suit)?'red':''}"><span>${pair.defend.rank}</span><span style="text-align:center;">${pair.defend.suit}</span><span style="transform: rotate(180deg);">${pair.defend.rank}</span></div>`;
-        tableSlot.appendChild(pairDiv);
-      });
+      if (tableSlot) {
+        tableSlot.innerHTML = '';
+        (state.tableCards || []).forEach(pair => {
+          let pairDiv = document.createElement('div');
+          pairDiv.className = 'card-pair';
+          if (pair.attack) pairDiv.innerHTML += `<div class="table-card-item ${['♥','♦'].includes(pair.attack.suit)?'red':''}"><span>${pair.attack.rank}</span><span style="text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span></div>`;
+          if (pair.defend) pairDiv.innerHTML += `<div class="table-card-item defend-card ${['♥','♦'].includes(pair.defend.suit)?'red':''}"><span>${pair.defend.rank}</span><span style="text-align:center;">${pair.defend.suit}</span><span style="transform: rotate(180deg);">${pair.defend.rank}</span></div>`;
+          tableSlot.appendChild(pairDiv);
+        });
+      }
       updateActionButtonsVisibility();
     });
 
-    socket.on('your_hand', (hand) => {
+    socket?.on('your_hand', (hand) => {
       myHandCards = hand || [];
       sortMyHand();
       renderMyHand();
@@ -407,6 +470,7 @@
 
     function renderMyHand() {
       const container = document.getElementById('my-hand-container');
+      if (!container) return;
       container.innerHTML = '';
       const totalCards = myHandCards.length;
       myHandCards.forEach((card, index) => {
@@ -415,36 +479,72 @@
         const angle = (index - (totalCards - 1) / 2) * 3;
         cardEl.style.transform = `rotate(${angle}deg)`;
         cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:20px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
-        cardEl.onclick = () => socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardIndex: index });
+        cardEl.onclick = () => socket?.emit('game_action', { gameId: currentGameId, action: 'play_card', cardIndex: index });
         container.appendChild(cardEl);
       });
     }
 
-    socket.on('is_turn_data', (data) => {
+    socket?.on('is_turn_data', (data) => {
       isMyTurnFlag = data.isMyTurn;
       isMyAttackTurn = data.isAttacker;
-      document.getElementById('turn-indicator').innerText = isMyTurnFlag ? (isMyAttackTurn ? 'Ваш ход (Атака)!' : 'Ваш ход (Защита)!') : 'Ход соперника...';
+      const indicator = document.getElementById('turn-indicator');
+      if (indicator) indicator.innerText = isMyTurnFlag ? (isMyAttackTurn ? 'Ваш ход (Атака)!' : 'Ваш ход (Защита)!') : 'Ход соперника...';
       updateActionButtonsVisibility();
     });
 
     function updateActionButtonsVisibility() {
       const bitoBtn = document.getElementById('action-btn-bito');
       const takeBtn = document.getElementById('action-btn-take');
-      if (!isMyTurnFlag) { bitoBtn.style.display = 'none'; takeBtn.style.display = 'none'; return; }
+      if (!bitoBtn || !takeBtn) return;
+
+      if (!isMyTurnFlag) { 
+        bitoBtn.style.display = 'none'; 
+        takeBtn.style.display = 'none'; 
+        return; 
+      }
       
-      if (isMyAttackTurn && tableHasCards) { bitoBtn.style.display = 'inline-block'; takeBtn.style.display = 'none'; } 
-      else if (!isMyAttackTurn && tableHasCards) { bitoBtn.style.display = 'none'; takeBtn.style.display = 'inline-block'; } 
-      else { bitoBtn.style.display = 'none'; takeBtn.style.display = 'none'; }
+      if (isMyAttackTurn && tableHasCards) { 
+        bitoBtn.style.display = 'inline-block'; 
+        takeBtn.style.display = 'none'; 
+      } 
+      else if (!isMyAttackTurn && tableHasCards) { 
+        bitoBtn.style.display = 'none'; 
+        takeBtn.style.display = 'inline-block'; 
+      } 
+      else { 
+        bitoBtn.style.display = 'none'; 
+        takeBtn.style.display = 'none'; 
+      }
     }
 
-    function handleGameAction(actionType) { socket.emit('game_action', { gameId: currentGameId, action: actionType }); }
-    socket.on('game_over', (d) => { alert(`🏆 Победитель: ${d.winnerName}!`); switchTab('lobbies'); });
+    function handleGameAction(actionType) { 
+      socket?.emit('game_action', { gameId: currentGameId, action: actionType }); 
+    }
+
+    socket?.on('game_over', (d) => { 
+      alert(`🏆 Победитель: ${d.winnerName}!`); 
+      switchTab('lobbies'); 
+    });
     
     async function loadLeaderboard() {
-      const res = await fetch('/api/leaderboard');
-      const list = await res.json();
-      const container = document.getElementById('leaderboard-list');
-      container.innerHTML = '';
-      list.forEach((u, i) => {
-        container.innerHTML += `<div class="table-card"><span>#${i+1} ${u.first_name || u.username} (ID: ${u.unique_id || '---'})</span><span style="color:var(--accent-gold);">⭐ ${u.stars_balance}</span></div>`;
-     
+      try {
+        const res = await fetch('/api/leaderboard');
+        const list = await res.json();
+        const container = document.getElementById('leaderboard-list');
+        if (!container) return;
+        container.innerHTML = '';
+        list.forEach((u, i) => {
+          container.innerHTML += `<div class="table-card"><span>#${i+1} ${u.first_name || u.username} (ID: ${u.unique_id || '---'})</span><span style="color:var(--accent-gold);">⭐ ${u.stars_balance}</span></div>`;
+        });
+      } catch (e) {
+        console.error("Ошибка загрузки лидерборда:", e);
+      }
+    }
+
+    function claimDailyBonus() { 
+      socket?.emit('claim_daily'); 
+    }
+
+    socket?.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
+    socket?.on('daily_error', (d) => alert(d.message));
+  </script>
