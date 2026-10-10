@@ -71,10 +71,22 @@
       width: 54px; height: 82px; background: #ffffff; color: #111;
       border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between;
       padding: 4px; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-      cursor: pointer; border: 2px solid transparent;
+      cursor: pointer; border: 2px solid transparent; user-select: none;
     }
     .card-item.red { color: var(--danger); }
     .card-item.selected { transform: translateY(-12px); border-color: var(--accent-gold); }
+
+    .card-pair {
+      position: relative;
+      width: 65px;
+      height: 95px;
+    }
+    .card-pair .defend-card {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 2;
+    }
 
     .progress-bar-bg { width: 100%; height: 8px; background: #23163d; border-radius: 4px; overflow: hidden; margin-top: 8px; margin-bottom: 6px; }
     .progress-bar-fill { height: 100%; background: var(--accent-gold-gradient); width: 0%; transition: width 0.4s ease; }
@@ -121,7 +133,7 @@
     </div>
   </div>
 
-  <!-- Вкладка Друзья и рефералы -->
+  <!-- Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
@@ -171,7 +183,7 @@
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted);">Загрузка...</div></div>
   </div>
 
-  <!-- Вкладка Профиль (полностью восстановлена со всеми статами и бонусами) -->
+  <!-- Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     <div class="card-box">
@@ -233,7 +245,7 @@
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
   </div>
 
-  <!-- Модальное окно создания стола (со всеми настройками) -->
+  <!-- Модальное окно создания стола -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px;">Создать игровой стол</h3>
@@ -281,6 +293,7 @@
     let currentGameId = null;
     let myHandCards = [];
     let isMyTurnFlag = false;
+    let selectedCardIndex = null;
 
     const initDataUnsafe = tg.initDataUnsafe || {};
     const telegramId = initDataUnsafe.user?.id || 12345;
@@ -499,6 +512,7 @@
       else socket.emit('get_lobbies');
     });
 
+    // Оптимизированный вход в стол без ошибок блокировки комнаты
     function joinTable(tableId) {
       if (!tableId) return;
       currentGameId = tableId;
@@ -506,18 +520,28 @@
       socket.emit('join_table', { tableId: tableId, gameId: tableId, telegram_id: telegramId, first_name: firstName });
       socket.emit('join_room', tableId);
       socket.emit('join', { gameId: tableId, tableId: tableId, telegram_id: telegramId });
+      socket.emit('get_game_state', { gameId: tableId, telegram_id: telegramId });
 
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view').classList.add('active');
       document.getElementById('turn-indicator').innerText = 'Подключено к столу. Ожидание соперника...';
+      
+      const primaryBtn = document.getElementById('action-btn-primary');
+      if (primaryBtn) {
+        primaryBtn.style.display = 'inline-block';
+        primaryBtn.disabled = false;
+        primaryBtn.innerText = 'Готов!';
+      }
     }
 
     function sendReady() {
       socket.emit('player_ready', { gameId: currentGameId, tableId: currentGameId, telegram_id: telegramId });
       socket.emit('ready', { gameId: currentGameId, tableId: currentGameId, telegram_id: telegramId });
       const btn = document.getElementById('action-btn-primary');
-      btn.innerText = 'Ожидание соперника...';
-      btn.disabled = true;
+      if (btn) {
+        btn.innerText = 'Ожидание соперника...';
+        btn.disabled = true;
+      }
     }
 
     socket.on('game_state', (state) => {
@@ -536,27 +560,100 @@
       const trumpView = document.getElementById('deck-card-view');
       trumpView.innerText = trumpSuit;
       trumpView.style.color = ['♥', '♦'].includes(trumpSuit) ? '#ef4444' : '#ffffff';
+
+      const tableSlot = document.getElementById('table-cards-slot');
+      if (tableSlot) {
+        tableSlot.innerHTML = '';
+        const cardsOnTable = state.tableCards || state.table || [];
+        cardsOnTable.forEach(pair => {
+          const pairDiv = document.createElement('div');
+          pairDiv.className = 'card-pair';
+          
+          if (pair.attack) {
+            const attCard = document.createElement('div');
+            attCard.className = `card-item ${['♥','♦'].includes(pair.attack.suit) ? 'red' : ''}`;
+            attCard.innerHTML = `<span>${pair.attack.rank}</span><span style="font-size:18px; text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span>`;
+            pairDiv.appendChild(attCard);
+          }
+          if (pair.defend) {
+            const defCard = document.createElement('div');
+            defCard.className = `card-item defend-card ${['♥','♦'].includes(pair.defend.suit) ? 'red' : ''}`;
+            defCard.innerHTML = `<span>${pair.defend.rank}</span><span style="font-size:18px; text-align:center;">${pair.defend.suit}</span><span style="transform: rotate(180deg);">${pair.defend.rank}</span>`;
+            pairDiv.appendChild(defCard);
+          }
+          tableSlot.appendChild(pairDiv);
+        });
+      }
     });
 
     socket.on('your_hand', (hand) => {
       myHandCards = hand || [];
+      renderMyHand();
+    });
+
+    function renderMyHand() {
       const container = document.getElementById('my-hand-container');
       if (!container) return;
       container.innerHTML = '';
       myHandCards.forEach((card, index) => {
         const cardEl = document.createElement('div');
-        cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''}`;
+        const isSelected = selectedCardIndex === index;
+        cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''} ${isSelected ? 'selected' : ''}`;
         cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:18px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
-        cardEl.onclick = () => {
-          socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardIndex: index, card: card, telegram_id: telegramId });
-        };
+        cardEl.onclick = () => onCardClick(index);
         container.appendChild(cardEl);
       });
-    });
+    }
+
+    function onCardClick(index) {
+      if (!isMyTurnFlag) return;
+      selectedCardIndex = index;
+      renderMyHand();
+
+      socket.emit('game_action', {
+        gameId: currentGameId,
+        action: 'play_card',
+        cardIndex: index,
+        card: myHandCards[index],
+        telegram_id: telegramId
+      });
+    }
 
     socket.on('is_my_turn', (isMyTurn) => {
       isMyTurnFlag = isMyTurn;
-      document.getElementById('turn-indicator').innerText = isMyTurn ? 'Ваш ход!' : 'Ход соперника...';
+      selectedCardIndex = null;
+      renderMyHand();
+
+      const indicator = document.getElementById('turn-indicator');
+      const primaryBtn = document.getElementById('action-btn-primary');
+      const secondaryBtn = document.getElementById('action-btn-secondary');
+
+      if (indicator) {
+        indicator.innerText = isMyTurn ? 'Ваш ход!' : 'Ход соперника...';
+        indicator.style.color = isMyTurn ? 'var(--success)' : 'var(--accent-gold)';
+      }
+      
+      if (primaryBtn) {
+        primaryBtn.disabled = false;
+        primaryBtn.style.display = isMyTurn ? 'inline-block' : 'none';
+        primaryBtn.innerText = 'Бито';
+        primaryBtn.onclick = () => handleGameAction('bito');
+      }
+
+      if (secondaryBtn) {
+        secondaryBtn.style.display = isMyTurn ? 'inline-block' : 'none';
+        secondaryBtn.innerText = 'Взять';
+        secondaryBtn.onclick = () => handleGameAction('take');
+      }
+    });
+
+    function handleGameAction(actionType) {
+      socket.emit('game_action', { gameId: currentGameId, action: actionType, telegram_id: telegramId });
+    }
+
+    socket.on('game_over', (data) => {
+      alert(`🏆 Игра окончена! Победитель: ${data.winnerName || 'Игрок'}. Выигрыш: +${data.prize || 10} ⭐`);
+      switchTab('lobbies');
     });
 
     async function loadLeaderboard() {
