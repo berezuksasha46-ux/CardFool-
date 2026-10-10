@@ -20,14 +20,16 @@ let useMemoryFallback = false;
 const memoryUsers = new Map();
 const memoryFriends = new Map();
 
-async function dbGetOrCreateUser(telegramId, userData) {
-  const uniqueId = Math.floor(100000 + Math.random() * 900000).toString();
+function generateUniqueId() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
+async function dbGetOrCreateUser(telegramId, userData) {
   if (useMemoryFallback) {
     if (!memoryUsers.has(telegramId)) {
       memoryUsers.set(telegramId, {
         telegram_id: telegramId,
-        unique_id: uniqueId,
+        unique_id: generateUniqueId(),
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
@@ -43,11 +45,11 @@ async function dbGetOrCreateUser(telegramId, userData) {
   }
 
   try {
-    const { data, error } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
+    let { data, error } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
     if (error && error.code === 'PGRST116') {
       const newUser = {
         telegram_id: telegramId,
-        unique_id: uniqueId,
+        unique_id: generateUniqueId(),
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
@@ -62,6 +64,14 @@ async function dbGetOrCreateUser(telegramId, userData) {
       if (insertErr) throw insertErr;
       return inserted;
     } else if (error) throw error;
+
+    // Если у пользователя еще нет unique_id, дозаписываем его
+    if (!data.unique_id) {
+      const uId = generateUniqueId();
+      const updated = await dbUpdateUser(telegramId, { unique_id: uId });
+      if (updated) data = updated;
+    }
+
     return data;
   } catch (err) {
     useMemoryFallback = true;
@@ -212,7 +222,9 @@ io.on('connection', (socket) => {
     if (!currentUser) return;
 
     const { mode, deckSize, stake } = config;
-    if (currentUser.stars_balance < stake) {
+    const currentStake = Number(stake) || 10;
+
+    if ((currentUser.stars_balance || 0) < currentStake) {
       socket.emit('error_message', 'Недостаточно звезд на балансе!');
       return;
     }
@@ -224,7 +236,7 @@ io.on('connection', (socket) => {
       hostName: currentUser.first_name || currentUser.username,
       mode: mode || 'podkidnoy',
       deckSize: Number(deckSize) || 36,
-      stake: Number(stake) || 10,
+      stake: currentStake,
       status: 'waiting'
     };
 
@@ -254,6 +266,11 @@ io.on('connection', (socket) => {
 
     if (table.hostId === currentUser.telegram_id) {
       socket.join(tableId);
+      return;
+    }
+
+    if ((currentUser.stars_balance || 0) < table.stake) {
+      socket.emit('error_message', 'Недостаточно звезд для входа!');
       return;
     }
 
