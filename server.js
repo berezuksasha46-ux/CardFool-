@@ -1,4 +1,3 @@
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -16,7 +15,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Supabase Configuration (с авто-фоллбеком в память при отсутствии ключей)
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://your-supabase-url.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'your-supabase-key';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -32,52 +30,38 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 10, // Стартовый бонус
+        stars_balance: 100,
         wins: 0,
         losses: 0,
         level: 1,
         last_daily_claim: null,
-        referrer_id: userData.referrer_id || null,
-        is_admin: false
+        referrer_id: userData.referrer_id || null
       });
     }
     return memoryUsers.get(telegramId);
   }
 
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('telegram_id', telegramId)
-      .single();
-
+    const { data, error } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
     if (error && error.code === 'PGRST116') {
       const newUser = {
         telegram_id: telegramId,
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 10,
+        stars_balance: 100,
         wins: 0,
         losses: 0,
         level: 1,
         last_daily_claim: null,
-        referrer_id: userData.referrer_id || null,
-        is_admin: false
+        referrer_id: userData.referrer_id || null
       };
-      const { data: inserted, error: insertErr } = await supabase
-        .from('users')
-        .insert([newUser])
-        .select()
-        .single();
+      const { data: inserted, error: insertErr } = await supabase.from('users').insert([newUser]).select().single();
       if (insertErr) throw insertErr;
       return inserted;
-    } else if (error) {
-      throw error;
-    }
+    } else if (error) throw error;
     return data;
   } catch (err) {
-    console.warn('Supabase error, switching to memory fallback:', err.message);
     useMemoryFallback = true;
     return dbGetOrCreateUser(telegramId, userData);
   }
@@ -86,24 +70,14 @@ async function dbGetOrCreateUser(telegramId, userData) {
 async function dbUpdateUser(telegramId, updateFields) {
   if (useMemoryFallback) {
     const user = memoryUsers.get(telegramId);
-    if (user) {
-      Object.assign(user, updateFields);
-      memoryUsers.set(telegramId, user);
-    }
+    if (user) Object.assign(user, updateFields);
     return user;
   }
-
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .update(updateFields)
-      .eq('telegram_id', telegramId)
-      .select()
-      .single();
+    const { data, error } = await supabase.from('users').update(updateFields).eq('telegram_id', telegramId).select().single();
     if (error) throw error;
     return data;
   } catch (err) {
-    console.warn('Supabase update error:', err.message);
     useMemoryFallback = true;
     return dbUpdateUser(telegramId, updateFields);
   }
@@ -111,17 +85,10 @@ async function dbUpdateUser(telegramId, updateFields) {
 
 async function dbGetLeaderboard() {
   if (useMemoryFallback) {
-    return Array.from(memoryUsers.values())
-      .sort((a, b) => b.wins - a.wins)
-      .slice(0, 50);
+    return Array.from(memoryUsers.values()).sort((a, b) => b.wins - a.wins).slice(0, 50);
   }
-
   try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('telegram_id, username, first_name, photo_url, stars_balance, wins, level')
-      .order('wins', { ascending: false })
-      .limit(50);
+    const { data, error } = await supabase.from('users').select('telegram_id, username, first_name, photo_url, stars_balance, wins, level').order('wins', { ascending: false }).limit(50);
     if (error) throw error;
     return data;
   } catch (err) {
@@ -130,9 +97,8 @@ async function dbGetLeaderboard() {
   }
 }
 
-// Игровая логика и хранилище столов
-const tables = new Map(); // tableId -> Table Object
-const activeGames = new Map(); // gameId -> Game State
+const tables = new Map();
+const activeGames = new Map();
 
 function createDeck(deckSize) {
   const suits = ['♠', '♥', '♦', '♣'];
@@ -153,7 +119,6 @@ function createDeck(deckSize) {
   }
   return deck;
 }
-
 io.on('connection', (socket) => {
   let currentUser = null;
 
@@ -161,15 +126,6 @@ io.on('connection', (socket) => {
     const { telegram_id, username, first_name, photo_url, referrer_id } = data;
     currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url, referrer_id });
     socket._telegram_id = telegram_id;
-    
-    if (referrer_id && !currentUser.referrer_id && Number(referrer_id) !== Number(telegram_id)) {
-      await dbUpdateUser(telegram_id, { referrer_id: Number(referrer_id) });
-      const refUser = await dbGetOrCreateUser(Number(referrer_id), {});
-      if (refUser) {
-        await dbUpdateUser(Number(referrer_id), { stars_balance: (refUser.stars_balance || 0) + 10 });
-      }
-    }
-
     socket.emit('auth_success', currentUser);
     emitLobbies();
   });
@@ -181,18 +137,13 @@ io.on('connection', (socket) => {
   socket.on('get_friends', async (data) => {
     const tId = data?.telegram_id || currentUser?.telegram_id;
     if (!tId) return;
-    
     if (useMemoryFallback) {
       const friends = Array.from(memoryUsers.values()).filter(u => u.referrer_id === Number(tId));
       socket.emit('friends_list', { friends });
       return;
     }
-
     try {
-      const { data: friends } = await supabase
-        .from('users')
-        .select('*')
-        .eq('referrer_id', Number(tId));
+      const { data: friends } = await supabase.from('users').select('*').eq('referrer_id', Number(tId));
       socket.emit('friends_list', { friends: friends || [] });
     } catch (e) {
       socket.emit('friends_list', { friends: [] });
@@ -203,18 +154,13 @@ io.on('connection', (socket) => {
     if (!currentUser) return;
     const now = new Date();
     const lastClaim = currentUser.last_daily_claim ? new Date(currentUser.last_daily_claim) : null;
-    
     if (lastClaim && (now - lastClaim) < 24 * 60 * 60 * 1000) {
       socket.emit('daily_error', { message: 'Ежедневный бонус уже получен сегодня!' });
       return;
     }
-
     currentUser.stars_balance = (currentUser.stars_balance || 0) + 10;
     currentUser.last_daily_claim = now.toISOString();
-    await dbUpdateUser(currentUser.telegram_id, {
-      stars_balance: currentUser.stars_balance,
-      last_daily_claim: currentUser.last_daily_claim
-    });
+    await dbUpdateUser(currentUser.telegram_id, { stars_balance: currentUser.stars_balance, last_daily_claim: currentUser.last_daily_claim });
     socket.emit('auth_success', currentUser);
     socket.emit('daily_success', { stars_balance: currentUser.stars_balance });
   });
@@ -236,12 +182,7 @@ io.on('connection', (socket) => {
       mode: mode || 'podkidnoy',
       deckSize: Number(deckSize) || 36,
       stake: Number(stake) || 10,
-      status: 'waiting',
-      players: [{
-        id: currentUser.telegram_id,
-        name: currentUser.first_name,
-        socketId: socket.id
-      }]
+      status: 'waiting'
     };
 
     tables.set(tableId, newTable);
@@ -261,15 +202,7 @@ io.on('connection', (socket) => {
     }
 
     if (table.hostId === currentUser.telegram_id) {
-      // Хост просто возвращается в свой стол
       socket.join(tableId);
-      socket.emit('game_state', {
-        gameId: tableId,
-        deckCount: table.deckSize,
-        trumpCard: '♠',
-        players: [{ name: table.hostName, handCount: 0 }],
-        tableCards: []
-      });
       return;
     }
 
@@ -278,7 +211,6 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Запуск партии при подключении второго игрока
     table.status = 'playing';
     const gameId = tableId;
     table.gameId = gameId;
@@ -307,7 +239,6 @@ io.on('connection', (socket) => {
       status: 'playing'
     };
 
-    // Находим сокет хоста
     for (let s of io.sockets.sockets.values()) {
       if (s._telegram_id == hostUser.telegram_id) {
         gameState.players[0].socketId = s.id;
@@ -321,13 +252,6 @@ io.on('connection', (socket) => {
     emitLobbies();
 
     broadcastGameState(gameState);
-  });
-
-  socket.on('player_ready', (data) => {
-    const gameId = data.gameId || data.tableId;
-    const game = activeGames.get(gameId);
-    if (!game) return;
-    broadcastGameState(game);
   });
 
   socket.on('game_action', (data) => {
@@ -375,26 +299,98 @@ function broadcastGameState(game) {
 async function handleGameAction(socket, data) {
   const { gameId, action, cardIndex } = data;
   const game = activeGames.get(gameId);
-  if (!game) return;
+  if (!game || game.status !== 'playing') return;
 
   const playerIdx = game.players.findIndex(p => p.socketId === socket.id);
   if (playerIdx === -1) return;
 
-  if (action === 'play_card' && game.attackerIndex === playerIdx) {
+  const isAttacker = game.attackerIndex === playerIdx;
+  const isDefender = game.defenderIndex === playerIdx;
+
+  if (action === 'play_card' && isAttacker) {
     const card = game.players[playerIdx].hand[cardIndex];
     if (!card) return;
 
     game.players[playerIdx].hand.splice(cardIndex, 1);
     game.tableCards.push({ attack: card, defend: null });
     
-    // Смена хода для примера
-    game.attackerIndex = game.attackerIndex === 0 ? 1 : 0;
-    game.defenderIndex = game.defenderIndex === 0 ? 1 : 0;
+    const temp = game.attackerIndex;
+    game.attackerIndex = game.defenderIndex;
+    game.defenderIndex = temp;
 
     broadcastGameState(game);
-  } else if (action === 'bito' || action === 'take') {
+  } 
+  else if (action === 'play_card' && isDefender) {
+    const attackPair = game.tableCards.find(tc => !tc.defend);
+    if (!attackPair) return;
+
+    const defCard = game.players[playerIdx].hand[cardIndex];
+    if (!defCard) return;
+
+    const isValid = (defCard.suit === attackPair.attack.suit && defCard.value > attackPair.attack.value) ||
+                    (defCard.suit === game.trumpCard.suit && attackPair.attack.suit !== game.trumpCard.suit);
+
+    if (isValid) {
+      game.players[playerIdx].hand.splice(cardIndex, 1);
+      attackPair.defend = defCard;
+
+      const temp = game.attackerIndex;
+      game.attackerIndex = game.defenderIndex;
+      game.defenderIndex = temp;
+
+      broadcastGameState(game);
+      checkWin(game);
+    } else {
+      socket.emit('error_message', 'Этой картой побить нельзя!');
+    }
+  }
+  else if (action === 'bito' && isAttacker) {
+    if (game.tableCards.length > 0 && game.tableCards.every(tc => tc.defend)) {
+      game.tableCards = [];
+      refillHands(game);
+      broadcastGameState(game);
+      checkWin(game);
+    }
+  }
+  else if (action === 'take' && isDefender) {
+    const cardsToTake = [];
+    game.tableCards.forEach(tc => {
+      cardsToTake.push(tc.attack);
+      if (tc.defend) cardsToTake.push(tc.defend);
+    });
+    game.players[playerIdx].hand.push(...cardsToTake);
     game.tableCards = [];
+    refillHands(game);
+    
+    const temp = game.attackerIndex;
+    game.attackerIndex = game.defenderIndex;
+    game.defenderIndex = temp;
+
     broadcastGameState(game);
+    checkWin(game);
+  }
+}
+
+function refillHands(game) {
+  while (game.players[game.attackerIndex].hand.length < 6 && game.deck.length > 0) {
+    game.players[game.attackerIndex].hand.push(game.deck.pop());
+  }
+  while (game.players[game.defenderIndex].hand.length < 6 && game.deck.length > 0) {
+    game.players[game.defenderIndex].hand.push(game.deck.pop());
+  }
+}
+
+async function checkWin(game) {
+  if (game.deck.length === 0) {
+    const p0Empty = game.players[0].hand.length === 0;
+    const p1Empty = game.players[1].hand.length === 0;
+
+    if (p0Empty || p1Empty) {
+      game.status = 'finished';
+      const winner = p0Empty ? game.players[0] : game.players[1];
+      io.to(game.gameId).emit('game_over', { winnerName: winner.name, prize: game.stake * 2 });
+      activeGames.delete(game.gameId);
+    }
   }
 }
 
