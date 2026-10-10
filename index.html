@@ -545,8 +545,18 @@
   </div>
 
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    let tg = window.Telegram.WebApp;
+if (tg && tg.expand) {
+  tg.expand();
+} else {
+  // Заглушка для тестирования с телефона в обычном браузере
+  tg = {
+    initDataUnsafe: {
+      user: { id: 12345, username: "MobileUser", first_name: "Игрок" }
+    }
+  };
+}
+
 
     const socket = io();
     let currentUser = null;
