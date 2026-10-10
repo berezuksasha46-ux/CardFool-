@@ -265,7 +265,6 @@
     </div>
     <button class="btn" style="width: 100%; margin-bottom: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
   </div>
-  <!-- Модальное окно окончания игры с начислением приза -->
   <div id="game-over-modal" class="modal">
     <div class="modal-content">
       <h2 id="game-over-title" style="font-size: 24px; margin-bottom: 10px; color: var(--accent-gold);">Победа!</h2>
@@ -556,7 +555,6 @@
       });
     }
 
-    // Автоматическое уплотнение карт в руке, чтобы они никогда не выходили за края
     function renderMyHand() {
       const container = document.getElementById('my-hand-container');
       if (!container) return;
@@ -565,8 +563,8 @@
 
       let marginLeft = -12;
       if (totalCards > 6) {
-        marginLeft = -12 - (totalCards - 6) * 6; // Чем больше карт, тем плотнее они заходят друг за друга
-        if (marginLeft < -48) marginLeft = -48; // Ограничение плотности
+        marginLeft = -12 - (totalCards - 6) * 6;
+        if (marginLeft < -48) marginLeft = -48;
       }
 
       myHandCards.forEach((card, index) => {
@@ -632,7 +630,6 @@
 
     function handleGameAction(actionType) { socket.emit('game_action', { gameId: currentGameId, action: actionType }); }
 
-    // Обработка окончания игры и показ модального окна с призом
     socket.on('game_over', (data) => {
       isGamePlaying = false;
       currentGameId = null;
