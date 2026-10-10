@@ -203,7 +203,6 @@
     <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; margin-top: 20px;">Ваши друзья (<span id="friends-count">0</span>)</div>
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div></div>
   </div>
-
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -260,6 +259,7 @@
     </div>
     <button class="btn" style="width: 100%; margin-bottom: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
   </div>
+
   <div id="game-over-modal" class="modal">
     <div class="modal-content">
       <h2 id="game-over-title" style="font-size: 24px; margin-bottom: 10px; color: var(--accent-gold);">Победа!</h2>
@@ -307,7 +307,6 @@
       </div>
     </div>
   </div>
-
   <script>
     let tg = window.Telegram?.WebApp;
     if (tg) {
@@ -697,4 +696,50 @@
         text.innerText = `Вы выиграли партию и получили +${data.prize} ⭐ (с учетом комиссии 10%)!`;
       } else {
         title.innerText = 'Поражение 😔';
-        text.innerText
+        text.innerText = 'К сожалению, вы проиграли эту партию.';
+      }
+      modal.classList.add('active');
+    });
+
+    function closeGameOverModal() {
+      document.getElementById('game-over-modal').classList.remove('active');
+      switchTab('lobbies', document.querySelector('.nav-item'));
+    }
+    
+    async function loadLeaderboard() {
+      try {
+        const res = await fetch('/api/leaderboard');
+        const list = await res.json();
+        const container = document.getElementById('leaderboard-list');
+        if (!container) return;
+        container.innerHTML = '';
+        if (list.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Пока нет лидеров</div>';
+          return;
+        }
+        list.forEach((u, i) => {
+          const avatarStyle = u.photo_url ? `style="background-image: url('${u.photo_url}');"` : '';
+          const avatarText = u.photo_url ? '' : (u.first_name || u.username).charAt(0).toUpperCase();
+
+          container.innerHTML += `
+            <div class="table-card">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
+                <div>
+                  <div style="font-weight:bold;">#${i+1} ${u.first_name || u.username}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">ID: ${u.unique_id || '---'}</div>
+                </div>
+              </div>
+              <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${u.stars_balance}</span>
+            </div>`;
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    function claimDailyBonus() { socket.emit('claim_daily'); }
+    socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
+    socket.on('daily_error', (d) => alert(d.message));
+    socket.on('error_message', (msg) => alert(msg));
+  </script>
+</body>
+</html>
