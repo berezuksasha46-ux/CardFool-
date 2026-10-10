@@ -223,13 +223,14 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Удаление стола создателем до начала игры
+  // Удаление стола по желанию создателя
   socket.on('delete_table', (tableId) => {
     if (!currentUser) return;
     const table = tables.get(tableId);
     if (table && String(table.hostId) === String(currentUser.telegram_id)) {
       tables.delete(tableId);
       socket.leave(tableId);
+      socket.emit('table_deleted');
       socket.emit('error_message', 'Ваш стол был успешно закрыт!');
       emitLobbies();
     }
@@ -238,8 +239,8 @@ io.on('connection', (socket) => {
     if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
     if (!currentUser) return;
 
-    // Проверка: уже ли у пользователя есть неначатый стол
-    for (let t of tables.values()) {
+    // Проверяем, есть ли не начатый стол у этого хоста
+    for (let [tId, t] of tables.entries()) {
       if (String(t.hostId) === String(currentUser.telegram_id)) {
         socket.emit('error_message', 'У вас уже есть созданный стол!');
         return;
@@ -257,7 +258,7 @@ io.on('connection', (socket) => {
     const tableId = 'table_' + Math.random().toString(36).substring(2, 9);
     const newTable = {
       id: tableId,
-      hostId: currentUser.telegram_id,
+      hostId: String(currentUser.telegram_id),
       hostName: currentUser.first_name || currentUser.username,
       mode: mode || 'podkidnoy',
       deckSize: Number(deckSize) || 36,
@@ -278,7 +279,7 @@ io.on('connection', (socket) => {
     const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
     const table = tables.get(tableId);
 
-    // Если игра идет, переподключаем
+    // Игра уже идет — возвращаем в комнату
     if (activeGames.has(tableId)) {
       const existingGame = activeGames.get(tableId);
       const player = existingGame.players.find(p => String(p.id) === String(currentUser.telegram_id));
@@ -290,12 +291,13 @@ io.on('connection', (socket) => {
     }
 
     if (!table) {
-      socket.emit('error_message', 'Стол не найден или уже запущен!');
+      socket.emit('error_message', 'Стол не найден или уже закрыт!');
       return;
     }
 
+    // Если хост пытается зайти сам к себе
     if (String(table.hostId) === String(currentUser.telegram_id)) {
-      socket.emit('error_message', 'Вы уже находитесь в своем столе!');
+      socket.emit('error_message', 'Ожидание второго игрока...');
       return;
     }
 
@@ -319,8 +321,8 @@ io.on('connection', (socket) => {
       deck,
       trumpCard,
       players: [
-        { id: hostUser.telegram_id, name: hostUser.first_name || hostUser.username, level: hostUser.level || 1, hand: p1Hand, socketId: null },
-        { id: currentUser.telegram_id, name: currentUser.first_name || currentUser.username, level: currentUser.level || 1, hand: p2Hand, socketId: socket.id }
+        { id: String(hostUser.telegram_id), name: hostUser.first_name || hostUser.username, level: hostUser.level || 1, hand: p1Hand, socketId: null },
+        { id: String(currentUser.telegram_id), name: currentUser.first_name || currentUser.username, level: currentUser.level || 1, hand: p2Hand, socketId: socket.id }
       ],
       attackerIndex: 0,
       defenderIndex: 1,
