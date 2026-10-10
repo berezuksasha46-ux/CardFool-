@@ -30,18 +30,13 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: userData.stars_balance !== undefined ? userData.stars_balance : 50,
+        stars_balance: 100,
         wins: 0,
         losses: 0,
         level: 1,
         last_daily_claim: null,
         referrer_id: userData.referrer_id || null
       });
-    } else {
-      // Обновляем photo_url и имя, если они изменились
-      const existing = memoryUsers.get(telegramId);
-      if (userData.photo_url) existing.photo_url = userData.photo_url;
-      if (userData.first_name) existing.first_name = userData.first_name;
     }
     return memoryUsers.get(telegramId);
   }
@@ -54,7 +49,7 @@ async function dbGetOrCreateUser(telegramId, userData) {
         username: userData.username || 'Player',
         first_name: userData.first_name || 'Gamer',
         photo_url: userData.photo_url || null,
-        stars_balance: 50,
+        stars_balance: 100,
         wins: 0,
         losses: 0,
         level: 1,
@@ -65,16 +60,8 @@ async function dbGetOrCreateUser(telegramId, userData) {
       if (insertErr) throw insertErr;
       return inserted;
     } else if (error) throw error;
-    
-    // Если пользователь найден, подтягиваем актуальную аватарку, если она прилетела
-    if (userData.photo_url && data.photo_url !== userData.photo_url) {
-      await supabase.from('users').update({ photo_url: userData.photo_url }).eq('telegram_id', telegramId);
-      data.photo_url = userData.photo_url;
-    }
-
     return data;
   } catch (err) {
-    console.warn('Supabase error, switching to memory fallback:', err.message);
     useMemoryFallback = true;
     return dbGetOrCreateUser(telegramId, userData);
   }
@@ -138,7 +125,6 @@ io.on('connection', (socket) => {
   socket.on('auth', async (data) => {
     const { telegram_id, username, first_name, photo_url, referrer_id } = data;
     if (!telegram_id) return;
-    
     currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url, referrer_id });
     socket._telegram_id = telegram_id;
     socket.emit('auth_success', currentUser);
@@ -160,7 +146,6 @@ io.on('connection', (socket) => {
     if (!currentUser) return;
 
     const { mode, deckSize, stake } = config;
-
     if (currentUser.stars_balance < stake) {
       socket.emit('error_message', 'Недостаточно звезд на балансе!');
       return;
@@ -206,13 +191,6 @@ io.on('connection', (socket) => {
 
     if (table.hostId === currentUser.telegram_id) {
       socket.join(tableId);
-      socket.emit('game_state', {
-        gameId: tableId,
-        deckCount: table.deckSize,
-        trumpCard: '♠',
-        tableCards: [],
-        players: [{ name: table.hostName, handCount: 0 }]
-      });
       return;
     }
 
@@ -314,37 +292,59 @@ async function handleGameAction(socket, data) {
 
   const isAttacker = game.attackerIndex === playerIdx;
   const isDefender = game.defenderIndex === playerIdx;
+  const card = game.players[playerIdx].hand[cardIndex];
 
+  // 1. Атака / Подкидывание
   if (action === 'play_card' && isAttacker) {
-    const card = game.players[playerIdx].hand[cardIndex];
     if (!card) return;
+    
+    // Если на столе уже есть карты, проверяем возможность подкидывания
+    if (game.tableCards.length > 0) {
+      const ranksOnTable = new Set();
+      game.tableCards.forEach(tc => {
+        ranksOnTable.add(tc.attack.rank);
+        if (tc.defend) ranksOnTable.add(tc.defend.rank);
+      });
+      if (!ranksOnTable.has(card.rank)) {
+        socket.emit('error_message', 'Эту карту нельзя подкинуть!');
+        return;
+      }
+    }
 
     game.players[playerIdx].hand.splice(cardIndex, 1);
     game.tableCards.push({ attack: card, defend: null });
-    
-    const temp = game.attackerIndex;
-    game.attackerIndex = game.defenderIndex;
-    game.defenderIndex = temp;
 
     broadcastGameState(game);
+    checkWin(game);
   } 
+  // 2. Защита / Перевод
   else if (action === 'play_card' && isDefender) {
-    const attackPair = game.tableCards.find(tc => !tc.defend);
-    if (!attackPair) return;
+    if (!card) return;
+    const activeAttack = game.tableCards.find(tc => !tc.defend);
+    if (!activeAttack) return;
 
-    const defCard = game.players[playerIdx].hand[cardIndex];
-    if (!defCard) return;
+    // Проверка на перевод (если режим переводной и на столе еще не начали отбиваться)
+    const canTransfer = game.mode === 'perevodnoy' && game.tableCards.length === 1 && !activeAttack.defend && card.rank === activeAttack.attack.rank;
 
-    const isValid = (defCard.suit === attackPair.attack.suit && defCard.value > attackPair.attack.value) ||
-                    (defCard.suit === game.trumpCard.suit && attackPair.attack.suit !== game.trumpCard.suit);
-
-    if (isValid) {
+    if (canTransfer) {
       game.players[playerIdx].hand.splice(cardIndex, 1);
-      attackPair.defend = defCard;
-
+      game.tableCards.push({ attack: card, defend: null });
+      // Меняем роли местами (теперь бывший защитник сам становится защищающимся)
       const temp = game.attackerIndex;
       game.attackerIndex = game.defenderIndex;
       game.defenderIndex = temp;
+
+      broadcastGameState(game);
+      return;
+    }
+
+    // Обычное отбивание карты
+    const isValid = (card.suit === activeAttack.attack.suit && card.value > activeAttack.attack.value) ||
+                    (card.suit === game.trumpCard.suit && activeAttack.attack.suit !== game.trumpCard.suit);
+
+    if (isValid) {
+      game.players[playerIdx].hand.splice(cardIndex, 1);
+      activeAttack.defend = card;
 
       broadcastGameState(game);
       checkWin(game);
@@ -352,14 +352,21 @@ async function handleGameAction(socket, data) {
       socket.emit('error_message', 'Этой картой побить нельзя!');
     }
   }
+  // 3. Бито (атакующий завершает ход, если всё отбито)
   else if (action === 'bito' && isAttacker) {
     if (game.tableCards.length > 0 && game.tableCards.every(tc => tc.defend)) {
       game.tableCards = [];
       refillHands(game);
+      // Меняем роли: защищавшийся теперь атакует первым
+      const temp = game.attackerIndex;
+      game.attackerIndex = game.defenderIndex;
+      game.defenderIndex = temp;
+
       broadcastGameState(game);
       checkWin(game);
     }
   }
+  // 4. Взять (защищающийся забирает карты)
   else if (action === 'take' && isDefender) {
     const cardsToTake = [];
     game.tableCards.forEach(tc => {
@@ -369,11 +376,8 @@ async function handleGameAction(socket, data) {
     game.players[playerIdx].hand.push(...cardsToTake);
     game.tableCards = [];
     refillHands(game);
-    
-    const temp = game.attackerIndex;
-    game.attackerIndex = game.defenderIndex;
-    game.defenderIndex = temp;
 
+    // После того как защитник взял, ход переходит к игроку слева от него (атакующий остается прежним или меняется право хода)
     broadcastGameState(game);
     checkWin(game);
   }
@@ -396,7 +400,25 @@ async function checkWin(game) {
     if (p0Empty || p1Empty) {
       game.status = 'finished';
       const winner = p0Empty ? game.players[0] : game.players[1];
-      io.to(game.gameId).emit('game_over', { winnerName: winner.name, prize: game.stake * 2 });
+      const loser = p0Empty ? game.players[1] : game.players[0];
+
+      const winnerUser = await dbGetOrCreateUser(winner.id, {});
+      const loserUser = await dbGetOrCreateUser(loser.id, {});
+
+      const totalPot = game.stake * 2;
+      const prize = totalPot * 0.9; // 10% комиссия
+
+      await dbUpdateUser(winner.id, {
+        stars_balance: (winnerUser.stars_balance || 0) + Math.floor(prize),
+        wins: (winnerUser.wins || 0) + 1,
+        level: Math.floor(((winnerUser.wins || 0) + 1) / 5) + 1
+      });
+
+      await dbUpdateUser(loser.id, {
+        losses: (loserUser.losses || 0) + 1
+      });
+
+      io.to(game.gameId).emit('game_over', { winnerName: winner.name, prize: Math.floor(prize) });
       activeGames.delete(game.gameId);
     }
   }
