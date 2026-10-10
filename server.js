@@ -598,3 +598,102 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`CardFool server running on port ${PORT}`);
 });
+// Хранилище активных игр и комнат
+const games = {};
+
+// Создание стола
+socket.on('create_table', (data) => {
+  const telegramId = data.telegram_id;
+  const firstName = data.first_name || 'Игрок';
+  const tableId = 'table_' + Math.random().toString(36).substring(2, 9);
+
+  games[tableId] = {
+    id: tableId,
+    hostId: telegramId,
+    mode: data.mode || 'podkidnoy',
+    deckSize: data.deckSize || 36,
+    stake: data.stake || 10,
+    players: [{
+      id: telegramId,
+      telegram_id: telegramId,
+      name: firstName,
+      first_name: firstName,
+      hand: [],
+      ready: false
+    }],
+    tableCards: [],
+    status: 'waiting'
+  };
+
+  // Хост заходит в комнату сокета
+  socket.join(tableId);
+
+  // Сразу отправляем создателю сигнал успешного создания стола с ID
+  socket.emit('table_created', tableId);
+  
+  // Рассылаем обновленный список лобби всем в меню
+  io.emit('lobbies_list', { tables: Object.values(games).filter(g => g.status === 'waiting') });
+});
+
+// Вход второго игрока в стол
+socket.on('join_table', (data) => {
+  const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
+  const telegramId = data.telegram_id;
+  const firstName = data.first_name || 'Игрок';
+
+  const game = games[tableId];
+  if (!game) {
+    socket.emit('error_message', 'Стол не найден или уже запущен!');
+    return;
+  }
+
+  // Добавляем сокет второго игрока в комнату стола
+  socket.join(tableId);
+
+  // Проверяем, есть ли уже этот игрок в массиве участников
+  const existingPlayer = game.players.find(p => String(p.id || p.telegram_id) === String(telegramId));
+  
+  if (!existingPlayer) {
+    if (game.players.length >= 2) {
+      socket.emit('error_message', 'Стол уже заполнен!');
+      return;
+    }
+    game.players.push({
+      id: telegramId,
+      telegram_id: telegramId,
+      name: firstName,
+      first_name: firstName,
+      hand: [],
+      ready: false
+    });
+  }
+
+  // Отправляем актуальное состояние игры ВСЕМ в комнате стола (и хосту, и вошедшему)
+  io.to(tableId).emit('game_state', game);
+  
+  // Обновляем лобби для остальных
+  io.emit('lobbies_list', { tables: Object.values(games).filter(g => g.status === 'waiting') });
+});
+
+// Нажатие кнопки "Готов"
+socket.on('player_ready', (data) => {
+  const tableId = data.gameId || data.tableId;
+  const telegramId = data.telegram_id;
+  const game = games[tableId];
+
+  if (!game) return;
+
+  const player = game.players.find(p => String(p.id || p.telegram_id) === String(telegramId));
+  if (player) {
+    player.ready = true;
+  }
+
+  // Если оба игрока готовы, переводим в статус игры
+  const allReady = game.players.length === 2 && game.players.every(p => p.ready);
+  if (allReady) {
+    game.status = 'playing';
+  }
+
+  io.to(tableId).emit('game_state', game);
+});
+
