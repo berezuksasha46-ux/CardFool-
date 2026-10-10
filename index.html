@@ -163,7 +163,6 @@
       object-fit: cover;
     }
 
-    /* Зеленый покерный стол */
     .poker-table {
       background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%);
       border: 2px solid #2d5a3c;
@@ -312,7 +311,7 @@
 </head>
 <body>
 
-  <!-- Шапка профиля -->
+  <!-- Шапка -->
   <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
@@ -326,7 +325,7 @@
     </div>
   </div>
 
-  <!-- Вкладка Лобби / Столы -->
+  <!-- Вкладка Лобби -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="font-size: 22px;">Игровые столы</h2>
@@ -337,7 +336,7 @@
     </div>
   </div>
 
-  <!-- Вкладка Друзья и Рефералы -->
+  <!-- Вкладка Друзья -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
@@ -353,7 +352,7 @@
     </div>
   </div>
 
-  <!-- Вкладка Игра (Мультиплеер Дурак Онлайн) -->
+  <!-- Вкладка Игра -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -425,81 +424,7 @@
 
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-label">Победы</div>
-        <div class="stat-value" id="stat-wins">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Поражения</div>
-        <div class="stat-value" id="stat-losses">0</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Винрейт</div>
-        <div class="stat-value" id="stat-winrate">0%</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Звезды баланс</div>
-        <div class="stat-value" id="profile-stars">0 ⭐</div>
-      </div>
-    </div>
-
-    <div style="margin-top: 16px;">
-      <button class="btn" style="width: 100%; margin-bottom: 12px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
-    </div>
-  </div>
-
-  <!-- Нижняя навигация -->
-  <div class="nav-bar">
-    <button class="nav-item active" onclick="switchTab('lobbies', this)">
-      <div class="nav-icon">🎲</div>
-      <div>Столы</div>
-    </button>
-    <button class="nav-item" onclick="switchTab('friends', this)">
-      <div class="nav-icon">👥</div>
-      <div>Друзья</div>
-    </button>
-    <button class="nav-item" onclick="switchTab('leaderboard', this)">
-      <div class="nav-icon">🏆</div>
-      <div>Лидеры</div>
-    </button>
-    <button class="nav-item" onclick="switchTab('profile', this)">
-      <div class="nav-icon">👤</div>
-      <div>Профиль</div>
-    </button>
-  </div>
-
-  <!-- Модальное окно создания стола -->
-  <div id="create-table-modal" class="modal">
-    <div class="modal-content">
-      <h3 style="margin-bottom: 18px; font-size: 20px;">Создать игровой стол</h3>
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Режим игры:</div>
-        <div style="display: flex; gap: 10px;">
-          <button id="mode-podkidnoy" class="option-btn selected" onclick="selectMode('podkidnoy')" style="flex: 1;">Подкидной</button>
-          <button id="mode-perevodnoy" class="option-btn" onclick="selectMode('perevodnoy')" style="flex: 1;">Переводной</button>
-        </div>
-      </div>
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Колода:</div>
-        <div style="display: flex; gap: 10px;">
-          <button id="deck-36" class="option-btn selected" onclick="selectDeck(36)" style="flex: 1;">36 карт</button>
-          <button id="deck-24" class="option-btn" onclick="selectDeck(24)" style="flex: 1;">24 карты</button>
-        </div>
-      </div>
-      <div style="margin-bottom: 22px;">
-        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ставка (звезды):</div>
-        <div style="display: flex; gap: 8px;">
-          <button class="option-btn selected" onclick="selectStake(10, this)">10 ⭐</button>
-          <button class="option-btn" onclick="selectStake(25, this)">25 ⭐</button>
-          <button class="option-btn" onclick="selectStake(50, this)">50 ⭐</button>
-          <button class="option-btn" onclick="selectStake(100, this)">100 ⭐</button>
-        </div>
-      </div>
-      <div style="display: flex; gap: 12px;">
-        <button class="btn btn-secondary" style="flex: 1;" onclick="closeCreateTableModal()">Отмена</button>
-        <button class="btn" style="flex: 1;" onclick="submitCreateTable()">Создать</button>
-      </div>
-    </div>
-  </div>
+        <div class
   <script>
     const BOT_USERNAME = "GOCardFoolbot";
 
@@ -752,29 +677,43 @@
     }
 
     function submitCreateTable() {
+      closeCreateTableModal();
+      // Отправляем запросы на создание под всеми стандартными именами событий бэкенда
       socket.emit('create_table', {
         mode: selectedGameMode,
         deckSize: selectedDeckSize,
         stake: selectedStake,
-        telegram_id: telegramId
+        telegram_id: telegramId,
+        first_name: firstName
       });
-      closeCreateTableModal();
+      socket.emit('create_room', {
+        mode: selectedGameMode,
+        deckSize: selectedDeckSize,
+        stake: selectedStake,
+        telegram_id: telegramId,
+        first_name: firstName
+      });
     }
 
-    socket.on('table_created', (data) => {
-      const tId = data.tableId || data.id || data;
+    // Обработка успешного создания стола от сервера
+    socket.on('table_created', handleTableCreated);
+    socket.on('room_created', handleTableCreated);
+    socket.on('game_created', handleTableCreated);
+
+    function handleTableCreated(data) {
+      const tId = (typeof data === 'string') ? data : (data?.tableId || data?.id || data?.roomId);
       if (tId) {
         joinTable(tId);
       } else {
         socket.emit('get_lobbies');
       }
-    });
+    }
 
-    // Улучшенный единый метод входа в стол и комнату
+    // Укрепленный метод входа в стол и комнату
     function joinTable(tableId) {
+      if (!tableId) return;
       currentGameId = tableId;
       
-      // Отправляем универсальные события подключения
       socket.emit('join_table', { tableId: tableId, telegram_id: telegramId, first_name: firstName });
       socket.emit('join_room', tableId);
       socket.emit('join', { gameId: tableId, telegram_id: telegramId });
@@ -807,8 +746,9 @@
       socket.emit('ready', { gameId: currentGameId, telegram_id: telegramId });
     }
 
-    // Синхронизация состояния игры, козыря и соперников
+    // Синхронизация состояния игры
     socket.on('game_state', (state) => {
+      if (!state) return;
       currentGameId = state.gameId || state.id || currentGameId;
 
       const players = state.players || [];
@@ -818,7 +758,6 @@
       document.getElementById('opponent-card-count').innerText = opponent.handCount !== undefined ? opponent.handCount : 0;
       document.getElementById('deck-count').innerText = state.deckCount !== undefined ? state.deckCount : (state.deckSize || 36);
       
-      // Синхронизация козыря
       const trump = state.trumpCard || state.trump;
       let trumpSuit = '♠';
       if (typeof trump === 'object' && trump !== null) {
