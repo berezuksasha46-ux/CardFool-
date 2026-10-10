@@ -319,7 +319,6 @@
     let currentGameId = null, isGamePlaying = false;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
-    // Гарантированная привязка аккаунта Telegram без подмены ID
     function getTelegramUserData() {
       const tgUser = tg?.initDataUnsafe?.user;
       if (tgUser && tgUser.id) {
@@ -331,7 +330,6 @@
         };
       }
       
-      // Локальное фиксированное хранилище для тестирования через браузер
       let savedId = localStorage.getItem('cardfool_fixed_id');
       if (!savedId) {
         savedId = 'test_' + Math.floor(100000 + Math.random() * 900000);
@@ -357,11 +355,8 @@
     socket.on('connect', () => { authenticate(); });
     authenticate();
 
-    // Если данные от Telegram приходят с небольшой задержкой, обновляем авторизацию
-    if (tg) {
-      tg.onEvent('mainButtonClicked', () => {});
-      setTimeout(() => { authenticate(); }, 500);
-    }
+    // Повторная отправка данных авторизации для стабильности в Telegram
+    setTimeout(() => { authenticate(); }, 500);
 
     socket.on('auth_success', (user) => {
       currentUser = user;
@@ -721,8 +716,7 @@
       document.getElementById('game-over-modal').classList.remove('active');
       switchTab('lobbies', document.querySelector('.nav-item'));
     }
-    
-    // Бесперебойная загрузка лидеров (сначала через REST, при сбое — через WebSocket)
+
     async function loadLeaderboard() {
       const container = document.getElementById('leaderboard-list');
       if (!container) return;
@@ -738,9 +732,7 @@
       }
     }
 
-    socket.on('leaderboard_data', (list) => {
-      renderLeaderboard(list);
-    });
+    socket.on('leaderboard_data', (list) => { renderLeaderboard(list); });
 
     function renderLeaderboard(list) {
       const container = document.getElementById('leaderboard-list');
@@ -772,4 +764,8 @@
 
     function claimDailyBonus() { socket.emit('claim_daily'); }
     socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
-    so
+    socket.on('daily_error', (d) => alert(d.message));
+    socket.on('error_message', (msg) => alert(msg));
+  </script>
+</body>
+</html>
