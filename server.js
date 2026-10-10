@@ -19,6 +19,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 let useMemoryFallback = false;
 const memoryUsers = new Map();
 const memoryFriends = new Map();
+const memoryRequests = new Map();
 
 function generateUniqueId() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -91,20 +92,6 @@ async function dbUpdateUser(telegramId, updateFields) {
     return dbUpdateUser(telegramId, updateFields);
   }
 }
-
-async function dbGetLeaderboard() {
-  if (useMemoryFallback) {
-    return Array.from(memoryUsers.values()).sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 50);
-  }
-  try {
-    const { data, error } = await supabase.from('users').select('telegram_id, unique_id, username, first_name, photo_url, stars_balance, wins, losses, level').order('wins', { ascending: false }).limit(50);
-    if (error) throw error;
-    return data || [];
-  } catch (err) {
-    useMemoryFallback = true;
-    return dbGetLeaderboard();
-  }
-}
 const tables = new Map();
 const activeGames = new Map();
 
@@ -143,72 +130,93 @@ io.on('connection', (socket) => {
   socket.on('set_socket_user', (telegram_id) => { socket._telegram_id = telegram_id; });
   socket.on('get_lobbies', () => { emitLobbies(socket); });
 
+  // Получение друзей и входящих заявок
   socket.on('get_friends', async (data) => {
     const tId = data?.telegram_id || currentUser?.telegram_id;
     if (!tId) return;
 
-    if (useMemoryFallback) {
-      const friendIds = memoryFriends.get(tId) || new Set();
-      const friendsList = [];
-      for (let fId of friendIds) {
-        if (memoryUsers.has(fId)) friendsList.push(memoryUsers.get(fId));
-      }
-      socket.emit('friends_list', { friends: friendsList });
-      return;
-    }
-
     try {
+      // 1. Друзья
       const { data: relations } = await supabase.from('friends').select('friend_id').eq('user_id', tId);
-      if (!relations || relations.length === 0) {
-        socket.emit('friends_list', { friends: [] });
-        return;
+      let friendsList = [];
+      if (relations && relations.length > 0) {
+        const friendIds = relations.map(r => r.friend_id);
+        const { data: fData } = await supabase.from('users').select('*').in('telegram_id', friendIds);
+        friendsList = fData || [];
       }
-      const friendIds = relations.map(r => r.friend_id);
-      const { data: friends } = await supabase.from('users').select('*').in('telegram_id', friendIds);
-      socket.emit('friends_list', { friends: friends || [] });
+
+      // 2. Входящие заявки
+      const { data: reqs } = await supabase.from('friend_requests').select('sender_id').eq('receiver_id', tId).eq('status', 'pending');
+      let requestsList = [];
+      if (reqs && reqs.length > 0) {
+        const senderIds = reqs.map(r => r.sender_id);
+        const { data: sData } = await supabase.from('users').select('*').in('telegram_id', senderIds);
+        requestsList = sData || [];
+      }
+
+      socket.emit('friends_list', { friends: friendsList, requests: requestsList });
     } catch (e) {
-      socket.emit('friends_list', { friends: [] });
+      socket.emit('friends_list', { friends: [], requests: [] });
     }
   });
 
+  // Отправка запроса в друзья по Unique ID
   socket.on('add_friend_by_unique_id', async (data) => {
     const { uniqueId } = data;
     if (!currentUser || !uniqueId) return;
 
-    let targetUser = null;
-    if (useMemoryFallback) {
-      for (let u of memoryUsers.values()) {
-        if (u.unique_id === uniqueId) { targetUser = u; break; }
+    try {
+      const { data: targetUser, error } = await supabase.from('users').select('*').eq('unique_id', uniqueId).single();
+      if (error || !targetUser) {
+        socket.emit('error_message', 'Игрок с таким ID не найден!');
+        return;
       }
-    } else {
-      const { data, error } = await supabase.from('users').select('*').eq('unique_id', uniqueId).single();
-      if (!error) targetUser = data;
-    }
 
-    if (!targetUser) {
-      socket.emit('error_message', 'Игрок с таким ID не найден!');
-      return;
-    }
+      if (String(targetUser.telegram_id) === String(currentUser.telegram_id)) {
+        socket.emit('error_message', 'Нельзя отправить заявку самому себе!');
+        return;
+      }
 
-    if (String(targetUser.telegram_id) === String(currentUser.telegram_id)) {
-      socket.emit('error_message', 'Нельзя добавить самого себя!');
-      return;
-    }
+      // Проверяем, не друзья ли уже
+      const { data: existingFriend } = await supabase.from('friends').select('*').eq('user_id', currentUser.telegram_id).eq('friend_id', targetUser.telegram_id).single();
+      if (existingFriend) {
+        socket.emit('error_message', 'Вы уже друзья с этим игроком!');
+        return;
+      }
 
-    if (useMemoryFallback) {
-      if (!memoryFriends.has(currentUser.telegram_id)) memoryFriends.set(currentUser.telegram_id, new Set());
-      memoryFriends.get(currentUser.telegram_id).add(targetUser.telegram_id);
-    } else {
-      await supabase.from('friends').insert([
-        { user_id: currentUser.telegram_id, friend_id: targetUser.telegram_id },
-        { user_id: targetUser.telegram_id, friend_id: currentUser.telegram_id }
-      ]);
-    }
+      // Создаем заявку
+      await supabase.from('friend_requests').upsert([
+        { sender_id: currentUser.telegram_id, receiver_id: targetUser.telegram_id, status: 'pending' }
+      ], { onConflict: ['sender_id', 'receiver_id'] });
 
-    socket.emit('error_message', `Игрок ${targetUser.first_name || targetUser.username} добавлен в друзья!`);
-    socket.emit('get_friends', { telegram_id: currentUser.telegram_id });
+      socket.emit('error_message', `Заявка в друзья отправлена игроку ${targetUser.first_name || targetUser.username}!`);
+    } catch (e) {
+      socket.emit('error_message', 'Ошибка при отправке заявки.');
+    }
   });
 
+  // Ответ на заявку (принять / отклонить)
+  socket.on('respond_friend_request', async (data) => {
+    const { senderId, action } = data; // action: 'accept' или 'reject'
+    if (!currentUser || !senderId) return;
+
+    try {
+      if (action === 'accept') {
+        // Добавляем друг другу связь в таблицу friends
+        await supabase.from('friends').insert([
+          { user_id: currentUser.telegram_id, friend_id: senderId },
+          { user_id: senderId, friend_id: currentUser.telegram_id }
+        ]);
+      }
+      // Удаляем заявку
+      await supabase.from('friend_requests').delete().eq('sender_id', senderId).eq('receiver_id', currentUser.telegram_id);
+
+      socket.emit('error_message', action === 'accept' ? 'Заявка принята!' : 'Заявка отклонена.');
+      socket.emit('get_friends', { telegram_id: currentUser.telegram_id });
+    } catch (e) {
+      socket.emit('error_message', 'Ошибка обработки заявки.');
+    }
+  });
   socket.on('claim_daily', async () => {
     if (!currentUser) return;
     const now = new Date();
@@ -223,6 +231,7 @@ io.on('connection', (socket) => {
     socket.emit('auth_success', currentUser);
     socket.emit('daily_success', { stars_balance: currentUser.stars_balance });
   });
+
   socket.on('create_table', async (config) => {
     if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
     if (!currentUser) return;
