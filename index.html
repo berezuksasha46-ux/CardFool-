@@ -148,7 +148,7 @@
     <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
       <div>
-        <div id="header-name" style="font-weight: bold; font-size: 15px;">Игрок</div>
+        <div id="header-name" style="font-weight: bold; font-size: 15px;">Загрузка...</div>
         <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="header-unique-id">------</span> | Ур. <span id="header-level">1</span></div>
       </div>
     </div>
@@ -262,7 +262,7 @@
 
   <div id="game-over-modal" class="modal">
     <div class="modal-content">
-      <h2 id="game-over-title" style="font-size: 24px; margin-bottom: 10px; color: var(--accent-gold);">Победа!</h2>
+      <h2 id="game-over-title" style="font-size: 24px; margin-bottom: 10px; color: var(--accent-gold);">Победа! 🎉</h2>
       <p id="game-over-text" style="font-size: 15px; color: var(--text-muted); margin-bottom: 20px;">Вы выиграли партию и получили звезды!</p>
       <button class="btn" style="width: 100%;" onclick="closeGameOverModal()">В лобби</button>
     </div>
@@ -319,27 +319,33 @@
     let currentGameId = null, isGamePlaying = false;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
+    // Гарантированное получение БЕССРОЧНОГО Telegram ID
     function getTelegramUserData() {
-      const tgUser = tg?.initDataUnsafe?.user;
+      let tgUser = tg?.initDataUnsafe?.user;
+
       if (tgUser && tgUser.id) {
-        return {
+        const u = {
           telegram_id: String(tgUser.id),
           username: tgUser.username || ('User_' + tgUser.id),
           first_name: tgUser.first_name || (tgUser.username ? tgUser.username : 'Игрок'),
           photo_url: tgUser.photo_url || null
         };
+        localStorage.setItem('cardfool_tg_id', u.telegram_id);
+        return u;
       }
-      
-      let savedId = localStorage.getItem('cardfool_fixed_id');
-      if (!savedId) {
-        savedId = 'test_' + Math.floor(100000 + Math.random() * 900000);
-        localStorage.setItem('cardfool_fixed_id', savedId);
+
+      // Защитный механизм: Если приложение запущено вне Telegram,
+      // мы фиксируем ЕДИНЫЙ постоянный ID на этом устройстве навсегда
+      let persistentDevId = localStorage.getItem('cardfool_tg_id') || localStorage.getItem('cardfool_dev_fixed_id');
+      if (!persistentDevId) {
+        persistentDevId = 'dev_user_' + Math.floor(100000 + Math.random() * 900000);
+        localStorage.setItem('cardfool_dev_fixed_id', persistentDevId);
       }
 
       return {
-        telegram_id: savedId,
-        username: 'TestUser_' + savedId.slice(-4),
-        first_name: 'Игрок ' + savedId.slice(-4),
+        telegram_id: persistentDevId,
+        username: 'DevUser_' + persistentDevId.slice(-4),
+        first_name: 'Тестовый Игрок',
         photo_url: null
       };
     }
@@ -355,8 +361,8 @@
     socket.on('connect', () => { authenticate(); });
     authenticate();
 
-    // Повторная отправка данных авторизации для стабильности в Telegram
-    setTimeout(() => { authenticate(); }, 500);
+    // Защитный вызов через 400мс
+    setTimeout(() => { authenticate(); }, 400);
 
     socket.on('auth_success', (user) => {
       currentUser = user;
@@ -764,7 +770,6 @@
 
     function claimDailyBonus() { socket.emit('claim_daily'); }
     socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
-    socket.on('daily_error', (d) => alert(d.message));
     socket.on('error_message', (msg) => alert(msg));
   </script>
 </body>
