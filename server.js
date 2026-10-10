@@ -223,15 +223,15 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Удаление стола по желанию создателя
-  socket.on('delete_table', (tableId) => {
+  // Выход из не начатой комнаты (Удаление стола)
+  socket.on('leave_waiting_table', (tableId) => {
     if (!currentUser) return;
     const table = tables.get(tableId);
     if (table && String(table.hostId) === String(currentUser.telegram_id)) {
       tables.delete(tableId);
       socket.leave(tableId);
       socket.emit('table_deleted');
-      socket.emit('error_message', 'Ваш стол был успешно закрыт!');
+      socket.emit('error_message', 'Вы вышли из стола!');
       emitLobbies();
     }
   });
@@ -239,10 +239,9 @@ io.on('connection', (socket) => {
     if (!currentUser && socket._telegram_id) currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
     if (!currentUser) return;
 
-    // Проверяем, есть ли не начатый стол у этого хоста
     for (let [tId, t] of tables.entries()) {
       if (String(t.hostId) === String(currentUser.telegram_id)) {
-        socket.emit('error_message', 'У вас уже есть созданный стол!');
+        socket.emit('table_created', tId);
         return;
       }
     }
@@ -279,7 +278,7 @@ io.on('connection', (socket) => {
     const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
     const table = tables.get(tableId);
 
-    // Игра уже идет — возвращаем в комнату
+    // Если игра идет, переподключаем
     if (activeGames.has(tableId)) {
       const existingGame = activeGames.get(tableId);
       const player = existingGame.players.find(p => String(p.id) === String(currentUser.telegram_id));
@@ -295,9 +294,9 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Если хост пытается зайти сам к себе
+    // Если создатель нажимает на свой же стол в списке
     if (String(table.hostId) === String(currentUser.telegram_id)) {
-      socket.emit('error_message', 'Ожидание второго игрока...');
+      socket.emit('table_created', tableId);
       return;
     }
 
