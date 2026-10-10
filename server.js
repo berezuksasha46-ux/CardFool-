@@ -134,35 +134,8 @@ io.on('connection', (socket) => {
     socket._telegram_id = telegram_id;
   });
 
-  socket.on('get_friends', async (data) => {
-    const tId = data?.telegram_id || currentUser?.telegram_id;
-    if (!tId) return;
-    if (useMemoryFallback) {
-      const friends = Array.from(memoryUsers.values()).filter(u => u.referrer_id === Number(tId));
-      socket.emit('friends_list', { friends });
-      return;
-    }
-    try {
-      const { data: friends } = await supabase.from('users').select('*').eq('referrer_id', Number(tId));
-      socket.emit('friends_list', { friends: friends || [] });
-    } catch (e) {
-      socket.emit('friends_list', { friends: [] });
-    }
-  });
-
-  socket.on('claim_daily', async () => {
-    if (!currentUser) return;
-    const now = new Date();
-    const lastClaim = currentUser.last_daily_claim ? new Date(currentUser.last_daily_claim) : null;
-    if (lastClaim && (now - lastClaim) < 24 * 60 * 60 * 1000) {
-      socket.emit('daily_error', { message: 'Ежедневный бонус уже получен сегодня!' });
-      return;
-    }
-    currentUser.stars_balance = (currentUser.stars_balance || 0) + 10;
-    currentUser.last_daily_claim = now.toISOString();
-    await dbUpdateUser(currentUser.telegram_id, { stars_balance: currentUser.stars_balance, last_daily_claim: currentUser.last_daily_claim });
-    socket.emit('auth_success', currentUser);
-    socket.emit('daily_success', { stars_balance: currentUser.stars_balance });
+  socket.on('get_lobbies', () => {
+    emitLobbies(socket);
   });
 
   socket.on('create_table', async (config) => {
@@ -196,13 +169,27 @@ io.on('connection', (socket) => {
     const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
     const table = tables.get(tableId);
 
-    if (!table || table.status !== 'waiting') {
+    if (activeGames.has(tableId)) {
+      socket.join(tableId);
+      const game = activeGames.get(tableId);
+      broadcastGameState(game);
+      return;
+    }
+
+    if (!table) {
       socket.emit('error_message', 'Стол не найден или уже запущен!');
       return;
     }
 
     if (table.hostId === currentUser.telegram_id) {
       socket.join(tableId);
+      socket.emit('game_state', {
+        gameId: tableId,
+        deckCount: table.deckSize,
+        trumpCard: '♠',
+        tableCards: [],
+        players: [{ name: table.hostName, handCount: 0 }]
+      });
       return;
     }
 
@@ -213,7 +200,6 @@ io.on('connection', (socket) => {
 
     table.status = 'playing';
     const gameId = tableId;
-    table.gameId = gameId;
 
     const deck = createDeck(table.deckSize);
     const trumpCard = deck[deck.length - 1];
@@ -256,10 +242,6 @@ io.on('connection', (socket) => {
 
   socket.on('game_action', (data) => {
     handleGameAction(socket, data);
-  });
-
-  socket.on('get_lobbies', () => {
-    emitLobbies(socket);
   });
 
   async function emitLobbies(targetSocket = io) {
