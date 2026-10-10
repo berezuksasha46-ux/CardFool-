@@ -73,7 +73,6 @@
       box-shadow: none;
     }
 
-    /* Карточки */
     .card-box {
       background: var(--bg-card);
       border-radius: 16px;
@@ -110,7 +109,6 @@
       font-weight: bold;
     }
 
-    /* Нижняя навигация (4 вкладки) */
     .nav-bar {
       position: fixed;
       bottom: 0;
@@ -144,7 +142,27 @@
       margin-bottom: 2px;
     }
 
-    /* Профиль и прогресс */
+    .avatar-container {
+      width: 40px;
+      height: 40px;
+      background: var(--accent-gold-gradient);
+      color: #000;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .avatar-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
     .progress-bar-bg {
       width: 100%;
       height: 8px;
@@ -189,7 +207,6 @@
       color: var(--text-muted);
     }
 
-    /* Модалки */
     .modal {
       display: none;
       position: fixed;
@@ -261,7 +278,7 @@
   <!-- Верхняя шапка -->
   <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <div id="header-avatar" style="width: 40px; height: 40px; background: var(--accent-gold-gradient); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px;">U</div>
+      <div id="header-avatar" class="avatar-container">U</div>
       <div>
         <div id="header-name" style="font-weight: bold; font-size: 15px;">Игрок</div>
         <div style="font-size: 12px; color: var(--text-muted);">Уровень <span id="header-level">1</span></div>
@@ -283,25 +300,25 @@
     </div>
   </div>
 
-  <!-- 2. Вкладка Друзья и Рефералы (НОВАЯ) -->
+  <!-- 2. Вкладка Друзья и Рефералы -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
-      <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎁 Приглашайте друзей</div>
+      <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎁 Реферальная система</div>
       <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
-        Отправляйте ссылку другу. Когда он запустит игру, он автоматически добавится в ваш список друзей!
+        Приглашайте друзей по вашей личной ссылке. Когда они перейдут в бота, они автоматически добавятся в ваш список друзей!
       </div>
-      <button class="btn" style="width: 100%;" onclick="copyReferralLink()">Поделиться реферальной ссылкой</button>
+      <button class="btn" style="width: 100%;" onclick="copyReferralLink()">Скопировать реферальную ссылку</button>
     </div>
 
     <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; margin-top: 20px;">Ваши друзья (<span id="friends-count">0</span>)</div>
     <div id="friends-list-container">
-      <div style="text-align: center; color: var(--text-muted); margin-top: 30px;">У вас пока нет друзей в игре. Пригласите первого!</div>
+      <div style="text-align: center; color: var(--text-muted); margin-top: 30px;">У вас пока нет друзей. Поделитесь ссылкой!</div>
     </div>
   </div>
 
-  <!-- Вкладка Игра (в процессе матча) -->
+  <!-- Вкладка Игра -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <div>
@@ -337,22 +354,24 @@
     </div>
   </div>
 
-  <!-- 4. Вкладка Профиль (ОБНОВЛЕННАЯ СИСТЕМА УРОВНЕЙ И СТАТИСТИКИ) -->
+  <!-- 4. Вкладка Профиль -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Профиль игрока</h2>
     
     <div class="card-box">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-        <div>
-          <div style="font-size: 20px; font-weight: bold;" id="profile-name">Игрок</div>
-          <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">ID: <span id="profile-id">12345</span></div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div id="profile-avatar" class="avatar-container" style="width: 50px; height: 50px; font-size: 20px;">U</div>
+          <div>
+            <div style="font-size: 18px; font-weight: bold;" id="profile-name">Игрок</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">ID: <span id="profile-id">12345</span></div>
+          </div>
         </div>
         <div style="background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); padding: 6px 12px; border-radius: 10px; font-weight: bold; font-size: 14px;">
           Уровень <span id="profile-level">1</span>
         </div>
       </div>
 
-      <!-- Прогресс уровня (15 побед = 1 уровень) -->
       <div style="margin-top: 14px;">
         <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted);">
           <span>Прогресс до Ур. <span id="next-level-num">2</span></span>
@@ -363,13 +382,11 @@
         </div>
       </div>
 
-      <!-- Кнопка сбора награды за уровень -->
       <div id="level-reward-box" style="margin-top: 14px; display: none;">
         <button class="btn" style="width: 100%; font-size: 14px; padding: 10px;" onclick="claimLevelReward()">Забрать бонус уровня (+10 ⭐)</button>
       </div>
     </div>
 
-    <!-- Статистика игрока -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Победы</div>
@@ -389,13 +406,12 @@
       </div>
     </div>
 
-    <!-- Кнопка ежедневного бонуса -->
     <div style="margin-top: 16px;">
       <button class="btn" style="width: 100%; margin-bottom: 12px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
     </div>
   </div>
 
-  <!-- Нижняя панель навигации (4 кнопки) -->
+  <!-- Нижняя навигация -->
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)">
       <div class="nav-icon">🎲</div>
@@ -452,364 +468,3 @@
       </div>
     </div>
   </div>
-  <script>
-    let tg = window.Telegram?.WebApp;
-    if (tg && tg.expand) {
-      try { tg.expand(); } catch (e) {}
-    } else {
-      tg = { initDataUnsafe: { user: { id: 12345, username: "MobileUser", first_name: "Игрок" } } };
-    }
-
-    const socket = io();
-    let currentUser = null;
-    let selectedGameMode = 'podkidnoy';
-    let selectedDeckSize = 36;
-    let selectedStake = 10;
-    let currentGameId = null;
-    let myHandCards = [];
-    let isMyTurnFlag = false;
-
-    const initDataUnsafe = tg.initDataUnsafe || {};
-    const telegramId = initDataUnsafe.user?.id || Math.floor(Math.random() * 1000000);
-    const username = initDataUnsafe.user?.username || 'User_' + telegramId;
-    const firstName = initDataUnsafe.user?.first_name || 'Игрок';
-    const urlParams = new URLSearchParams(window.location.search);
-    const referrerId = urlParams.get('startapp') || null;
-
-    // Авторизация и передача реферера для автоматического добавления в друзья
-    socket.emit('set_socket_user', telegramId);
-    socket.emit('auth', {
-      telegram_id: telegramId,
-      username: username,
-      first_name: firstName,
-      referrer_id: referrerId
-    });
-
-    socket.on('auth_success', (user) => {
-      currentUser = user;
-      updateProfileUI(user);
-    });
-
-    socket.on('error_message', (msg) => {
-      alert(msg);
-    });
-
-    // Функция обновления данных профиля и уровней
-    function updateProfileUI(user) {
-      document.getElementById('header-stars').innerText = user.stars_balance;
-      document.getElementById('header-level').innerText = user.level || 1;
-      document.getElementById('header-name').innerText = user.first_name || user.username;
-      
-      document.getElementById('profile-name').innerText = user.first_name || user.username;
-      document.getElementById('profile-id').innerText = user.telegram_id;
-      document.getElementById('profile-stars').innerText = user.stars_balance + ' ⭐';
-      document.getElementById('header-avatar').innerText = (user.first_name || 'P')[0].toUpperCase();
-
-      const wins = user.wins || 0;
-      const losses = user.losses || 0;
-      const totalGames = wins + losses;
-      const winrate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
-
-      document.getElementById('stat-wins').innerText = wins;
-      document.getElementById('stat-losses').innerText = losses;
-      document.getElementById('stat-winrate').innerText = winrate + '%';
-
-      // Расчет уровней: каждые 15 побед = 1 уровень
-      const calculatedLevel = Math.floor(wins / 15) + 1;
-      const winsInLevel = wins % 15;
-      const progressPercent = Math.round((winsInLevel / 15) * 100);
-
-      document.getElementById('profile-level').innerText = calculatedLevel;
-      document.getElementById('next-level-num').innerText = calculatedLevel + 1;
-      document.getElementById('wins-in-level').innerText = winsInLevel;
-      document.getElementById('level-progress-bar').style.width = progressPercent + '%';
-
-      // Проверка доступности награды за уровень (если уровень на бэке ниже расчетного или есть несобранные)
-      if (calculatedLevel > (user.claimed_level || 1)) {
-        document.getElementById('level-reward-box').style.display = 'block';
-      } else {
-        document.getElementById('level-reward-box').style.display = 'none';
-      }
-    }
-
-    // Переключение вкладок в меню
-    function switchTab(tabId, el) {
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      
-      document.getElementById(tabId + '-view').classList.add('active');
-      if (el) el.classList.add('active');
-
-      if (tabId === 'lobbies') {
-        socket.emit('get_lobbies');
-      } else if (tabId === 'leaderboard') {
-        loadLeaderboard();
-      } else if (tabId === 'friends') {
-        socket.emit('get_friends', { telegram_id: telegramId });
-      }
-    }
-
-    // Получение списка друзей и рефералов
-    socket.on('friends_list', (data) => {
-      const container = document.getElementById('friends-list-container');
-      const countEl = document.getElementById('friends-count');
-      if (!container) return;
-
-      container.innerHTML = '';
-      const friends = data.friends || [];
-      countEl.innerText = friends.length;
-
-      if (friends.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">У вас пока нет друзей в игре. Пригласите первого!</div>';
-        return;
-      }
-
-      friends.forEach(friend => {
-        const item = document.createElement('div');
-        item.className = 'table-card';
-        item.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 36px; height: 36px; background: #23163d; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--accent-gold);">
-              ${(friend.first_name || 'F')[0].toUpperCase()}
-            </div>
-            <div>
-              <div style="font-weight: bold; font-size: 15px;">${friend.first_name || friend.username}</div>
-              <div style="font-size: 12px; color: var(--text-muted);">Побед: ${friend.wins || 0} | Уровень: ${friend.level || 1}</div>
-            </div>
-          </div>
-          <div style="font-size: 12px; color: var(--success); font-weight: bold;">В друзьях</div>
-        `;
-        container.appendChild(item);
-      });
-    });
-
-    // Ежедневный бонус
-    function claimDailyBonus() {
-      socket.emit('claim_daily', { telegram_id: telegramId });
-    }
-
-    socket.on('daily_success', (data) => {
-      alert(`🎉 Вы успешно получили ежедневный бонус +${data.amount || 10} ⭐!`);
-      if (currentUser) {
-        currentUser.stars_balance = data.new_balance;
-        updateProfileUI(currentUser);
-      }
-    });
-
-    socket.on('daily_error', (data) => {
-      alert(data.message || 'Ежедневный бонус можно получать только раз в сутки!');
-    });
-
-    // Получение награды за уровень
-    function claimLevelReward() {
-      socket.emit('claim_level_reward', { telegram_id: telegramId });
-    }
-
-    socket.on('level_reward_success', (data) => {
-      alert(`⭐ Награда за уровень получена: +10 звёзд!`);
-      if (currentUser) {
-        currentUser.stars_balance = data.new_balance;
-        currentUser.claimed_level = data.claimed_level;
-        updateProfileUI(currentUser);
-      }
-    });
-
-    // Реферальная ссылка
-    function copyReferralLink() {
-      const refLink = `https://t.me/your_bot_username/app?startapp=${telegramId}`;
-      navigator.clipboard.writeText(refLink).then(() => {
-        alert('📋 Реферальная ссылка скопирована в буфер обмена!');
-      }).catch(() => {
-        prompt('Скопируйте вашу реферальную ссылку:', refLink);
-      });
-    }
-
-    // Лобби столов
-    socket.on('lobbies_list', (data) => {
-      const container = document.getElementById('tables-container');
-      if (!container) return;
-      container.innerHTML = '';
-
-      if (!data.tables || data.tables.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div>';
-        return;
-      }
-
-      data.tables.forEach(table => {
-        const isMy = table.hostId === data.currentUserId;
-        const card = document.createElement('div');
-        card.className = isMy ? 'table-card my-table' : 'table-card';
-
-        const badge = isMy ? '<div class="my-table-badge">Ваш стол</div>' : '';
-        const mode = table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной';
-        const btn = isMy 
-          ? '<span style="font-size: 12px; color: var(--text-muted);">Ожидание игрока</span>' 
-          : `<button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>`;
-
-        card.innerHTML = `
-          ${badge}
-          <div>
-            <div style="font-weight: bold; font-size: 16px;">Стол от ${table.hostName}</div>
-            <div style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">${mode} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
-          </div>
-          <div>${btn}</div>
-        `;
-        container.appendChild(card);
-      });
-    });
-
-    function openCreateTableModal() {
-      document.getElementById('create-table-modal').classList.add('active');
-    }
-
-    function closeCreateTableModal() {
-      document.getElementById('create-table-modal').classList.remove('active');
-    }
-
-    function selectMode(mode) {
-      selectedGameMode = mode;
-      document.getElementById('mode-podkidnoy').classList.toggle('selected', mode === 'podkidnoy');
-      document.getElementById('mode-perevodnoy').classList.toggle('selected', mode === 'perevodnoy');
-    }
-
-    function selectDeck(size) {
-      selectedDeckSize = size;
-      document.getElementById('deck-36').classList.toggle('selected', size === 36);
-      document.getElementById('deck-24').classList.toggle('selected', size === 24);
-    }
-
-    function selectStake(stake, el) {
-      selectedStake = stake;
-      el.parentElement.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
-      el.classList.add('selected');
-    }
-
-    function submitCreateTable() {
-      socket.emit('create_table', {
-        mode: selectedGameMode,
-        deckSize: selectedDeckSize,
-        stake: selectedStake
-      });
-      closeCreateTableModal();
-    }
-
-    socket.on('table_created', () => {
-      socket.emit('get_lobbies');
-    });
-
-    function joinTable(tableId) {
-      socket.emit('join_table', tableId);
-    }
-
-    // Игровой процесс
-    socket.on('game_state', (state) => {
-      currentGameId = state.gameId;
-      document.getElementById('lobbies-view').classList.remove('active');
-      document.getElementById('game-view').classList.add('active');
-
-      const opponent = state.players.find(p => p.id !== currentUser.telegram_id) || state.players[1];
-      document.getElementById('opponent-name').innerText = opponent.name;
-      document.getElementById('opponent-card-count').innerText = opponent.handCount;
-      document.getElementById('deck-count').innerText = state.deckCount;
-      document.getElementById('deck-card-view').innerText = state.trumpCard.suit;
-      
-      if (['♥', '♦'].includes(state.trumpCard.suit)) {
-        document.getElementById('deck-card-view').style.color = '#dc2626';
-      }
-
-      const tableSlot = document.getElementById('table-cards-slot');
-      tableSlot.innerHTML = '';
-      state.tableCards.forEach(pair => {
-        const slot = document.createElement('div');
-        slot.className = 'card-slot';
-        
-        const attCard = document.createElement('div');
-        attCard.className = `card-item ${['♥','♦'].includes(pair.attack.suit) ? 'red' : ''}`;
-        attCard.innerHTML = `<span>${pair.attack.rank}</span><span style="font-size:18px; text-align:center;">${pair.attack.suit}</span><span style="transform: rotate(180deg);">${pair.attack.rank}</span>`;
-        slot.appendChild(attCard);
-
-        if (pair.defend) {
-          const defCard = document.createElement('div');
-          defCard.className = `card-item ${['♥','♦'].includes(pair.defend.suit) ? 'red' : ''}`;
-          defCard.innerHTML = `<span>${pair.defend.rank}</span><span style="font-size:18px; text-align:center;">${pair.defend.suit}</span><span style="transform: rotate(180deg);">${pair.defend.rank}</span>`;
-          slot.appendChild(defCard);
-        }
-        tableSlot.appendChild(slot);
-      });
-    });
-
-    socket.on('your_hand', (hand) => {
-      myHandCards = hand;
-      const handContainer = document.getElementById('my-hand-container');
-      handContainer.innerHTML = '';
-
-      hand.forEach((card, index) => {
-        const cardEl = document.createElement('div');
-        cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''}`;
-        cardEl.innerHTML = `<span>${card.rank}</span><span style="font-size:18px; text-align:center;">${card.suit}</span><span style="transform: rotate(180deg);">${card.rank}</span>`;
-        cardEl.onclick = () => onCardClick(index);
-        handContainer.appendChild(cardEl);
-      });
-    });
-
-    socket.on('is_my_turn', (isMyTurn) => {
-      isMyTurnFlag = isMyTurn;
-      document.getElementById('turn-indicator').innerText = isMyTurn ? 'Ваш ход!' : 'Ход соперника';
-      document.getElementById('turn-indicator').style.color = isMyTurn ? 'var(--success)' : 'var(--accent-gold)';
-      
-      document.getElementById('action-btn-primary').style.display = isMyTurn ? 'block' : 'none';
-      document.getElementById('action-btn-secondary').style.display = isMyTurn ? 'block' : 'none';
-    });
-
-    socket.on('timer_update', (sec) => {
-      const bar = document.getElementById('timer-bar');
-      if (bar) {
-        bar.style.width = (sec / 15 * 100) + '%';
-      }
-    });
-
-    function onCardClick(index) {
-      if (!isMyTurnFlag) return;
-      socket.emit('game_action', { gameId: currentGameId, action: 'attack', cardIndex: index });
-    }
-
-    function handleGameAction(actionType) {
-      socket.emit('game_action', { gameId: currentGameId, action: actionType });
-    }
-
-    socket.on('game_over', (data) => {
-      alert(`Игра окончена! Победитель: ${data.winnerName}. Выигрыш: +${data.prize} ⭐`);
-      switchTab('lobbies');
-    });
-
-    // Лидерборд
-    async function loadLeaderboard() {
-      try {
-        const res = await fetch('/api/leaderboard');
-        const list = await res.json();
-        const container = document.getElementById('leaderboard-list');
-        if (!container) return;
-        container.innerHTML = '';
-
-        list.slice(0, 10).forEach((user, idx) => {
-          const item = document.createElement('div');
-          item.className = 'table-card';
-          item.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-weight: bold; color: var(--accent-gold); font-size: 16px;">#${idx + 1}</span>
-              <div>
-                <div style="font-weight: bold; font-size: 15px;">${user.first_name || user.username}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">Побед: ${user.wins} | Ур. ${user.level || 1}</div>
-              </div>
-            </div>
-            <div style="color: var(--accent-gold); font-weight: bold; font-size: 15px;">⭐ ${user.stars_balance}</div>
-          `;
-          container.appendChild(item);
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    }
-  </script>
-</body>
-</html>
