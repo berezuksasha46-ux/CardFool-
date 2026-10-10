@@ -142,6 +142,20 @@
       <h2 style="font-size: 22px;">Игровые столы</h2>
       <button class="btn" style="padding: 10px 18px; font-size: 14px;" onclick="openCreateTableModal()">Создать стол</button>
     </div>
+
+    <!-- Блок если вы прямо сейчас ожидаете в столе -->
+    <div id="my-waiting-table-box" style="display: none;" class="card-box">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div class="my-table-badge">Ваш открытый стол</div>
+          <div style="font-size: 14px; font-weight: bold;">Ожидание соперника...</div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-danger" onclick="leaveCurrentWaitingTable()">✖ Выйти</button>
+        </div>
+      </div>
+    </div>
+
     <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div></div>
   </div>
 
@@ -172,7 +186,7 @@
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div></div>
   </div>
 
-  <!-- Вкладка Игровой процесс -->
+  <!-- Вкладка Игровой процесс (Во время игры выходить НЕЛЬЗЯ) -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
@@ -276,7 +290,8 @@
     if (tg && tg.expand) tg.expand();
 
     const socket = io({ transports: ['websocket', 'polling'] });
-    let currentUser = null, selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10, currentGameId = null;
+    let currentUser = null, selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
+    let currentGameId = null, isGamePlaying = false;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
     const initDataUnsafe = tg?.initDataUnsafe || {};
@@ -312,6 +327,14 @@
     function switchTab(tabId, el) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+      // Если возврат в столы и идет игра -> сразу открываем игровой стол
+      if (tabId === 'lobbies' && isGamePlaying) {
+        document.getElementById('game-view')?.classList.add('active');
+        if (el) el.classList.add('active');
+        return;
+      }
+
       const target = document.getElementById(tabId + '-view');
       if (target) target.classList.add('active');
       if (el) el.classList.add('active');
@@ -389,37 +412,50 @@
       }
     }
 
-    // Список столов: выводим крестик для удаления ТОЛЬКО создателю
+    // Отображение списка столов
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
+      const myWaitingBox = document.getElementById('my-waiting-table-box');
       if (!container) return;
+      
       container.innerHTML = '';
-      if (!data.tables || data.tables.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div>';
-        return;
+      let hasMyWaitingTable = false;
+
+      if (data.tables && data.tables.length > 0) {
+        data.tables.forEach(table => {
+          const isMy = String(table.hostId) === String(telegramId);
+          if (isMy) {
+            hasMyWaitingTable = true;
+            currentGameId = table.id;
+          } else {
+            container.innerHTML += `
+              <div class="table-card">
+                <div>
+                  <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName}</div>
+                  <div style="font-size: 12px; color: var(--text-muted);">${table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной'} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
+                </div>
+                <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>
+              </div>`;
+          }
+        });
       }
-      data.tables.forEach(table => {
-        const isMy = String(table.hostId) === String(telegramId);
-        container.innerHTML += `
-          <div class="table-card ${isMy ? 'my-table' : ''}">
-            <div>
-              ${isMy ? '<div class="my-table-badge">Ваш стол</div>' : ''}
-              <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName}</div>
-              <div style="font-size: 12px; color: var(--text-muted);">${table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной'} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              ${isMy ? `<button class="btn-danger" style="padding: 8px 12px;" onclick="deleteMyTable('${table.id}')">✖</button>` : `<button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>`}
-            </div>
-          </div>`;
-      });
+
+      if (myWaitingBox) {
+        myWaitingBox.style.display = hasMyWaitingTable ? 'block' : 'none';
+      }
+
+      if (!hasMyWaitingTable && container.innerHTML === '') {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div>';
+      }
     });
 
-    function deleteMyTable(tId) {
-      socket.emit('delete_table', tId);
+    function leaveCurrentWaitingTable() {
+      if (currentGameId) socket.emit('leave_waiting_table', currentGameId);
     }
 
     socket.on('table_deleted', () => {
       currentGameId = null;
+      document.getElementById('my-waiting-table-box').style.display = 'none';
     });
 
     function openCreateTableModal() { document.getElementById('create-table-modal')?.classList.add('active'); }
@@ -435,6 +471,7 @@
 
     socket.on('table_created', (tId) => {
       currentGameId = tId;
+      socket.emit('get_lobbies');
     });
 
     function joinTable(tId) {
@@ -442,8 +479,11 @@
       socket.emit('join_table', tId);
     }
 
+    // Включается при старте/ходе игры (крестик пропадает, выйти нельзя)
     socket.on('game_state', (state) => {
       if (!state) return;
+      isGamePlaying = true;
+
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view')?.classList.add('active');
 
