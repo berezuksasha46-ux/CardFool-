@@ -17,6 +17,7 @@
       --text-main: #ffffff;
       --text-muted: #9ca3af;
       --success: #10b981;
+      --danger: #ef4444;
       --border-color: rgba(255, 255, 255, 0.08);
     }
 
@@ -36,7 +37,7 @@
     .view {
       display: none;
       padding: 16px;
-      animation: fadeIn 0.3s ease;
+      animation: fadeIn 0.25s ease;
     }
 
     .view.active {
@@ -162,12 +163,13 @@
       object-fit: cover;
     }
 
+    /* Зеленый покерный стол */
     .poker-table {
       background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%);
       border: 2px solid #2d5a3c;
       border-radius: 20px;
-      padding: 14px;
-      min-height: 260px;
+      padding: 16px;
+      min-height: 280px;
       box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
       display: flex;
       flex-direction: column;
@@ -195,7 +197,7 @@
     }
 
     .card-item.red {
-      color: #dc2626;
+      color: var(--danger);
     }
 
     .card-item.selected {
@@ -310,7 +312,7 @@
 </head>
 <body>
 
-  <!-- Шапка -->
+  <!-- Шапка профиля -->
   <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
       <div id="header-avatar" class="avatar-container">U</div>
@@ -324,7 +326,7 @@
     </div>
   </div>
 
-  <!-- Вкладка Лобби -->
+  <!-- Вкладка Лобби / Столы -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h2 style="font-size: 22px;">Игровые столы</h2>
@@ -335,7 +337,7 @@
     </div>
   </div>
 
-  <!-- Вкладка Друзья -->
+  <!-- Вкладка Друзья и Рефералы -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
@@ -351,18 +353,18 @@
     </div>
   </div>
 
-  <!-- Вкладка Игра -->
+  <!-- Вкладка Игра (Мультиплеер Дурак Онлайн) -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <div id="opponent-avatar" class="avatar-container" style="width: 32px; height: 32px; font-size: 12px;">O</div>
         <div>
-          <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Соперник</div>
-          <div style="font-size: 11px; color: var(--text-muted);">Карт: <span id="opponent-card-count">0</span></div>
+          <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Ожидание соперника...</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
         </div>
       </div>
-      <div style="background: var(--bg-card); padding: 4px 10px; border-radius: 8px; font-size: 12px; border: 1px solid var(--border-color);">
-        Колода: <span id="deck-count">36</span> | Козырь: <span id="deck-card-view" style="font-weight: bold; font-size: 14px;">♠</span>
+      <div style="background: var(--bg-card); padding: 6px 12px; border-radius: 8px; font-size: 13px; border: 1px solid var(--border-color);">
+        Колода: <span id="deck-count">36</span> | Козырь: <span id="deck-card-view" style="font-weight: bold; font-size: 16px;">♠</span>
       </div>
     </div>
 
@@ -371,15 +373,15 @@
     </div>
 
     <div class="poker-table">
-      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold);">Ожидание игроков...</div>
+      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold);">Подключение к столу...</div>
       <div id="table-cards-slot" style="display: flex; gap: 12px; min-height: 110px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 10px 0;"></div>
       <div style="display: flex; gap: 10px; justify-content: center;">
-        <button id="action-btn-primary" class="btn" style="display: none; padding: 8px 16px; font-size: 13px;" onclick="sendReady()">Готов!</button>
-        <button id="action-btn-secondary" class="btn btn-secondary" style="display: none; padding: 8px 16px; font-size: 13px;" onclick="handleGameAction('take')">Взять</button>
+        <button id="action-btn-primary" class="btn" style="display: inline-block; padding: 10px 20px; font-size: 14px;" onclick="sendReady()">Готов!</button>
+        <button id="action-btn-secondary" class="btn btn-secondary" style="display: none; padding: 10px 20px; font-size: 14px;" onclick="handleGameAction('take')">Взять</button>
       </div>
     </div>
 
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 10px; margin-bottom: 6px;">Ваши карты:</div>
+    <div style="font-size: 12px; color: var(--text-muted); margin-top: 12px; margin-bottom: 6px;">Ваши карты:</div>
     <div id="my-hand-container" style="display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; min-height: 95px;"></div>
   </div>
 
@@ -527,6 +529,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const referrerId = urlParams.get('startapp') || null;
 
+    // Авторизация
     socket.emit('set_socket_user', telegramId);
     socket.emit('auth', {
       telegram_id: telegramId,
@@ -688,6 +691,7 @@
       });
     }
 
+    // Отображение столов в лобби
     socket.on('lobbies_list', (data) => {
       const container = document.getElementById('tables-container');
       if (!container) return;
@@ -706,7 +710,7 @@
         const badge = isMy ? '<div class="my-table-badge">Ваш стол</div>' : '';
         const mode = table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной';
         const btn = isMy 
-          ? `<button class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="openGameRoom('${table.id}')">Вернуться в стол</button>` 
+          ? `<button class="btn btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="joinTable('${table.id}')">Вернуться в стол</button>` 
           : `<button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>`;
 
         card.innerHTML = `
@@ -758,27 +762,27 @@
     }
 
     socket.on('table_created', (data) => {
-      if (data && data.tableId) {
-        joinTable(data.tableId);
+      const tId = data.tableId || data.id || data;
+      if (tId) {
+        joinTable(tId);
       } else {
         socket.emit('get_lobbies');
       }
     });
 
+    // Улучшенный единый метод входа в стол и комнату
     function joinTable(tableId) {
       currentGameId = tableId;
+      
+      // Отправляем универсальные события подключения
       socket.emit('join_table', { tableId: tableId, telegram_id: telegramId, first_name: firstName });
       socket.emit('join_room', tableId);
       socket.emit('join', { gameId: tableId, telegram_id: telegramId });
-      openGameRoom(tableId);
-    }
 
-    function openGameRoom(tableId) {
-      currentGameId = tableId;
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view').classList.add('active');
-      socket.emit('get_game_state', { gameId: tableId, telegram_id: telegramId });
       document.getElementById('turn-indicator').innerText = 'Ожидание второго игрока...';
+      
       showReadyButton();
     }
 
@@ -803,17 +807,31 @@
       socket.emit('ready', { gameId: currentGameId, telegram_id: telegramId });
     }
 
+    // Синхронизация состояния игры, козыря и соперников
     socket.on('game_state', (state) => {
       currentGameId = state.gameId || state.id || currentGameId;
 
-      const opponent = (state.players || []).find(p => String(p.id) !== String(telegramId)) || { name: 'Ожидание второго игрока...', handCount: 0 };
-      document.getElementById('opponent-name').innerText = opponent.name || opponent.first_name || 'Ожидание...';
+      const players = state.players || [];
+      const opponent = players.find(p => String(p.id) !== String(telegramId)) || { name: 'Ожидание второго игрока...', handCount: 0 };
+      
+      document.getElementById('opponent-name').innerText = opponent.name || opponent.first_name || 'Соперник';
       document.getElementById('opponent-card-count').innerText = opponent.handCount !== undefined ? opponent.handCount : 0;
       document.getElementById('deck-count').innerText = state.deckCount !== undefined ? state.deckCount : (state.deckSize || 36);
       
-      const trumpSuit = state.trumpCard?.suit || state.trumpSuit || '♠';
-      document.getElementById('deck-card-view').innerText = trumpSuit;
-      document.getElementById('deck-card-view').style.color = ['♥', '♦'].includes(trumpSuit) ? '#dc2626' : '#ffffff';
+      // Синхронизация козыря
+      const trump = state.trumpCard || state.trump;
+      let trumpSuit = '♠';
+      if (typeof trump === 'object' && trump !== null) {
+        trumpSuit = trump.suit || '♠';
+      } else if (typeof trump === 'string') {
+        trumpSuit = trump;
+      } else if (state.trumpSuit) {
+        trumpSuit = state.trumpSuit;
+      }
+
+      const trumpView = document.getElementById('deck-card-view');
+      trumpView.innerText = trumpSuit;
+      trumpView.style.color = ['♥', '♦'].includes(trumpSuit) ? '#dc2626' : '#ffffff';
 
       const tableSlot = document.getElementById('table-cards-slot');
       tableSlot.innerHTML = '';
