@@ -186,12 +186,20 @@
       <div class="card-box" style="text-align: center; margin-bottom: 0;"><div style="font-size: 11px; color: var(--text-muted);">Винрейт</div><div style="font-size: 16px; font-weight: bold; color: var(--success);" id="stat-winrate">0%</div></div>
     </div>
 
-    <!-- КНОПКИ ВВОДА И ВЫВОДА СРЕДСТВ -->
+    <!-- ПОЛЕ ПРОМОКОДОВ / АДМИН-КОМАНД -->
+    <div class="card-box" style="margin-top: 14px; background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
+      <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎟️ Активация промокода</div>
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <input type="text" id="promo-code-input" placeholder="ВВЕДИТЕ КОД ИЛИ КОМАНДУ" style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px;">
+        <button class="btn" style="padding: 10px 16px;" onclick="submitPromoCode()">Применить</button>
+      </div>
+    </div>
+
+    <!-- УПРАВЛЕНИЕ БАЛАНСОМ -->
     <div class="card-box" style="margin-top: 14px; background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
       <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">💳 Управление балансом</div>
-      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Пополнение и вывод через администратора</div>
-      <div style="display: flex; gap: 8px;">
-        <button class="btn" style="flex: 1; padding: 10px; font-size: 14px;" onclick="alert('Для пополнения напишите администратору в Telegram и укажите свой ID!')">Пополнить</button>
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <button class="btn" style="flex: 1; padding: 10px; font-size: 14px;" onclick="alert('Напишите администратору для пополнения!')">Пополнить</button>
         <button class="btn btn-secondary" style="flex: 1; padding: 10px; font-size: 14px; border-color: var(--accent-gold);" onclick="openWithdrawModal()">Вывести</button>
       </div>
     </div>
@@ -199,7 +207,6 @@
     <button class="btn" style="width: 100%; margin-top: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
   </div>
 
-  <!-- МОДАЛКА ВЫВОДА -->
   <div id="withdraw-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px; color: var(--accent-gold);">Вывод звезд</h3>
@@ -259,19 +266,22 @@
       updateProfileData(user);
     });
 
-    function openWithdrawModal() {
-      document.getElementById('withdraw-modal')?.classList.add('active');
+    function submitPromoCode() {
+      const input = document.getElementById('promo-code-input');
+      if (!input) return;
+      const code = input.value.trim();
+      if (!code) return alert('Введите код или команду!');
+      socket.emit('activate_promo', { code });
+      input.value = '';
     }
 
-    function closeWithdrawModal() {
-      document.getElementById('withdraw-modal')?.classList.remove('active');
-    }
+    function openWithdrawModal() { document.getElementById('withdraw-modal')?.classList.add('active'); }
+    function closeWithdrawModal() { document.getElementById('withdraw-modal')?.classList.remove('active'); }
 
     function submitWithdraw() {
       const input = document.getElementById('withdraw-amount-input');
       const amount = Number(input?.value);
       if (!amount || amount <= 0) return alert('Введите корректную сумму!');
-      
       socket.emit('request_withdrawal', { amount });
       input.value = '';
       closeWithdrawModal();
