@@ -237,7 +237,7 @@
   </div>
 
   <div id="leaderboard-view" class="view">
-    <h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров</h2>
+    <h2 style="font-size: 22px; margin-bottom: 16px;">Таблица лидеров (Топ по Звёздам ⭐)</h2>
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка лидеров...</div></div>
   </div>
   
@@ -325,7 +325,6 @@
       if (initData && initData.length > 0) {
         socket.emit('auth', { initData });
       } else {
-        // Жестко фиксируем тестовый ID в localStorage браузера навсегда
         let devId = localStorage.getItem('cardfool_permanent_dev_id');
         if (!devId) {
           devId = 'dev_' + Math.floor(100000 + Math.random() * 900000);
@@ -360,20 +359,25 @@
       }
     }
 
+    // Полное и мгновенное обновление отображения ID и всех параметров
     function updateProfileData(user) {
-      const uId = user.unique_id || '------';
-      const name = user.first_name || user.username;
+      if (!user) return;
       
-      document.getElementById('header-stars').innerText = user.stars_balance || 0;
-      document.getElementById('header-level').innerText = user.level || 1;
+      const uId = (user.unique_id && String(user.unique_id).trim() !== '') ? user.unique_id : '------';
+      const name = user.first_name || user.username || 'Игрок';
+      
+      // Шапка
+      document.getElementById('header-stars').innerText = user.stars_balance ?? 0;
+      document.getElementById('header-level').innerText = user.level ?? 1;
       document.getElementById('header-name').innerText = name;
       document.getElementById('header-unique-id').innerText = uId;
       setAvatarElement('header-avatar', user.photo_url, name);
       
+      // Профиль
       document.getElementById('profile-name').innerText = name;
       document.getElementById('profile-unique-id').innerText = uId;
-      document.getElementById('stat-wins').innerText = user.wins || 0;
-      document.getElementById('stat-losses').innerText = user.losses || 0;
+      document.getElementById('stat-wins').innerText = user.wins ?? 0;
+      document.getElementById('stat-losses').innerText = user.losses ?? 0;
       setAvatarElement('profile-avatar', user.photo_url, name);
       
       const totalGames = (user.wins || 0) + (user.losses || 0);
@@ -428,7 +432,7 @@
                   <div style="font-size:12px; color:var(--text-muted);">ID: ${f.unique_id || '---'}</div>
                 </div>
               </div>
-              <div style="color:var(--success); font-weight:bold; font-size:13px;">В друзьях</div>
+              <div style="color:var(--success); font-weight:bold; font-size:13px;">⭐ ${f.stars_balance || 0}</div>
             </div>`;
         });
       }
@@ -719,6 +723,7 @@
 
     socket.on('leaderboard_data', (list) => { renderLeaderboard(list); });
 
+    // Отрисовка топа лидеров по Балансу Звёзд ⭐
     function renderLeaderboard(list) {
       const container = document.getElementById('leaderboard-list');
       if (!container) return;
@@ -731,7 +736,7 @@
 
       list.forEach((u, i) => {
         const avatarStyle = u.photo_url ? `style="background-image: url('${u.photo_url}');"` : '';
-        const avatarText = u.photo_url ? '' : (u.first_name || u.username).charAt(0).toUpperCase();
+        const avatarText = u.photo_url ? '' : (u.first_name || u.username || 'U').charAt(0).toUpperCase();
 
         container.innerHTML += `
           <div class="table-card">
@@ -742,7 +747,7 @@
                 <div style="font-size:11px; color:var(--text-muted);">ID: ${u.unique_id || '---'}</div>
               </div>
             </div>
-            <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${u.stars_balance || 0}</span>
+            <span style="color:var(--accent-gold); font-weight:bold; font-size: 15px;">⭐ ${u.stars_balance || 0}</span>
           </div>`;
       });
     }
