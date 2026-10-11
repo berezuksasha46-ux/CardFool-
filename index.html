@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CardFool Mini App</title>
+  <title>CardFool Premium</title>
   
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
   
   <style>
     :root {
-      --bg-main: #0b0614; --bg-card: #150b26; --accent-gold: #f59e0b;
-      --accent-gold-gradient: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-      --text-main: #ffffff; --text-muted: #9ca3af; --danger: #ef4444;
-      --border-color: rgba(255, 255, 255, 0.08);
+      --bg-main: #07040d; --bg-card: #130a24; --accent-gold: #f59e0b;
+      --accent-gold-gradient: linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #b45309 100%);
+      --text-main: #ffffff; --text-muted: #9ca3af; --danger: #f43f5e;
+      --border-color: rgba(255, 255, 255, 0.12);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     html, body { width: 100%; height: 100%; overflow-x: hidden; background-color: var(--bg-main); color: var(--text-main); }
@@ -23,90 +23,122 @@
       position: fixed; top: 0; left: 0; right: 0; height: 60px;
       background: var(--bg-card); border-bottom: 1px solid var(--border-color);
       display: flex; justify-content: space-between; align-items: center;
-      padding: 0 14px; z-index: 1000;
+      padding: 0 14px; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     .view { display: none; padding: 14px; width: 100%; }
     .view.active { display: block; }
 
-    .btn { background: var(--accent-gold-gradient); color: #000; border: none; padding: 14px 28px; font-weight: bold; font-size: 16px; border-radius: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
+    .btn { background: var(--accent-gold-gradient); color: #0b0614; border: none; padding: 14px 28px; font-weight: 800; font-size: 16px; border-radius: 14px; cursor: pointer; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4); text-transform: uppercase; }
     .btn:active { transform: scale(0.97); }
-    .btn-secondary { background: #23163d; color: #fff; border: 1px solid var(--border-color); }
+    .btn-secondary { background: rgba(35, 22, 61, 0.9); color: #fff; border: 1px solid var(--border-color); box-shadow: none; }
     .btn-danger { background: var(--danger); color: #fff; padding: 6px 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
 
-    .card-box, .table-card { background: var(--bg-card); border-radius: 16px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border-color); }
+    .card-box, .table-card { background: var(--bg-card); border-radius: 18px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border-color); box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
     .table-card { display: flex; justify-content: space-between; align-items: center; }
 
     .avatar-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
     .avatar-container { 
-      width: 40px; height: 40px; background: var(--accent-gold-gradient); color: #000; 
+      width: 42px; height: 42px; background: var(--accent-gold-gradient); color: #000; 
       border-radius: 50%; display: flex; align-items: center; justify-content: center; 
-      font-weight: bold; overflow: hidden; background-size: cover; background-position: center; flex-shrink: 0; 
+      font-weight: 800; overflow: hidden; background-size: cover; background-position: center; flex-shrink: 0; 
+      border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     }
 
     .action-toast {
-      position: absolute; top: -32px; left: 50%; transform: translateX(-50%) scale(0);
-      background: var(--accent-gold); color: #000; font-weight: bold; font-size: 11px;
-      padding: 4px 10px; border-radius: 12px; white-space: nowrap;
-      transition: transform 0.2s ease-out, opacity 0.2s ease-out; opacity: 0; pointer-events: none; z-index: 200;
+      position: absolute; top: -35px; left: 50%; transform: translateX(-50%) scale(0);
+      background: var(--accent-gold-gradient); color: #0b0614; font-weight: 900; font-size: 12px;
+      padding: 5px 12px; border-radius: 16px; white-space: nowrap;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s; opacity: 0; pointer-events: none; z-index: 200;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.5);
     }
     .action-toast.show { transform: translateX(-50%) scale(1); opacity: 1; }
 
     .poker-table { 
-      background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%); 
-      border: 2px solid #2d6a45; border-radius: 18px; padding: 12px; 
-      min-height: 250px; display: flex; flex-direction: column; justify-content: space-between; 
+      background: radial-gradient(circle at center, #1b4d32 0%, #0d281a 70%, #05140c 100%); 
+      border: 3px solid #2d6a45; border-radius: 22px; padding: 14px; 
+      min-height: 270px; display: flex; flex-direction: column; justify-content: space-between; 
       position: relative; width: 100%; margin-bottom: 10px;
+      box-shadow: inset 0 0 50px rgba(0,0,0,0.8), 0 10px 30px rgba(0,0,0,0.5);
     }
 
-    /* УВЕЛИЧЕННЫЙ ВИДЖЕТ КОЛОДЫ */
+    /* ТАЙМЕР ХОДА */
+    .timer-bar-container { width: 100%; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; margin-top: 6px; border: 1px solid rgba(255,255,255,0.1); }
+    .timer-bar-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #10b981, #f59e0b, #f43f5e); transition: width 1s linear; }
+
+    /* УВЕЛИЧЕННАЯ КОЛОДА */
     .deck-side-container { 
-      position: absolute; right: 12px; top: 12px; 
-      display: flex; align-items: center; gap: 8px; 
-      background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 12px; font-size: 13px; z-index: 10;
-      border: 1px solid rgba(255,255,255,0.1);
+      position: absolute; right: 14px; top: 14px; 
+      display: flex; align-items: center; gap: 10px; 
+      background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);
+      padding: 8px 14px; border-radius: 16px; font-size: 13px; z-index: 10;
+      border: 1px solid rgba(255,255,255,0.15);
     }
-    .deck-stack { width: 32px; height: 46px; background: #23163d; border-radius: 6px; border: 1px solid var(--accent-gold); position: relative; }
-    .trump-preview { position: absolute; bottom: -4px; right: -8px; width: 26px; height: 38px; background: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+    .deck-stack { width: 40px; height: 58px; background: linear-gradient(135deg, #2e1065, #1e1b4b); border-radius: 6px; border: 1.5px solid var(--accent-gold); position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
+    .trump-preview { position: absolute; bottom: -5px; right: -10px; width: 34px; height: 46px; background: #fff; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; box-shadow: 0 3px 8px rgba(0,0,0,0.6); color: #111; }
 
-    /* КАРТЫ НА СТОЛЕ В ЦЕНТРЕ */
     #table-cards-slot {
-      display: flex; gap: 10px; min-height: 90px; justify-content: center; align-items: center; flex-wrap: wrap; margin: auto 0;
+      display: flex; gap: 10px; min-height: 100px; justify-content: center; align-items: center; flex-wrap: wrap; margin: auto 0;
     }
 
     #my-hand-container {
       display: flex; justify-content: center; align-items: flex-end;
-      height: 110px; position: relative; width: 100%; margin-top: 5px; margin-bottom: 15px;
+      height: 125px; position: relative; width: 100%; margin-top: 5px; margin-bottom: 12px;
+      perspective: 1000px;
     }
 
+    /* ПРЕМИУМ ДИЗАЙН КАРТ */
     .card-item {
-      width: 58px; height: 86px; background: #ffffff; color: #111;
-      border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;
-      padding: 5px; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-      cursor: pointer; border: 1px solid #ccc; position: absolute; transform-origin: bottom center;
-      transition: transform 0.2s ease;
+      width: 66px; height: 98px; 
+      background: linear-gradient(145deg, #ffffff 0%, #f3f4f6 100%); 
+      color: #111;
+      border-radius: 10px; 
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 6px; font-weight: 900; font-size: 15px; 
+      box-shadow: -3px 6px 16px rgba(0,0,0,0.5);
+      cursor: pointer; 
+      border: 1.5px solid rgba(0,0,0,0.2); 
+      position: absolute; transform-origin: bottom center;
+      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s;
     }
-    .card-item:hover, .card-item:active { transform: translateY(-20px) scale(1.15) rotate(0deg) !important; z-index: 500 !important; border-color: var(--accent-gold); }
-    .card-item.red { color: var(--danger); }
+    .card-item::after {
+      content: ''; position: absolute; inset: 3px; border: 1px dashed rgba(0,0,0,0.08); border-radius: 7px; pointer-events: none;
+    }
+    .card-item:hover, .card-item:active { 
+      transform: translateY(-24px) scale(1.15) rotate(0deg) !important; 
+      z-index: 500 !important; 
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.6);
+      border-color: var(--accent-gold);
+    }
+    .card-item.red { color: #e11d48; }
 
-    .table-card-item { width: 48px; height: 70px; background: #fff; color: #111; border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between; padding: 4px; font-weight: bold; font-size: 12px; box-shadow: 0 3px 6px rgba(0,0,0,0.3); }
-    .table-card-item.red { color: var(--danger); }
-    .card-pair { position: relative; width: 56px; height: 80px; margin: 3px; }
-    .card-pair .defend-card { position: absolute; top: 10px; left: 10px; z-index: 2; }
+    /* НАСТОЛЬНЫЕ КАРТЫ С ПРЕМИУМ ДИЗАЙНОМ */
+    .table-card-item { 
+      width: 52px; height: 76px; background: #fff; color: #111; border-radius: 8px; 
+      display: flex; flex-direction: column; justify-content: space-between; padding: 5px; 
+      font-weight: 900; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); border: 1px solid #ccc; position: relative;
+    }
+    .table-card-item::after {
+      content: ''; position: absolute; inset: 2px; border: 1px dashed rgba(0,0,0,0.08); border-radius: 6px; pointer-events: none;
+    }
+    .table-card-item.red { color: #e11d48; }
+    .card-pair { position: relative; width: 60px; height: 86px; margin: 4px; }
+    .card-pair .defend-card { position: absolute; top: 12px; left: 12px; z-index: 2; }
 
     .nav-bar { 
       position: fixed; bottom: 0; left: 0; right: 0; height: 65px;
-      background: var(--bg-card); display: flex; justify-content: space-around; 
+      background: rgba(19, 10, 36, 0.95); backdrop-filter: blur(12px);
+      display: flex; justify-content: space-around; 
       align-items: center; border-top: 1px solid var(--border-color); z-index: 1000; 
     }
-    .nav-item { color: var(--text-muted); text-align: center; font-size: 11px; cursor: pointer; background: none; border: none; }
-    .nav-item.active { color: var(--accent-gold); font-weight: bold; }
-    .nav-icon { font-size: 18px; margin-bottom: 2px; }
+    .nav-item { color: var(--text-muted); text-align: center; font-size: 11px; cursor: pointer; background: none; border: none; font-weight: 600; }
+    .nav-item.active { color: var(--accent-gold); }
+    .nav-icon { font-size: 20px; margin-bottom: 2px; }
 
-    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
     .modal.active { display: flex; }
-    .modal-content { background: var(--bg-card); width: 100%; max-width: 380px; border-radius: 18px; padding: 20px; border: 1px solid var(--border-color); text-align: center; }
-    .option-btn { background: #1e1033; border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; }
-    .option-btn.selected { background: var(--accent-gold-gradient); color: #000; font-weight: bold; border-color: transparent; }
+    .modal-content { background: var(--bg-card); width: 100%; max-width: 380px; border-radius: 22px; padding: 22px; border: 1px solid var(--border-color); text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.7); }
+    .option-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 10px 14px; border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .option-btn.selected { background: var(--accent-gold-gradient); color: #0b0614; font-weight: 800; border-color: transparent; }
   </style>
 </head>
 <body>
@@ -114,22 +146,22 @@
     <div style="display: flex; align-items: center; gap: 10px;">
       <div class="avatar-wrapper"><div id="header-avatar" class="avatar-container">U</div></div>
       <div>
-        <div id="header-name" style="font-weight: bold; font-size: 14px;">Загрузка...</div>
+        <div id="header-name" style="font-weight: 800; font-size: 14px;">Загрузка...</div>
         <div style="font-size: 11px; color: var(--text-muted);">ID: <span id="header-unique-id">------</span></div>
       </div>
     </div>
-    <div style="background: rgba(251, 191, 36, 0.15); padding: 4px 12px; border-radius: 16px; color: var(--accent-gold); font-weight: bold; font-size: 13px;">⭐ <span id="header-stars">0</span></div>
+    <div style="background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.3); padding: 5px 14px; border-radius: 18px; color: var(--accent-gold); font-weight: 800; font-size: 13px;">⭐ <span id="header-stars">0</span></div>
   </div>
   <!-- ВКЛАДКА 1: СТОЛЫ -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-      <h2 style="font-size: 20px;">Игровые столы</h2>
-      <button class="btn" onclick="openCreateTableModal()">Создать стол</button>
+      <h2 style="font-size: 22px; font-weight: 800;">Игровые столы</h2>
+      <button class="btn" style="padding: 10px 18px; font-size: 13px;" onclick="openCreateTableModal()">Создать стол</button>
     </div>
     <div id="my-waiting-table-box" style="display: none;" class="card-box">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <div style="font-size: 11px; color: var(--accent-gold); font-weight: bold;">Ваш открытый стол</div>
+          <div style="font-size: 11px; color: var(--accent-gold); font-weight: bold; background: rgba(251,191,36,0.15); padding: 3px 8px; border-radius: 6px; display: inline-block; margin-bottom: 4px;">Ваш открытый стол</div>
           <div style="font-size: 13px; font-weight: bold;">Ожидание соперника...</div>
         </div>
         <button class="btn-danger" onclick="leaveCurrentWaitingTable()">✖ Выйти</button>
@@ -140,15 +172,15 @@
 
   <!-- ВКЛАДКА 2: ДРУЗЬЯ -->
   <div id="friends-view" class="view">
-    <h2 style="font-size: 20px; margin-bottom: 14px;">Друзья</h2>
+    <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 14px;">Друзья</h2>
     <div class="card-box">
       <div style="font-weight: bold; font-size: 14px; margin-bottom: 6px; color: var(--accent-gold);">➕ Добавить по ID</div>
       <div style="display: flex; gap: 8px;">
-        <input type="text" id="friend-id-input" placeholder="Введите ID" style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 8px; font-size: 13px;">
-        <button class="btn" style="padding: 8px 14px;" onclick="addFriendById()">Запрос</button>
+        <input type="text" id="friend-id-input" placeholder="Введите ID" style="flex: 1; background: #07040d; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 12px; font-size: 13px;">
+        <button class="btn" style="padding: 10px 16px; font-size: 13px;" onclick="addFriendById()">Запрос</button>
       </div>
     </div>
-    <div style="font-size: 14px; font-weight: bold; margin-bottom: 8px;">Список друзей (<span id="friends-count">0</span>)</div>
+    <div style="font-size: 15px; font-weight: bold; margin-bottom: 8px;">Список друзей (<span id="friends-count">0</span>)</div>
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список пуст</div></div>
   </div>
   <!-- ВКЛАДКА 3: ИГРА -->
@@ -157,10 +189,10 @@
       <div style="display: flex; align-items: center; gap: 8px;">
         <div class="avatar-wrapper">
           <div id="opponent-toast" class="action-toast">БИТО!</div>
-          <div id="opponent-avatar" class="avatar-container" style="width: 36px; height: 36px; font-size: 13px;">O</div>
+          <div id="opponent-avatar" class="avatar-container" style="width: 38px; height: 38px; font-size: 13px;">O</div>
         </div>
         <div>
-          <div id="opponent-name" style="font-weight: bold; font-size: 13px; color: var(--accent-gold);">Соперник</div>
+          <div id="opponent-name" style="font-weight: 800; font-size: 14px; color: var(--accent-gold);">Соперник</div>
           <div style="font-size: 11px; color: var(--text-muted);">Карт: <span id="opponent-card-count">0</span></div>
         </div>
       </div>
@@ -170,16 +202,20 @@
       <div class="deck-side-container">
         <div style="text-align: right; line-height: 1.1;">
           <div style="font-size: 10px; color: var(--text-muted);">Колода</div>
-          <div style="font-weight: bold; font-size: 14px;" id="deck-count">36</div>
+          <div style="font-weight: 800; font-size: 15px;" id="deck-count">36</div>
         </div>
         <div class="deck-stack"><div id="deck-card-view" class="trump-preview">♠</div></div>
       </div>
-      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold);">Ожидание...</div>
+      <div id="turn-indicator" style="text-align: center; font-weight: 800; font-size: 14px; color: var(--accent-gold);">Ожидание...</div>
+      
+      <!-- Полоса таймера хода (15 секунд) -->
+      <div class="timer-bar-container"><div id="timer-bar-fill" class="timer-bar-fill"></div></div>
+
       <div id="table-cards-slot"></div>
     </div>
     
     <div style="display: flex; justify-content: space-between; align-items: center; position: relative;">
-      <div style="font-size: 11px; color: var(--text-muted);">Ваши карты:</div>
+      <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Ваши карты:</div>
       <div class="avatar-wrapper" style="position: absolute; right: 10px; top: -10px;">
         <div id="my-toast" class="action-toast">БИТО!</div>
       </div>
@@ -188,71 +224,71 @@
     <div id="my-hand-container"></div>
 
     <!-- КНОПКИ НИЖЕ ВЕЕРА КАРТ -->
-    <div style="display: flex; justify-content: center; margin-top: 10px; min-height: 50px;">
-      <button id="action-btn-bito" class="btn" style="display: none; width: 80%; padding: 14px; font-size: 18px;" onclick="handleGameAction('bito')">Бито</button>
-      <button id="action-btn-take" class="btn btn-secondary" style="display: none; width: 80%; padding: 14px; font-size: 18px; border-color: var(--accent-gold);" onclick="handleGameAction('take')">Взять</button>
+    <div style="display: flex; justify-content: center; margin-top: 8px; min-height: 54px;">
+      <button id="action-btn-bito" class="btn" style="display: none; width: 85%; padding: 14px; font-size: 18px;" onclick="handleGameAction('bito')">Бито</button>
+      <button id="action-btn-take" class="btn btn-secondary" style="display: none; width: 85%; padding: 14px; font-size: 18px; border-color: var(--accent-gold);" onclick="handleGameAction('take')">Взять</button>
     </div>
   </div>
 
   <!-- ВКЛАДКА 4: ЛИДЕРЫ -->
   <div id="leaderboard-view" class="view">
-    <h2 style="font-size: 20px; margin-bottom: 14px;">Таблица лидеров</h2>
+    <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 14px;">Таблица лидеров</h2>
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Загрузка...</div></div>
   </div>
   <!-- ВКЛАДКА 5: ПРОФИЛЬ -->
   <div id="profile-view" class="view">
-    <h2 style="font-size: 20px; margin-bottom: 14px;">Профиль</h2>
+    <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 14px;">Профиль</h2>
     <div class="card-box">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <div class="avatar-wrapper"><div id="profile-avatar" class="avatar-container" style="width: 50px; height: 50px; font-size: 20px;">U</div></div>
+        <div class="avatar-wrapper"><div id="profile-avatar" class="avatar-container" style="width: 52px; height: 52px; font-size: 20px;">U</div></div>
         <div>
-          <div style="font-size: 16px; font-weight: bold;" id="profile-name">Игрок</div>
-          <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="profile-unique-id" style="color: var(--accent-gold);">------</span></div>
+          <div style="font-size: 16px; font-weight: 800;" id="profile-name">Игрок</div>
+          <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="profile-unique-id" style="color: var(--accent-gold); font-weight: bold;">------</span></div>
         </div>
       </div>
     </div>
     
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px;">
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Победы</div><div style="font-size: 14px; font-weight: bold; color: var(--accent-gold);" id="stat-wins">0</div></div>
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Поражения</div><div style="font-size: 14px; font-weight: bold; color: var(--accent-gold);" id="stat-losses">0</div></div>
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Винрейт</div><div style="font-size: 14px; font-weight: bold; color: #10b981;" id="stat-winrate">0%</div></div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
+      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Победы</div><div style="font-size: 15px; font-weight: bold; color: var(--accent-gold);" id="stat-wins">0</div></div>
+      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Поражения</div><div style="font-size: 15px; font-weight: bold; color: var(--accent-gold);" id="stat-losses">0</div></div>
+      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Винрейт</div><div style="font-size: 15px; font-weight: bold; color: #10b981;" id="stat-winrate">0%</div></div>
     </div>
 
     <div class="card-box">
       <div style="font-weight: bold; font-size: 14px; margin-bottom: 6px; color: var(--accent-gold);">🎟️ Промокод / Команда</div>
       <div style="display: flex; gap: 8px;">
-        <input type="text" id="promo-code-input" placeholder="Код..." style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 8px; font-size: 13px;">
-        <button class="btn" style="padding: 8px 14px;" onclick="submitPromoCode()">Ввод</button>
+        <input type="text" id="promo-code-input" placeholder="Код..." style="flex: 1; background: #07040d; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px;">
+        <button class="btn" style="padding: 10px 16px; font-size: 13px;" onclick="submitPromoCode()">Ввод</button>
       </div>
     </div>
 
     <div class="card-box">
       <div style="font-weight: bold; font-size: 14px; margin-bottom: 6px; color: var(--accent-gold);">💳 Баланс</div>
       <div style="display: flex; gap: 8px;">
-        <button class="btn" style="flex: 1; padding: 8px;" onclick="alert('Обратитесь к администратору')">Пополнить</button>
-        <button class="btn btn-secondary" style="flex: 1; padding: 8px;" onclick="openWithdrawModal()">Вывести</button>
+        <button class="btn" style="flex: 1; padding: 10px; font-size: 13px;" onclick="alert('Обратитесь к администратору')">Пополнить</button>
+        <button class="btn btn-secondary" style="flex: 1; padding: 10px; font-size: 13px;" onclick="openWithdrawModal()">Вывести</button>
       </div>
     </div>
 
-    <button class="btn" style="width: 100%; margin-top: 6px;" onclick="claimDailyBonus()">Ежедневный бонус (+10 ⭐)</button>
+    <button class="btn" style="width: 100%; margin-top: 8px;" onclick="claimDailyBonus()">Ежедневный бонус (+10 ⭐)</button>
   </div>
 
   <!-- МОДАЛКА СОЗДАНИЯ СТОЛА -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
-      <h3 style="margin-bottom: 14px; font-size: 18px; color: var(--accent-gold);">Создать стол</h3>
+      <h3 style="margin-bottom: 14px; font-size: 20px; font-weight: 800; color: var(--accent-gold);">Создать стол</h3>
       <div style="text-align: left; margin-bottom: 4px; font-size: 12px; color: var(--text-muted);">Режим:</div>
-      <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
         <button class="option-btn selected" id="mode-podkidnoy-btn" onclick="selectGameMode('podkidnoy')" style="flex:1;">Подкидной</button>
         <button class="option-btn" id="mode-perevodnoy-btn" onclick="selectGameMode('perevodnoy')" style="flex:1;">Переводной</button>
       </div>
       <div style="text-align: left; margin-bottom: 4px; font-size: 12px; color: var(--text-muted);">Колода:</div>
-      <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
         <button class="option-btn selected" id="deck-36-btn" onclick="selectDeckSize(36)" style="flex:1;">36 карт</button>
         <button class="option-btn" id="deck-24-btn" onclick="selectDeckSize(24)" style="flex:1;">24 карты</button>
       </div>
       <div style="text-align: left; margin-bottom: 4px; font-size: 12px; color: var(--text-muted);">Ставка (⭐):</div>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 16px;">
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 18px;">
         <button class="option-btn selected stake-btn" onclick="selectStake(10, this)">10 ⭐</button>
         <button class="option-btn stake-btn" onclick="selectStake(25, this)">25 ⭐</button>
         <button class="option-btn stake-btn" onclick="selectStake(50, this)">50 ⭐</button>
@@ -270,7 +306,7 @@
   <div id="withdraw-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 14px; font-size: 18px; color: var(--accent-gold);">Вывод звезд</h3>
-      <input type="number" id="withdraw-amount-input" placeholder="Количество ⭐" style="width: 100%; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 8px; font-size: 14px; margin-bottom: 14px;">
+      <input type="number" id="withdraw-amount-input" placeholder="Количество ⭐" style="width: 100%; background: #07040d; border: 1px solid var(--border-color); color: #fff; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 14px;">
       <div style="display: flex; gap: 8px;">
         <button class="btn btn-secondary" style="flex: 1;" onclick="closeWithdrawModal()">Отмена</button>
         <button class="btn" style="flex: 1;" onclick="submitWithdraw()">Запросить</button>
@@ -305,7 +341,7 @@
     const socket = io({ transports: ['websocket', 'polling'] });
     let currentUser = null, currentGameId = null, currentTableId = null;
     let selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
-    let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false, currentTableCards = [];
+    let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false, currentTableCards = [], isTakingStateFlag = false;
 
     function authenticate() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -368,7 +404,7 @@
               <b>${t.hostName}</b> <small style="color:var(--text-muted);">(${modeText}, ${t.deckSize}к)</small>
               <br><small style="color:var(--accent-gold); font-weight:bold;">Ставка: ${t.stake} ⭐</small>
             </div>
-            <button class="btn" style="padding:6px 12px; font-size:12px;">Играть</button>
+            <button class="btn" style="padding:8px 16px; font-size:12px;">Играть</button>
           </div>`;
       });
     });
@@ -376,6 +412,7 @@
     socket.on('game_state', (data) => {
       currentGameId = data.gameId;
       currentTableCards = data.tableCards || [];
+      isTakingStateFlag = !!data.isTakingState;
       switchTab('game');
 
       document.getElementById('deck-count').innerText = data.deckCount;
@@ -384,7 +421,7 @@
         const view = document.getElementById('deck-card-view');
         if (view) {
           view.innerHTML = `${data.trumpCard.rank}<br>${data.trumpCard.suit}`;
-          view.style.color = isRed ? 'var(--danger)' : '#111';
+          view.style.color = isRed ? '#e11d48' : '#111';
         }
       }
 
@@ -418,7 +455,16 @@
         });
       }
 
-      updateActionButtons(data.isTakingState);
+      updateActionButtons();
+    });
+
+    /* Обработка таймера хода */
+    socket.on('turn_timer', (data) => {
+      const fill = document.getElementById('timer-bar-fill');
+      if (fill) {
+        const percent = (data.timeLeft / 15) * 100;
+        fill.style.width = percent + '%';
+      }
     });
 
     socket.on('your_hand', (hand) => {
@@ -432,7 +478,7 @@
 
       const maxAngle = Math.min(total * 4, 30);
       const angleStep = total > 1 ? (maxAngle * 2) / (total - 1) : 0;
-      const cardOverlap = Math.min(28, 180 / total);
+      const cardOverlap = Math.min(30, 190 / total);
 
       myHandCards.forEach((c, idx) => {
         const isRed = ['♥', '♦'].includes(c.suit) ? 'red' : '';
@@ -447,7 +493,7 @@
         cardDiv.style.transform = `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${angle}deg)`;
         cardDiv.style.zIndex = 100 + idx;
 
-        cardDiv.innerHTML = `<div>${c.rank}</div><div style="text-align:right; font-size:16px;">${c.suit}</div>`;
+        cardDiv.innerHTML = `<div>${c.rank}</div><div style="text-align:right; font-size:18px;">${c.suit}</div>`;
         cardDiv.onclick = () => playCard(c.id);
         container.appendChild(cardDiv);
       });
@@ -461,8 +507,7 @@
       updateActionButtons();
     });
 
-    /* ЛОГИКА ОТОБРАЖЕНИЯ КНОПОК БИТО/ВЗЯТЬ */
-    function updateActionButtons(isTakingState = false) {
+    function updateActionButtons() {
       const bitoBtn = document.getElementById('action-btn-bito');
       const takeBtn = document.getElementById('action-btn-take');
 
@@ -470,14 +515,12 @@
       const allDefended = tableHasCards && currentTableCards.every(tc => tc.defend !== null);
 
       if (bitoBtn) {
-        // Бито показываем только если мы атакуем, на столе есть карты И они либо все отбиты, либо соперник берет
-        const showBito = isMyTurnFlag && isAttackerFlag && tableHasCards && (allDefended || isTakingState);
+        const showBito = isMyTurnFlag && isAttackerFlag && tableHasCards && (allDefended || isTakingStateFlag);
         bitoBtn.style.display = showBito ? 'inline-block' : 'none';
       }
 
       if (takeBtn) {
-        // Взять показываем только защищающемуся, когда на столе есть неотбитые карты
-        const showTake = isMyTurnFlag && !isAttackerFlag && tableHasCards && !isTakingState;
+        const showTake = isMyTurnFlag && !isAttackerFlag && tableHasCards && !isTakingStateFlag;
         takeBtn.style.display = showTake ? 'inline-block' : 'none';
       }
     }
