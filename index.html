@@ -207,17 +207,33 @@
     <button class="btn" style="width: 100%; margin-top: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
   </div>
 
-  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА -->
+  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА С ВЫБОРОМ СТАВОК И РЕЖИМОВ -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px; color: var(--accent-gold);">Создать игровой стол</h3>
-      <div style="text-align: left; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Размер колоды:</div>
-      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+      
+      <div style="text-align: left; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Режим игры:</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <button class="option-btn selected" id="mode-podkidnoy-btn" onclick="selectGameMode('podkidnoy')" style="flex:1;">Подкидной</button>
+        <button class="option-btn" id="mode-perevodnoy-btn" onclick="selectGameMode('perevodnoy')" style="flex:1;">Переводной</button>
+      </div>
+
+      <div style="text-align: left; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Размер колоды:</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
         <button class="option-btn selected" id="deck-36-btn" onclick="selectDeckSize(36)" style="flex:1;">36 карт</button>
         <button class="option-btn" id="deck-24-btn" onclick="selectDeckSize(24)" style="flex:1;">24 карты</button>
       </div>
-      <div style="text-align: left; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Ставка (⭐):</div>
-      <input type="number" id="create-stake-input" value="10" min="1" style="width: 100%; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 14px; margin-bottom: 18px;">
+
+      <div style="text-align: left; margin-bottom: 6px; font-size: 13px; color: var(--text-muted);">Ставка (⭐):</div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 20px;">
+        <button class="option-btn selected stake-btn" onclick="selectStake(10, this)">10 ⭐</button>
+        <button class="option-btn stake-btn" onclick="selectStake(25, this)">25 ⭐</button>
+        <button class="option-btn stake-btn" onclick="selectStake(50, this)">50 ⭐</button>
+        <button class="option-btn stake-btn" onclick="selectStake(100, this)">100 ⭐</button>
+        <button class="option-btn stake-btn" onclick="selectStake(250, this)">250 ⭐</button>
+        <button class="option-btn stake-btn" onclick="selectStake(500, this)">500 ⭐</button>
+      </div>
+
       <div style="display: flex; gap: 10px;">
         <button class="btn btn-secondary" style="flex: 1;" onclick="closeCreateTableModal()">Отмена</button>
         <button class="btn" style="flex: 1;" onclick="submitCreateTable()">Создать</button>
@@ -269,7 +285,9 @@
 
     const socket = io({ transports: ['websocket', 'polling'] });
     let currentUser = null, currentGameId = null, isGamePlaying = false, opponentTelegramId = null;
+    let selectedGameMode = 'podkidnoy';
     let selectedDeckSize = 36;
+    let selectedStake = 10;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, isTakingState = false, tableHasCards = false, currentTrumpSuit = '♠';
 
     function authenticate() {
@@ -290,16 +308,30 @@
     function openCreateTableModal() { document.getElementById('create-table-modal')?.classList.add('active'); }
     function closeCreateTableModal() { document.getElementById('create-table-modal')?.classList.remove('active'); }
 
+    function selectGameMode(mode) {
+      selectedGameMode = mode;
+      document.getElementById('mode-podkidnoy-btn')?.classList.toggle('selected', mode === 'podkidnoy');
+      document.getElementById('mode-perevodnoy-btn')?.classList.toggle('selected', mode === 'perevodnoy');
+    }
+
     function selectDeckSize(size) {
       selectedDeckSize = size;
       document.getElementById('deck-36-btn')?.classList.toggle('selected', size === 36);
       document.getElementById('deck-24-btn')?.classList.toggle('selected', size === 24);
     }
 
+    function selectStake(amount, el) {
+      selectedStake = amount;
+      document.querySelectorAll('.stake-btn').forEach(b => b.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
     function submitCreateTable() {
-      const stakeInput = document.getElementById('create-stake-input');
-      const stake = Number(stakeInput?.value) || 10;
-      socket.emit('create_table', { mode: 'podkidnoy', deckSize: selectedDeckSize, stake: stake });
+      socket.emit('create_table', {
+        mode: selectedGameMode,
+        deckSize: selectedDeckSize,
+        stake: selectedStake
+      });
       closeCreateTableModal();
     }
 
@@ -340,7 +372,6 @@
       const total = (user.wins || 0) + (user.losses || 0);
       document.getElementById('stat-winrate').innerText = (total > 0 ? Math.round((user.wins / total) * 100) : 0) + '%';
 
-      // Рендер аватарок
       const initial = name[0].toUpperCase();
       const hAv = document.getElementById('header-avatar');
       const pAv = document.getElementById('profile-avatar');
