@@ -783,4 +783,16 @@
           <div class="table-card" onclick="openUserProfile('${u.unique_id || u.telegram_id}')">
             <div style="display: flex; align-items: center; gap: 10px;">
               <div class="avatar-container" style="width: 34px; height: 34px; font-size: 13px; ${avStyle}">${init}</div>
-              <div><b>#${i+1} ${
+                    <div><b>#${i+1} ${u.first_name || u.username}</b><br><small style="color:var(--text-muted)">ID: ${u.unique_id}</small></div>
+            </div>
+            <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${u.stars_balance || 0}</span>
+          </div>`;
+      });
+    });
+
+    socket.on('error_message', (msg) => alert(msg));
+    function claimDailyBonus() { socket.emit('claim_daily'); }
+    socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
+  </script>
+</body>
+</html>
