@@ -509,7 +509,6 @@ async function handleGameAction(socket, data) {
       const activeAttack = game.tableCards.find(tc => !tc.defend);
       if (!activeAttack) return;
 
-      // Логика переводного дурака
       if (game.mode === 'perevodnoy' && card.rank === activeAttack.attack.rank && game.tableCards.length === 1 && !game.tableCards.some(tc => tc.defend)) {
         hand.splice(cardIndex, 1);
         game.tableCards.push({ attack: card, defend: null });
