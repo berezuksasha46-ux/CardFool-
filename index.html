@@ -31,16 +31,56 @@
     .nav-item { color: var(--text-muted); text-align: center; font-size: 11px; cursor: pointer; background: none; border: none; }
     .nav-item.active { color: var(--accent-gold); }
     .nav-icon { font-size: 20px; margin-bottom: 2px; }
+    
+    /* Аватарки и бабблы сообщений */
+    .avatar-wrapper { position: relative; display: inline-block; }
     .avatar-container { width: 42px; height: 42px; background: var(--accent-gold-gradient); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; flex-shrink: 0; background-size: cover; background-position: center; border: 2px solid rgba(255, 255, 255, 0.1); }
+    .speech-bubble {
+      position: absolute; top: -35px; left: 50%; transform: translateX(-50%) scale(0);
+      background: var(--accent-gold); color: #000; font-weight: bold; font-size: 12px;
+      padding: 4px 10px; border-radius: 12px; white-space: nowrap;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 20;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      pointer-events: none;
+    }
+    .speech-bubble.active { transform: translateX(-50%) scale(1); }
+
     .poker-table { background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%); border: 2px solid #2d5a3c; border-radius: 18px; padding: 12px; min-height: 250px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; width: 100%; }
+    
     #my-hand-container { display: flex; justify-content: center; align-items: flex-end; padding: 15px 5px 20px 5px; min-height: 130px; position: relative; overflow: hidden; width: 100%; }
-    .card-item { width: 68px; height: 102px; background: linear-gradient(145deg, #ffffff, #f0f0f0); color: #111; border-radius: 9px; display: flex; flex-direction: column; justify-content: space-between; padding: 6px; font-weight: bold; font-size: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.5); cursor: pointer; border: 2px solid rgba(0,0,0,0.1); user-select: none; position: relative; transition: transform 0.2s ease; flex-shrink: 0; }
+    
+    /* АНИМАЦИИ КАРТ */
+    .card-item {
+      width: 68px; height: 102px; background: linear-gradient(145deg, #ffffff, #f0f0f0); color: #111;
+      border-radius: 9px; display: flex; flex-direction: column; justify-content: space-between;
+      padding: 6px; font-weight: bold; font-size: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.5);
+      cursor: pointer; border: 2px solid rgba(0,0,0,0.1); user-select: none; position: relative;
+      transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), margin 0.25s ease;
+      flex-shrink: 0;
+      animation: cardDeal 0.35s ease-out forwards;
+    }
+    @keyframes cardDeal {
+      0% { opacity: 0; transform: translateY(50px) scale(0.5); }
+      100% { opacity: 1; }
+    }
+
     .card-item:hover, .card-item.selected { z-index: 100 !important; transform: translateY(-18px) scale(1.08) !important; border-color: var(--accent-gold); }
     .card-item.red { color: var(--danger); }
-    .table-card-item { width: 46px; height: 68px; background: #ffffff; color: #111; border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between; padding: 3px; font-weight: bold; font-size: 11px; border: 1px solid #ccc; }
+    
+    .table-card-item {
+      width: 46px; height: 68px; background: #ffffff; color: #111; border-radius: 6px;
+      display: flex; flex-direction: column; justify-content: space-between; padding: 3px;
+      font-weight: bold; font-size: 11px; border: 1px solid #ccc;
+      animation: cardThrow 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes cardThrow {
+      0% { opacity: 0; transform: scale(1.4) translateY(-30px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
     .table-card-item.red { color: var(--danger); }
     .card-pair { position: relative; width: 54px; height: 78px; margin: 3px; }
     .card-pair .defend-card { position: absolute; top: 8px; left: 8px; z-index: 2; }
+    
     .deck-side-container { position: absolute; right: 10px; top: 10px; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.35); padding: 4px 8px; border-radius: 10px; font-size: 11px; z-index: 5; }
     .deck-stack { width: 26px; height: 38px; background: #23163d; border-radius: 4px; border: 1px solid var(--accent-gold); position: relative; }
     .trump-preview { position: absolute; bottom: -3px; right: -6px; width: 22px; height: 32px; background: #fff; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
@@ -54,33 +94,12 @@
 <body>
   <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border-color);">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <div id="header-avatar" class="avatar-container">U</div>
+      <div class="avatar-wrapper">
+        <div id="header-avatar" class="avatar-container">U</div>
+      </div>
       <div>
         <div id="header-name" style="font-weight: bold; font-size: 15px;">Загрузка...</div>
         <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="header-unique-id">------</span> | Ур. <span id="header-level">1</span></div>
-      </div>
-    </div>
-    <div style="background: rgba(251, 191, 36, 0.12); padding: 6px 14px; border-radius: 20px; color: var(--accent-gold); font-weight: bold;">
-      ⭐ <span id="header-stars">0</span>
-    </div>
-  </div>
-
-  <div id="lobbies-view" class="view active">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-      <h2 style="font-size: 22px;">Игровые столы</h2>
-      <button class="btn" style="padding: 10px 18px; font-size: 14px;" onclick="openCreateTableModal()">Создать стол</button>
-    </div>
-    <div id="my-waiting-table-box" style="display: none;" class="card-box">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div class="my-table-badge">Ваш открытый стол</div>
-          <div style="font-size: 14px; font-weight: bold;">Ожидание соперника...</div>
-        </div>
-        <button class="btn-danger" onclick="leaveCurrentWaitingTable()">✖ Выйти</button>
-      </div>
-    </div>
-    <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div></div>
-  </div>
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; margin-bottom: 16px;">Друзья и рефералы</h2>
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%); margin-bottom: 16px;">
@@ -106,7 +125,10 @@
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <div id="opponent-avatar" class="avatar-container" style="width: 36px; height: 36px; font-size: 14px;">O</div>
+        <div class="avatar-wrapper">
+          <div id="opponent-bubble" class="speech-bubble">БИТО!</div>
+          <div id="opponent-avatar" class="avatar-container" style="width: 36px; height: 36px; font-size: 14px;">O</div>
+        </div>
         <div>
           <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Соперник</div>
           <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
@@ -124,8 +146,15 @@
       <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold); margin-top: 2px;">Ожидание игрока...</div>
       <div id="table-cards-slot" style="display: flex; gap: 8px; min-height: 80px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 4px 0;"></div>
     </div>
-    <div style="font-size: 12px; color: var(--text-muted); margin-top: 6px; margin-bottom: 2px;">Ваши карты:</div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; margin-bottom: 2px;">
+      <div style="font-size: 12px; color: var(--text-muted);">Ваши карты:</div>
+      <div class="avatar-wrapper" style="margin-right: 10px;">
+        <div id="my-bubble" class="speech-bubble">БИТО!</div>
+      </div>
+    </div>
     <div id="my-hand-container"></div>
+
     <div style="display: flex; justify-content: center; margin-top: 10px; min-height: 42px;">
       <button id="action-btn-bito" class="btn" style="display: none; min-width: 150px; padding: 10px;" onclick="handleGameAction('bito')">Бито</button>
       <button id="action-btn-take" class="btn btn-secondary" style="display: none; min-width: 150px; padding: 10px; border-color: var(--accent-gold);" onclick="handleGameAction('take')">Взять</button>
@@ -218,7 +247,15 @@
     const socket = io({ transports: ['websocket', 'polling'] });
     let currentUser = null, selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
     let currentGameId = null, isGamePlaying = false;
-    let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
+    let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, isTakingState = false, tableHasCards = false, currentTrumpSuit = '♠';
+
+    function showBubble(isMe, text) {
+      const bubbleEl = document.getElementById(isMe ? 'my-bubble' : 'opponent-bubble');
+      if (!bubbleEl) return;
+      bubbleEl.innerText = text;
+      bubbleEl.classList.add('active');
+      setTimeout(() => bubbleEl.classList.remove('active'), 2000);
+    }
 
     function authenticate() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -250,6 +287,13 @@
     socket.on('auth_success', (user) => {
       currentUser = user;
       updateProfileData(user);
+    });
+
+    socket.on('player_action_notify', (data) => {
+      if (data && currentUser) {
+        const isMe = String(data.playerId) === String(currentUser.telegram_id);
+        showBubble(isMe, data.text);
+      }
     });
 
     function setAvatarElement(elementId, photoUrl, fallbackText) {
@@ -433,6 +477,8 @@
     socket.on('game_state', (state) => {
       if (!state) return;
       isGamePlaying = true;
+      isTakingState = !!state.isTakingState;
+
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view')?.classList.add('active');
 
@@ -505,7 +551,13 @@
       isMyTurnFlag = data.isMyTurn;
       isMyAttackTurn = data.isAttacker;
       const indicator = document.getElementById('turn-indicator');
-      if (indicator) indicator.innerText = isMyTurnFlag ? (isMyAttackTurn ? 'Ваш ход (Атака)!' : 'Ваш ход (Защита)!') : 'Ход соперника...';
+      if (indicator) {
+        if (isTakingState) {
+          indicator.innerText = isMyAttackTurn ? 'Соперник берет! Докиньте карты и нажмите "Завершить"' : 'Вы берете... Ожидайте докидывания соперника';
+        } else {
+          indicator.innerText = isMyTurnFlag ? (isMyAttackTurn ? 'Ваш ход (Атака)!' : 'Ваш ход (Защита)!') : 'Ход соперника...';
+        }
+      }
       updateActionButtonsVisibility();
     });
 
@@ -513,6 +565,20 @@
       const bitoBtn = document.getElementById('action-btn-bito');
       const takeBtn = document.getElementById('action-btn-take');
       if (!bitoBtn || !takeBtn) return;
+
+      if (isTakingState) {
+        if (isMyAttackTurn) {
+          bitoBtn.style.display = 'inline-block';
+          bitoBtn.innerText = 'Завершить';
+          takeBtn.style.display = 'none';
+        } else {
+          bitoBtn.style.display = 'none';
+          takeBtn.style.display = 'none';
+        }
+        return;
+      }
+
+      bitoBtn.innerText = 'Бито';
       if (!isMyTurnFlag) { bitoBtn.style.display = 'none'; takeBtn.style.display = 'none'; return; }
       bitoBtn.style.display = (isMyAttackTurn && tableHasCards) ? 'inline-block' : 'none';
       takeBtn.style.display = (!isMyAttackTurn && tableHasCards) ? 'inline-block' : 'none';
