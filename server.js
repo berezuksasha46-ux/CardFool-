@@ -98,7 +98,6 @@ async function dbGetLeaderboard() {
 const tables = new Map();
 const activeGames = new Map();
 
-// Функция пополнения баланса администратором
 async function adminAddStars(targetUniqueId, amount) {
   try {
     const { data: user } = await supabase.from('users').select('*').eq('unique_id', targetUniqueId).maybeSingle();
@@ -119,7 +118,6 @@ async function adminAddStars(targetUniqueId, amount) {
   }
 }
 
-// Функция списания звёзд администратором
 async function adminDeductStars(targetUniqueId, amount) {
   try {
     const { data: user } = await supabase.from('users').select('*').eq('unique_id', targetUniqueId).maybeSingle();
@@ -178,7 +176,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Обработка ввода промокода или админ-команд
   socket.on('activate_promo', async (data) => {
     const rawInput = data?.code?.trim();
     const tId = socket._telegram_id;
@@ -511,6 +508,19 @@ async function handleGameAction(socket, data) {
     } else if (isDefender && !game.isTakingState) {
       const activeAttack = game.tableCards.find(tc => !tc.defend);
       if (!activeAttack) return;
+
+      // Логика переводного дурака
+      if (game.mode === 'perevodnoy' && card.rank === activeAttack.attack.rank && game.tableCards.length === 1 && !game.tableCards.some(tc => tc.defend)) {
+        hand.splice(cardIndex, 1);
+        game.tableCards.push({ attack: card, defend: null });
+        const tempIdx = game.attackerIndex;
+        game.attackerIndex = game.defenderIndex;
+        game.defenderIndex = tempIdx;
+        broadcastGameState(game);
+        await checkGameEnd(game);
+        return;
+      }
+
       const isValid = (card.suit === activeAttack.attack.suit && card.value > activeAttack.attack.value) ||
                       (card.suit === game.trumpCard.suit && activeAttack.attack.suit !== game.trumpCard.suit);
       if (isValid) {
