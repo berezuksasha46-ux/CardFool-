@@ -47,7 +47,6 @@
 
     .poker-table { background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%); border: 2px solid #2d5a3c; border-radius: 18px; padding: 12px; min-height: 250px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; width: 100%; }
     
-    /* Исправленный контейнер карт: больше не обрезает веер карт */
     #my-hand-container {
       display: flex; justify-content: center; align-items: flex-end;
       padding: 25px 15px 15px 15px; min-height: 140px;
@@ -151,13 +150,13 @@
 
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <div class="avatar-wrapper" onclick="openOpponentProfile()" style="cursor: pointer;" title="Посмотреть профиль">
+      <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="openOpponentProfile()">
+        <div class="avatar-wrapper">
           <div id="opponent-bubble" class="speech-bubble">БИТО!</div>
           <div id="opponent-avatar" class="avatar-container" style="width: 36px; height: 36px; font-size: 14px;">O</div>
         </div>
         <div>
-          <div id="opponent-name" style="font-weight: bold; font-size: 14px; cursor: pointer;" onclick="openOpponentProfile()">Соперник</div>
+          <div id="opponent-name" style="font-weight: bold; font-size: 14px; color: var(--accent-gold);">Соперник</div>
           <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
         </div>
       </div>
@@ -222,20 +221,23 @@
     </div>
   </div>
 
-  <!-- Модальное окно просмотра чужого профиля -->
   <div id="user-profile-modal" class="modal">
     <div class="modal-content">
       <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px; text-align: left;">
-        <div id="modal-user-avatar" class="avatar-container" style="width: 50px; height: 50px; font-size: 20px;">U</div>
+        <div id="modal-user-avatar" class="avatar-container" style="width: 52px; height: 52px; font-size: 22px;">U</div>
         <div>
-          <div style="font-size: 18px; font-weight: bold;" id="modal-user-name">Игрок</div>
+          <div style="font-size: 18px; font-weight: bold;" id="modal-user-name">Загрузка...</div>
           <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="modal-user-id" style="color: var(--accent-gold); font-weight: bold;">------</span></div>
         </div>
       </div>
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
-        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Победы</div><div style="font-size: 14px; font-weight: bold; color: var(--accent-gold);" id="modal-user-wins">0</div></div>
-        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Поражения</div><div style="font-size: 14px; font-weight: bold; color: var(--accent-gold);" id="modal-user-losses">0</div></div>
-        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Звёзды</div><div style="font-size: 14px; font-weight: bold; color: var(--accent-gold);" id="modal-user-stars">0</div></div>
+        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 11px; color: var(--text-muted);">Победы</div><div style="font-size: 15px; font-weight: bold; color: var(--accent-gold);" id="modal-user-wins">0</div></div>
+        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 11px; color: var(--text-muted);">Поражения</div><div style="font-size: 15px; font-weight: bold; color: var(--accent-gold);" id="modal-user-losses">0</div></div>
+        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 11px; color: var(--text-muted);">Винрейт</div><div style="font-size: 15px; font-weight: bold; color: var(--success);" id="modal-user-winrate">0%</div></div>
+      </div>
+      <div class="card-box" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 16px;">
+        <span style="font-size: 13px; color: var(--text-muted);">Баланс звёзд:</span>
+        <span style="font-weight: bold; color: var(--accent-gold); font-size: 16px;">⭐ <span id="modal-user-stars">0</span></span>
       </div>
       <button class="btn btn-secondary" style="width: 100%;" onclick="closeUserProfileModal()">Закрыть</button>
     </div>
@@ -374,7 +376,10 @@
     }
     function openUserProfile(targetId) {
       if (!targetId) return;
-      socket.emit('get_user_profile', { targetId });
+      document.getElementById('modal-user-name').innerText = 'Загрузка...';
+      document.getElementById('modal-user-id').innerText = '------';
+      document.getElementById('user-profile-modal')?.classList.add('active');
+      socket.emit('get_user_profile', { targetId: String(targetId) });
     }
 
     function openOpponentProfile() {
@@ -387,13 +392,19 @@
 
     socket.on('user_profile_data', (profile) => {
       if (!profile) return;
-      document.getElementById('modal-user-name').innerText = profile.first_name || profile.username || 'Игрок';
+      const name = profile.first_name || profile.username || 'Игрок';
+      const wins = profile.wins || 0;
+      const losses = profile.losses || 0;
+      const total = wins + losses;
+      const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+      document.getElementById('modal-user-name').innerText = name;
       document.getElementById('modal-user-id').innerText = profile.unique_id || '---';
-      document.getElementById('modal-user-wins').innerText = profile.wins || 0;
-      document.getElementById('modal-user-losses').innerText = profile.losses || 0;
+      document.getElementById('modal-user-wins').innerText = wins;
+      document.getElementById('modal-user-losses').innerText = losses;
+      document.getElementById('modal-user-winrate').innerText = winrate + '%';
       document.getElementById('modal-user-stars').innerText = profile.stars_balance || 0;
-      setAvatarElement('modal-user-avatar', profile.photo_url, profile.first_name || profile.username);
-      document.getElementById('user-profile-modal')?.classList.add('active');
+      setAvatarElement('modal-user-avatar', profile.photo_url, name);
     });
 
     function submitPromoCode() {
@@ -440,7 +451,7 @@
           const avatarStyle = f.photo_url ? `style="background-image: url('${f.photo_url}');"` : '';
           const avatarText = f.photo_url ? '' : (f.first_name || f.username).charAt(0).toUpperCase();
           friendsContainer.innerHTML += `
-            <div class="table-card" onclick="openUserProfile('${f.telegram_id}')">
+            <div class="table-card" onclick="openUserProfile('${f.unique_id || f.telegram_id}')">
               <div style="display:flex; align-items:center; gap:10px;">
                 <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
                 <div>
@@ -465,7 +476,7 @@
             const avatarStyle = req.photo_url ? `style="background-image: url('${req.photo_url}');"` : '';
             const avatarText = req.photo_url ? '' : (req.first_name || req.username).charAt(0).toUpperCase();
             requestsContainer.innerHTML += `
-              <div class="table-card" onclick="openUserProfile('${req.telegram_id}')">
+              <div class="table-card" onclick="openUserProfile('${req.unique_id || req.telegram_id}')">
                 <div style="display:flex; align-items:center; gap:10px;">
                   <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
                   <div>
@@ -688,7 +699,7 @@
         const avatarStyle = u.photo_url ? `style="background-image: url('${u.photo_url}');"` : '';
         const avatarText = u.photo_url ? '' : (u.first_name || u.username || 'U').charAt(0).toUpperCase();
         container.innerHTML += `
-          <div class="table-card" onclick="openUserProfile('${u.telegram_id}')">
+          <div class="table-card" onclick="openUserProfile('${u.unique_id || u.telegram_id}')">
             <div style="display:flex; align-items:center; gap:10px;">
               <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
               <div>
