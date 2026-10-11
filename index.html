@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -341,7 +342,7 @@
     let currentUser = null, currentGameId = null, currentTableId = null;
     let selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
     let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false, currentTableCards = [], isTakingStateFlag = false;
-    let timerInterval = null, turnTimeLeft = 20;
+    let timerInterval = null, turnTimeLeft = 20, currentTrumpSuit = '♠';
 
     function authenticate() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -370,7 +371,7 @@
       updateProfileData(user);
     });
 
-    /* ТАЙМЕР НА 20 СЕКУНД С АВТОМАТИЧЕСКИМ ПОРАЖЕНИЕМ */
+    /* ГАРАНТИРОВАННЫЙ ТАЙМЕР НА 20 СЕКУНД С АВТО-ПОРАЖЕНИЕМ */
     function startClientTimer() {
       if (timerInterval) clearInterval(timerInterval);
       turnTimeLeft = 20;
@@ -481,6 +482,7 @@
 
       document.getElementById('deck-count').innerText = data.deckCount;
       if (data.trumpCard) {
+        currentTrumpSuit = data.trumpCard.suit;
         const isRed = ['♥', '♦'].includes(data.trumpCard.suit);
         const view = document.getElementById('deck-card-view');
         if (view) {
@@ -522,8 +524,29 @@
       updateActionButtons();
     });
 
+    /* СТРОГАЯ СОРТИРОВКА КАРТ В РУКЕ ПО ПРАВИЛАМ ДУРАКА */
+    function sortCards(cards) {
+      const suitOrder = { '♠': 1, '♣': 2, '♥': 3, '♦': 4 };
+      const rankOrder = { '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+
+      return [...cards].sort((a, b) => {
+        const aIsTrump = a.suit === currentTrumpSuit ? 1 : 0;
+        const bIsTrump = b.suit === currentTrumpSuit ? 1 : 0;
+
+        if (aIsTrump !== bIsTrump) {
+          return aIsTrump - bIsTrump; // Козыри всегда уходят вправо
+        }
+
+        if (a.suit !== b.suit) {
+          return (suitOrder[a.suit] || 99) - (suitOrder[b.suit] || 99);
+        }
+
+        return (rankOrder[a.rank] || 0) - (rankOrder[b.rank] || 0);
+      });
+    }
+
     socket.on('your_hand', (hand) => {
-      myHandCards = hand || [];
+      myHandCards = sortCards(hand || []);
       const container = document.getElementById('my-hand-container');
       if (!container) return;
       container.innerHTML = '';
@@ -621,7 +644,6 @@
       input.value = '';
     }
 
-    /* РЕФЕРАЛЬНАЯ ССЫЛКА НА БОТА @GOCardFoolbot */
     function copyReferralLink() {
       if (!currentUser?.unique_id) return alert('Сначала авторизуйтесь!');
       const link = `https://t.me/GOCardFoolbot?start=${currentUser.unique_id}`;
@@ -721,7 +743,7 @@
         return;
       }
       container.innerHTML = '';
-      friends.forEach(f => {
+      friends.friends.forEach(f => {
         const avStyle = f.photo_url ? `background-image: url('${f.photo_url}'); color: transparent;` : '';
         const init = (f.first_name || f.username || 'U')[0].toUpperCase();
         container.innerHTML += `
