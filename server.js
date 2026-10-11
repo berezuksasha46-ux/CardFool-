@@ -21,7 +21,6 @@ function generateUniqueId() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Извлечение и валидация данных пользователя из Telegram initData
 function parseInitData(initDataRaw) {
   if (!initDataRaw) return null;
   try {
@@ -48,13 +47,12 @@ async function dbGetOrCreateUser(userData) {
     let { data, error } = await supabase.from('users').select('*').eq('telegram_id', cleanId).maybeSingle();
 
     if (!data) {
-      // Создаем нового игрока
       const newUser = {
         telegram_id: cleanId,
         unique_id: generateUniqueId(),
-        username: userData.username,
-        first_name: userData.first_name,
-        photo_url: userData.photo_url,
+        username: userData.username || 'Игрок',
+        first_name: userData.first_name || 'Игрок',
+        photo_url: userData.photo_url || null,
         stars_balance: 50,
         wins: 0,
         losses: 0,
@@ -64,27 +62,15 @@ async function dbGetOrCreateUser(userData) {
 
       const { data: inserted, error: insertErr } = await supabase.from('users').insert([newUser]).select().single();
       if (insertErr) throw insertErr;
-
-      // Обработка реферала при создании первого профиля
-      if (userData.start_param) {
-        processReferral(inserted.telegram_id, userData.start_param);
-      }
-
       return inserted;
     }
 
-    // Обновляем аватарку и имя, если они изменились в Telegram
+    // Обновляем данные профиля, если они поменялись в Telegram
     const updatePayload = {};
-    if (!data.unique_id) {
-      data.unique_id = generateUniqueId();
-      updatePayload.unique_id = data.unique_id;
-    }
     if (userData.photo_url && data.photo_url !== userData.photo_url) {
-      data.photo_url = userData.photo_url;
       updatePayload.photo_url = userData.photo_url;
     }
-    if (userData.first_name && data.first_name !== userData.first_name) {
-      data.first_name = userData.first_name;
+    if (userData.first_name && data.first_name !== 'Игрок' && data.first_name !== data.first_name) {
       updatePayload.first_name = userData.first_name;
     }
 
@@ -97,18 +83,6 @@ async function dbGetOrCreateUser(userData) {
   } catch (err) {
     console.error(`Ошибка БД (dbGetOrCreateUser): ${err.message}`);
     return null;
-  }
-}
-
-async function processReferral(newUserId, referrerUniqueId) {
-  try {
-    const { data: referrer } = await supabase.from('users').select('*').eq('unique_id', String(referrerUniqueId).trim()).maybeSingle();
-    if (referrer && String(referrer.telegram_id) !== String(newUserId)) {
-      const bonusBalance = Number(referrer.stars_balance || 0) + 10;
-      await supabase.from('users').update({ stars_balance: bonusBalance }).eq('telegram_id', referrer.telegram_id);
-    }
-  } catch (e) {
-    console.error('Ошибка начисления реферала:', e.message);
   }
 }
 
@@ -165,7 +139,6 @@ io.on('connection', (socket) => {
     if (data?.initData) {
       userData = parseInitData(data.initData);
     }
-
     if (!userData && data?.telegram_id) {
       userData = {
         telegram_id: String(data.telegram_id),
