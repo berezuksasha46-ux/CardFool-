@@ -132,6 +132,38 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Обработчик получения чужого профиля по ID / Telegram ID
+  socket.on('get_user_profile', async (data) => {
+    const targetId = data?.targetId ? String(data.targetId).trim() : null;
+    if (!targetId) return;
+
+    try {
+      let { data: userProfile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('unique_id', targetId)
+        .maybeSingle();
+
+      if (!userProfile) {
+        let { data: byTg } = await supabase
+          .from('users')
+          .select('*')
+          .eq('telegram_id', targetId)
+          .maybeSingle();
+        userProfile = byTg;
+      }
+
+      if (userProfile) {
+        socket.emit('user_profile_data', userProfile);
+      } else {
+        socket.emit('error_message', 'Профиль игрока не найден в базе.');
+      }
+    } catch (e) {
+      console.error('Ошибка получения профиля:', e);
+      socket.emit('error_message', 'Ошибка при загрузке профиля.');
+    }
+  });
+
   socket.on('get_lobbies', () => { emitLobbies(socket); });
 
   socket.on('get_leaderboard', async () => {
@@ -397,7 +429,7 @@ function broadcastGameState(game) {
         trumpCard: game.trumpCard,
         tableCards: game.tableCards,
         isTakingState: !!game.isTakingState,
-        players: game.players.map(p => ({ name: p.name, photoUrl: p.photoUrl, handCount: p.hand.length }))
+        players: game.players.map(p => ({ id: p.id, name: p.name, photoUrl: p.photoUrl, handCount: p.hand.length }))
       });
       sock.emit('your_hand', player.hand);
       sock.emit('is_turn_data', {
@@ -502,7 +534,6 @@ async function handleGameAction(socket, data) {
   }
   else if (action === 'bito' && isAttacker) {
     if (game.isTakingState) {
-      // Атакующий завершил докидывание -> защищающийся забирает карты
       const defender = game.players[game.defenderIndex];
       const cardsToTake = [];
       game.tableCards.forEach(tc => {
@@ -519,7 +550,6 @@ async function handleGameAction(socket, data) {
       broadcastGameState(game);
       await checkGameEnd(game);
     } else if (game.tableCards.length > 0 && game.tableCards.every(tc => tc.defend)) {
-      // Обычное бито
       io.to(game.gameId).emit('player_action_notify', { playerId: game.players[playerIdx].id, text: 'БИТО!' });
       
       game.tableCards = [];
@@ -532,7 +562,6 @@ async function handleGameAction(socket, data) {
     }
   }
   else if (action === 'take' && isDefender && !game.isTakingState) {
-    // Защищающийся нажал Взять -> переводим в состояние ожидания докидывания
     game.isTakingState = true;
     io.to(game.gameId).emit('player_action_notify', { playerId: game.players[playerIdx].id, text: 'БЕРУ...' });
     broadcastGameState(game);
