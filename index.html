@@ -28,7 +28,7 @@
     .view { display: none; padding: 14px; width: 100%; }
     .view.active { display: block; }
 
-    .btn { background: var(--accent-gold-gradient); color: #000; border: none; padding: 10px 18px; font-weight: bold; font-size: 14px; border-radius: 12px; cursor: pointer; }
+    .btn { background: var(--accent-gold-gradient); color: #000; border: none; padding: 14px 28px; font-weight: bold; font-size: 16px; border-radius: 14px; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
     .btn:active { transform: scale(0.97); }
     .btn-secondary { background: #23163d; color: #fff; border: 1px solid var(--border-color); }
     .btn-danger { background: var(--danger); color: #fff; padding: 6px 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
@@ -53,14 +53,29 @@
 
     .poker-table { 
       background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%); 
-      border: 2px solid #2d5a3c; border-radius: 18px; padding: 12px; 
-      min-height: 230px; display: flex; flex-direction: column; justify-content: space-between; 
+      border: 2px solid #2d6a45; border-radius: 18px; padding: 12px; 
+      min-height: 250px; display: flex; flex-direction: column; justify-content: space-between; 
       position: relative; width: 100%; margin-bottom: 10px;
+    }
+
+    /* УВЕЛИЧЕННЫЙ ВИДЖЕТ КОЛОДЫ */
+    .deck-side-container { 
+      position: absolute; right: 12px; top: 12px; 
+      display: flex; align-items: center; gap: 8px; 
+      background: rgba(0,0,0,0.5); padding: 6px 12px; border-radius: 12px; font-size: 13px; z-index: 10;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .deck-stack { width: 32px; height: 46px; background: #23163d; border-radius: 6px; border: 1px solid var(--accent-gold); position: relative; }
+    .trump-preview { position: absolute; bottom: -4px; right: -8px; width: 26px; height: 38px; background: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+
+    /* КАРТЫ НА СТОЛЕ В ЦЕНТРЕ */
+    #table-cards-slot {
+      display: flex; gap: 10px; min-height: 90px; justify-content: center; align-items: center; flex-wrap: wrap; margin: auto 0;
     }
 
     #my-hand-container {
       display: flex; justify-content: center; align-items: flex-end;
-      height: 120px; position: relative; width: 100%; margin-top: 10px;
+      height: 110px; position: relative; width: 100%; margin-top: 5px; margin-bottom: 15px;
     }
 
     .card-item {
@@ -70,17 +85,13 @@
       cursor: pointer; border: 1px solid #ccc; position: absolute; transform-origin: bottom center;
       transition: transform 0.2s ease;
     }
-    .card-item:hover, .card-item:active { transform: translateY(-16px) scale(1.1) rotate(0deg) !important; z-index: 500 !important; border-color: var(--accent-gold); }
+    .card-item:hover, .card-item:active { transform: translateY(-20px) scale(1.15) rotate(0deg) !important; z-index: 500 !important; border-color: var(--accent-gold); }
     .card-item.red { color: var(--danger); }
 
-    .table-card-item { width: 44px; height: 64px; background: #fff; color: #111; border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between; padding: 3px; font-weight: bold; font-size: 11px; }
+    .table-card-item { width: 48px; height: 70px; background: #fff; color: #111; border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between; padding: 4px; font-weight: bold; font-size: 12px; box-shadow: 0 3px 6px rgba(0,0,0,0.3); }
     .table-card-item.red { color: var(--danger); }
-    .card-pair { position: relative; width: 52px; height: 74px; margin: 2px; }
-    .card-pair .defend-card { position: absolute; top: 8px; left: 8px; z-index: 2; }
-
-    .deck-side-container { position: absolute; right: 10px; top: 10px; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; font-size: 11px; }
-    .deck-stack { width: 24px; height: 34px; background: #23163d; border-radius: 4px; border: 1px solid var(--accent-gold); position: relative; }
-    .trump-preview { position: absolute; bottom: -3px; right: -6px; width: 20px; height: 28px; background: #fff; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
+    .card-pair { position: relative; width: 56px; height: 80px; margin: 3px; }
+    .card-pair .defend-card { position: absolute; top: 10px; left: 10px; z-index: 2; }
 
     .nav-bar { 
       position: fixed; bottom: 0; left: 0; right: 0; height: 65px;
@@ -158,13 +169,13 @@
     <div class="poker-table">
       <div class="deck-side-container">
         <div style="text-align: right; line-height: 1.1;">
-          <div style="font-size: 9px; color: var(--text-muted);">Колода</div>
-          <div style="font-weight: bold;" id="deck-count">36</div>
+          <div style="font-size: 10px; color: var(--text-muted);">Колода</div>
+          <div style="font-weight: bold; font-size: 14px;" id="deck-count">36</div>
         </div>
         <div class="deck-stack"><div id="deck-card-view" class="trump-preview">♠</div></div>
       </div>
-      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 13px; color: var(--accent-gold);">Ожидание...</div>
-      <div id="table-cards-slot" style="display: flex; gap: 6px; min-height: 75px; justify-content: center; align-items: center; flex-wrap: wrap;"></div>
+      <div id="turn-indicator" style="text-align: center; font-weight: bold; font-size: 14px; color: var(--accent-gold);">Ожидание...</div>
+      <div id="table-cards-slot"></div>
     </div>
     
     <div style="display: flex; justify-content: space-between; align-items: center; position: relative;">
@@ -176,9 +187,10 @@
 
     <div id="my-hand-container"></div>
 
-    <div style="display: flex; justify-content: center; margin-top: 10px; min-height: 40px;">
-      <button id="action-btn-bito" class="btn" style="display: none; min-width: 140px;" onclick="handleGameAction('bito')">Бито</button>
-      <button id="action-btn-take" class="btn btn-secondary" style="display: none; min-width: 140px;" onclick="handleGameAction('take')">Взять</button>
+    <!-- КНОПКИ НИЖЕ ВЕЕРА КАРТ -->
+    <div style="display: flex; justify-content: center; margin-top: 10px; min-height: 50px;">
+      <button id="action-btn-bito" class="btn" style="display: none; width: 80%; padding: 14px; font-size: 18px;" onclick="handleGameAction('bito')">Бито</button>
+      <button id="action-btn-take" class="btn btn-secondary" style="display: none; width: 80%; padding: 14px; font-size: 18px; border-color: var(--accent-gold);" onclick="handleGameAction('take')">Взять</button>
     </div>
   </div>
 
@@ -293,7 +305,7 @@
     const socket = io({ transports: ['websocket', 'polling'] });
     let currentUser = null, currentGameId = null, currentTableId = null;
     let selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
-    let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false;
+    let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false, currentTableCards = [];
 
     function authenticate() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -363,6 +375,7 @@
 
     socket.on('game_state', (data) => {
       currentGameId = data.gameId;
+      currentTableCards = data.tableCards || [];
       switchTab('game');
 
       document.getElementById('deck-count').innerText = data.deckCount;
@@ -392,7 +405,7 @@
       const tableSlot = document.getElementById('table-cards-slot');
       if (tableSlot) {
         tableSlot.innerHTML = '';
-        data.tableCards.forEach(pair => {
+        currentTableCards.forEach(pair => {
           const pairDiv = document.createElement('div');
           pairDiv.className = 'card-pair';
           const attRed = ['♥', '♦'].includes(pair.attack.suit) ? 'red' : '';
@@ -404,6 +417,8 @@
           tableSlot.appendChild(pairDiv);
         });
       }
+
+      updateActionButtons(data.isTakingState);
     });
 
     socket.on('your_hand', (hand) => {
@@ -441,15 +456,31 @@
     socket.on('is_turn_data', (data) => {
       isMyTurnFlag = data.isMyTurn;
       isAttackerFlag = data.isAttacker;
-
       const indicator = document.getElementById('turn-indicator');
+      if (indicator) indicator.innerText = isMyTurnFlag ? 'Ваш ход!' : 'Ход соперника...';
+      updateActionButtons();
+    });
+
+    /* ЛОГИКА ОТОБРАЖЕНИЯ КНОПОК БИТО/ВЗЯТЬ */
+    function updateActionButtons(isTakingState = false) {
       const bitoBtn = document.getElementById('action-btn-bito');
       const takeBtn = document.getElementById('action-btn-take');
 
-      if (indicator) indicator.innerText = isMyTurnFlag ? 'Ваш ход!' : 'Ход соперника...';
-      if (bitoBtn) bitoBtn.style.display = (isMyTurnFlag && isAttackerFlag) ? 'inline-block' : 'none';
-      if (takeBtn) takeBtn.style.display = (isMyTurnFlag && !isAttackerFlag) ? 'inline-block' : 'none';
-    });
+      const tableHasCards = currentTableCards.length > 0;
+      const allDefended = tableHasCards && currentTableCards.every(tc => tc.defend !== null);
+
+      if (bitoBtn) {
+        // Бито показываем только если мы атакуем, на столе есть карты И они либо все отбиты, либо соперник берет
+        const showBito = isMyTurnFlag && isAttackerFlag && tableHasCards && (allDefended || isTakingState);
+        bitoBtn.style.display = showBito ? 'inline-block' : 'none';
+      }
+
+      if (takeBtn) {
+        // Взять показываем только защищающемуся, когда на столе есть неотбитые карты
+        const showTake = isMyTurnFlag && !isAttackerFlag && tableHasCards && !isTakingState;
+        takeBtn.style.display = showTake ? 'inline-block' : 'none';
+      }
+    }
 
     function playCard(cardId) {
       if (!currentGameId || !isMyTurnFlag) return;
