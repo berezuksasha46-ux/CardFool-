@@ -26,7 +26,6 @@
     html, body { width: 100%; height: 100%; overflow-x: hidden; background: radial-gradient(circle at 50% 0%, #200a45 0%, #05020a 100%); color: var(--text-main); }
     body { padding-top: 62px; padding-bottom: 78px; }
 
-    /* Шапка приложения */
     .top-header {
       position: fixed; top: 0; left: 0; right: 0; height: 62px;
       background: rgba(10, 4, 22, 0.94); backdrop-filter: blur(20px);
@@ -38,7 +37,6 @@
     .view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Роскошные Кнопки */
     .btn { 
       background: var(--accent-gold-gradient); color: #000; border: none; 
       padding: 14px 24px; font-weight: 900; font-size: 15px; border-radius: 16px; 
@@ -49,7 +47,6 @@
     .btn-secondary { background: rgba(36, 17, 68, 0.92); color: #fff; border: 1px solid var(--border-color); box-shadow: 0 4px 18px rgba(0,0,0,0.5); }
     .btn-danger { background: linear-gradient(135deg, #f87171 0%, #dc2626 100%); color: #fff; padding: 8px 14px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4); }
 
-    /* Карточки залов */
     .card-box, .table-card { 
       background: var(--bg-card); backdrop-filter: blur(16px);
       border-radius: 22px; padding: 16px; margin-bottom: 14px; 
@@ -58,7 +55,6 @@
     .table-card { display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
     .table-card:active { border-color: var(--accent-gold); transform: translateY(-2px); }
 
-    /* Аватарки */
     .avatar-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
     .avatar-container { 
       width: 44px; height: 44px; background: var(--accent-gold-gradient); color: #000; 
@@ -76,7 +72,6 @@
     }
     .action-toast.show { transform: translateX(-50%) scale(1); opacity: 1; }
 
-    /* РОСКОШНЫЙ СТОЛ КАЗИНО С СВЕЧЕНИЕМ */
     .poker-table { 
       background: radial-gradient(circle at center, #1e5c38 0%, #082113 100%); 
       border: 3px solid #348e58; border-radius: 28px; padding: 14px; 
@@ -110,7 +105,6 @@
       height: 150px; position: relative; width: 100%; margin-top: 2px; margin-bottom: 8px;
     }
 
-    /* ИДЕАЛЬНЫЙ ДИЗАЙН ИГРОВЫХ КАРТ */
     .card-item {
       width: 70px; height: 104px; 
       background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); 
@@ -133,7 +127,6 @@
     .table-card-item.red { color: #dc2626; }
     .card-pair { position: relative; width: 58px; height: 82px; margin: 3px; }
     .card-pair .defend-card { position: absolute; top: 12px; left: 12px; z-index: 2; }
-    /* Нижнее Меню */
     .nav-bar { 
       position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
       background: rgba(10, 4, 22, 0.96); backdrop-filter: blur(20px);
@@ -145,7 +138,6 @@
     .nav-item.active { color: var(--accent-gold); font-weight: 900; text-shadow: 0 0 14px rgba(251,191,36,0.6); }
     .nav-icon { font-size: 22px; margin-bottom: 2px; }
 
-    /* Модалки */
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
     .modal.active { display: flex; animation: fadeIn 0.2s ease-out; }
     .modal-content { background: #160a2d; width: 100%; max-width: 390px; border-radius: 26px; padding: 24px; border: 1px solid var(--border-color); text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.95); }
@@ -200,8 +192,21 @@
         <span style="font-weight: 900; font-size: 16px; color: var(--accent-gold);">Партнерская программа</span>
       </div>
       <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
-        Приглашайте игроков в бота <b style="color:#fff;">@GOCardFoolbot</b>. Ваш друг получит приветственный бонус, а вы получите <b style="color:var(--accent-gold);">+10 ⭐</b> на счет и пожизненные <b style="color:var(--success);">+5%</b> с каждой его ставки!
+        Приглашайте игроков в бота <b style="color:#fff;">@GOCardFoolbot</b>. Вы получаете <b style="color:var(--accent-gold);">+10 ⭐</b> за каждого друга и пожизненные <b style="color:var(--success);">+5%</b> от всех его ставок!
       </div>
+
+      <!-- СТАТИСТИКА РЕФЕРАЛОВ (Счетчик + Заработок) -->
+      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08);">
+        <div style="text-align: center;">
+          <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">ПЕРЕШЛИ ПО ССЫЛКЕ</div>
+          <div style="font-size: 18px; font-weight: 900; color: #fff; margin-top: 2px;" id="ref-count-badge">0</div>
+        </div>
+        <div style="text-align: center; border-left: 1px solid rgba(255,255,255,0.1);">
+          <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">ЗАРАБОТАНО С НИХ</div>
+          <div style="font-size: 18px; font-weight: 900; color: var(--accent-gold); margin-top: 2px;" id="ref-earned-badge">0 ⭐</div>
+        </div>
+      </div>
+
       <button class="btn" style="width: 100%; padding: 13px; font-size: 13px;" onclick="copyReferralLink()">✨ Скопировать реферальную ссылку</button>
     </div>
 
@@ -213,7 +218,7 @@
       </div>
     </div>
 
-    <div style="font-size: 15px; font-weight: 900; margin-bottom: 10px;">Список друзей (<span id="friends-count">0</span>)</div>
+    <div style="font-size: 15px; font-weight: 900; margin-bottom: 10px;">Список рефералов и друзей (<span id="friends-count">0</span>)</div>
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список друзей пуст</div></div>
   </div>
 
@@ -410,7 +415,6 @@
       updateProfileData(user);
     });
 
-    /* ТАЙМЕР НА 20 СЕКУНД С АВТО-ХОДОМ */
     function startClientTimer() {
       if (timerInterval) clearInterval(timerInterval);
       turnTimeLeft = 20;
@@ -562,7 +566,6 @@
       updateActionButtons();
     });
 
-    /* СТРOГАЯ СОРТИРОВКА (Пики -> Крести -> Червы -> Бубны, козыри справа) */
     function sortCards(cards) {
       const suitOrder = { '♠': 1, '♣': 2, '♥': 3, '♦': 4 };
       const rankOrder = { '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
@@ -583,7 +586,6 @@
       });
     }
 
-    /* ИДЕАЛЬНЫЙ ВЕЕР КАРТ — ВСЯ КАРТА ЧЕТКО ВИДНА СО ВСЕХ СТОРОН */
     socket.on('your_hand', (hand) => {
       myHandCards = sortCards(hand || []);
       const container = document.getElementById('my-hand-container');
@@ -781,14 +783,24 @@
       if (tabId === 'friends') socket.emit('get_friends');
     }
 
+    /* ОБНОВЛЕНИЕ ДАННЫХ ДРУЗЕЙ И РЕФЕРАЛОВ СО СЧЕТЧИКАМИ И ЗАРАБОТКОМ */
     socket.on('friends_list', (data) => {
       const container = document.getElementById('friends-list-container');
       const countEl = document.getElementById('friends-count');
+      const refCountBadge = document.getElementById('ref-count-badge');
+      const refEarnedBadge = document.getElementById('ref-earned-badge');
+
       if (!container) return;
       const friends = data?.friends || [];
+      const refCount = data?.referralCount ?? friends.length;
+      const refEarned = data?.referralEarned ?? (friends.length * 10);
+
       if (countEl) countEl.innerText = friends.length;
+      if (refCountBadge) refCountBadge.innerText = refCount;
+      if (refEarnedBadge) refEarnedBadge.innerText = refEarned + ' ⭐';
+
       if (friends.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список друзей пуст</div>';
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список рефералов пуст</div>';
         return;
       }
       container.innerHTML = '';
