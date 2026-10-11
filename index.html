@@ -192,7 +192,7 @@
         <span style="font-weight: 900; font-size: 16px; color: var(--accent-gold);">Партнерская программа</span>
       </div>
       <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
-        Приглашайте игроков в бота <b style="color:#fff;">@GOCardFoolbot</b>. Вы получаете <b style="color:var(--accent-gold);">+10 ⭐</b> за каждого друга и пожизненные <b style="color:var(--success);">+5%</b> от всех его ставок!
+        Приглашайте игроков через прямую ссылку. Вы получаете <b style="color:var(--accent-gold);">+10 ⭐</b> за каждого друга и пожизненные <b style="color:var(--success);">+5%</b> от всех его ставок!
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08);">
@@ -217,7 +217,7 @@
       </div>
     </div>
 
-    <div style="font-size: 15px; font-weight: 900; margin-bottom: 10px;">Список рефералов и друзей (<span id="friends-count">0</span>)</div>
+    <div style="font-size: 15px; font-weight: 900; margin-bottom: 10px;">Список рефералов (<span id="friends-count">0</span>)</div>
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список друзей пуст</div></div>
   </div>
 
@@ -392,6 +392,7 @@
       let telegram_id = tgUser?.id ? String(tgUser.id) : (localStorage.getItem('cardfool_id') || 'browser_' + Math.floor(100000 + Math.random() * 900000));
       localStorage.setItem('cardfool_id', telegram_id);
 
+      // Считываем start_param (передается черезпрямую ссылку t.me/GOCardFoolbot/app?startapp=ID)
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param || localStorage.getItem('cardfool_ref');
       if (startParam && startParam !== telegram_id) {
         localStorage.setItem('cardfool_ref', startParam);
@@ -694,10 +695,11 @@
       input.value = '';
     }
 
+    /* ПРЯМАЯ РЕФЕРАЛЬНАЯ ССЫЛКА ЧЕРЕЗ /app?startapp= */
     function copyReferralLink() {
       if (!currentUser?.unique_id) return alert('Сначала авторизуйтесь!');
-      const link = `https://t.me/GOCardFoolbot?start=${currentUser.unique_id}`;
-      navigator.clipboard.writeText(link).then(() => alert('✨ Реферальная ссылка скопирована!'));
+      const link = `https://t.me/GOCardFoolbot/app?startapp=${currentUser.unique_id}`;
+      navigator.clipboard.writeText(link).then(() => alert('✨ Прямая реферальная ссылка скопирована!'));
     }
 
     function updateProfileData(user) {
