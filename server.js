@@ -47,6 +47,7 @@ async function dbGetOrCreateUser(userData) {
     let { data, error } = await supabase.from('users').select('*').eq('telegram_id', cleanId).maybeSingle();
 
     if (!data) {
+      // Новый пользователь: гарантированно генерируем unique_id
       const newUser = {
         telegram_id: cleanId,
         unique_id: generateUniqueId(),
@@ -62,27 +63,50 @@ async function dbGetOrCreateUser(userData) {
 
       const { data: inserted, error: insertErr } = await supabase.from('users').insert([newUser]).select().single();
       if (insertErr) throw insertErr;
+
+      if (userData.start_param) {
+        processReferral(inserted.telegram_id, userData.start_param);
+      }
+
       return inserted;
     }
 
-    // Обновляем данные профиля, если они поменялись в Telegram
+    // Если у текущей записи в БД по какой-то причине нет unique_id — генерируем его и сохраняем
     const updatePayload = {};
+    if (!data.unique_id || String(data.unique_id).trim() === '') {
+      data.unique_id = generateUniqueId();
+      updatePayload.unique_id = data.unique_id;
+    }
+
     if (userData.photo_url && data.photo_url !== userData.photo_url) {
       updatePayload.photo_url = userData.photo_url;
+      data.photo_url = userData.photo_url;
     }
-    if (userData.first_name && data.first_name !== 'Игрок' && data.first_name !== data.first_name) {
+    if (userData.first_name && data.first_name !== 'Игрок' && data.first_name !== userData.first_name) {
       updatePayload.first_name = userData.first_name;
+      data.first_name = userData.first_name;
     }
 
     if (Object.keys(updatePayload).length > 0) {
       await supabase.from('users').update(updatePayload).eq('telegram_id', cleanId);
-      Object.assign(data, updatePayload);
     }
 
     return data;
   } catch (err) {
-    console.error(`Ошибка БД (dbGetOrCreateUser): ${err.message}`);
+    console.error(` Ошибка dbGetOrCreateUser (${cleanId}): ${err.message}`);
     return null;
+  }
+}
+
+async function processReferral(newUserId, referrerUniqueId) {
+  try {
+    const { data: referrer } = await supabase.from('users').select('*').eq('unique_id', String(referrerUniqueId).trim()).maybeSingle();
+    if (referrer && String(referrer.telegram_id) !== String(newUserId)) {
+      const bonusBalance = Number(referrer.stars_balance || 0) + 10;
+      await supabase.from('users').update({ stars_balance: bonusBalance }).eq('telegram_id', referrer.telegram_id);
+    }
+  } catch (e) {
+    console.error('Ошибка реферала:', e.message);
   }
 }
 
@@ -93,17 +117,23 @@ async function dbUpdateUser(telegramId, updateFields) {
     if (error) throw error;
     return data;
   } catch (err) {
-    console.error(`Ошибка обновления пользователя ${cleanId}: ${err.message}`);
+    console.error(`Ошибка обновления ${cleanId}: ${err.message}`);
     return null;
   }
 }
 
+// Лидерборд: Сортировка строго ПО БАЛАНСУ ЗВЁЗД (stars_balance)
 async function dbGetLeaderboard() {
   try {
-    const { data, error } = await supabase.from('users').select('telegram_id, unique_id, username, first_name, photo_url, stars_balance, wins, losses, level').order('wins', { ascending: false }).limit(50);
+    const { data, error } = await supabase.from('users')
+      .select('telegram_id, unique_id, username, first_name, photo_url, stars_balance, wins, losses, level')
+      .order('stars_balance', { ascending: false })
+      .limit(50);
+
     if (error) throw error;
     return data || [];
   } catch (err) {
+    console.error('Ошибка лидерборда:', err.message);
     return [];
   }
 }
