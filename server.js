@@ -101,6 +101,61 @@ async function dbGetLeaderboard() {
 const tables = new Map();
 const activeGames = new Map();
 
+// Функция пополнения баланса игрока администратором
+async function adminAddStars(targetUniqueId, amount) {
+  try {
+    const { data: user } = await supabase.from('users').select('*').eq('unique_id', targetUniqueId).maybeSingle();
+    if (!user) {
+      console.log(`Игрок с ID ${targetUniqueId} не найден.`);
+      return false;
+    }
+    const newBalance = Number(user.stars_balance || 0) + Number(amount);
+    await dbUpdateUser(user.telegram_id, { stars_balance: newBalance });
+
+    for (let s of io.sockets.sockets.values()) {
+      if (String(s._telegram_id) === String(user.telegram_id)) {
+        s.emit('auth_success', { ...user, stars_balance: newBalance });
+        s.emit('error_message', `🎉 Администратор пополнил ваш баланс на +${amount} ⭐!`);
+      }
+    }
+    console.log(`Успешно начислено ${amount} ⭐ игроку ${user.first_name} (ID: ${targetUniqueId})`);
+    return true;
+  } catch (e) {
+    console.error('Ошибка админ-пополнения:', e);
+    return false;
+  }
+}
+
+// Функция списания звезд администратором при выводе
+async function adminDeductStars(targetUniqueId, amount) {
+  try {
+    const { data: user } = await supabase.from('users').select('*').eq('unique_id', targetUniqueId).maybeSingle();
+    if (!user) {
+      console.log(`Игрок с ID ${targetUniqueId} не найден.`);
+      return false;
+    }
+    const currentBalance = Number(user.stars_balance || 0);
+    if (currentBalance < amount) {
+      console.log(`У игрока недостаточно средств (баланс: ${currentBalance}, запрос: ${amount})`);
+      return false;
+    }
+    const newBalance = currentBalance - Number(amount);
+    await dbUpdateUser(user.telegram_id, { stars_balance: newBalance });
+
+    for (let s of io.sockets.sockets.values()) {
+      if (String(s._telegram_id) === String(user.telegram_id)) {
+        s.emit('auth_success', { ...user, stars_balance: newBalance });
+        s.emit('error_message', `💸 Вывод ${amount} ⭐ успешно обработан! Средства списаны с баланса.`);
+      }
+    }
+    console.log(`Успешно списано ${amount} ⭐ у игрока ${user.first_name} (ID: ${targetUniqueId})`);
+    return true;
+  } catch (e) {
+    console.error('Ошибка админ-списания:', e);
+    return false;
+  }
+}
+
 function createDeck(deckSize) {
   const suits = ['♠', '♥', '♦', '♣'];
   const ranks24 = ['9', '10', 'J', 'Q', 'K', 'A'];
@@ -121,48 +176,6 @@ function createDeck(deckSize) {
   return deck;
 }
 
-// Вебхук для приема успешных платежей Telegram Stars
-app.post('/telegram-webhook', async (req, res) => {
-  const update = req.body;
-
-  if (update.pre_checkout_query) {
-    try {
-      await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/answerPreCheckoutQuery`, {
-        pre_checkout_query_id: update.pre_checkout_query.id,
-        ok: true
-      });
-    } catch (e) {
-      console.error('Pre-checkout error:', e);
-    }
-    return res.sendStatus(200);
-  }
-
-  if (update.message && update.message.successful_payment) {
-    const payment = update.message.successful_payment;
-    try {
-      const payload = JSON.parse(payment.invoice_payload);
-      const { telegram_id, stars } = payload;
-
-      const user = await dbGetOrCreateUser({ telegram_id });
-      if (user) {
-        const newBalance = (user.stars_balance || 0) + Number(stars);
-        const updatedUser = await dbUpdateUser(telegram_id, { stars_balance: newBalance });
-
-        for (let s of io.sockets.sockets.values()) {
-          if (String(s._telegram_id) === String(telegram_id)) {
-            s.emit('auth_success', updatedUser || user);
-            s.emit('error_message', `🎉 Оплата прошла успешно! Начислено +${stars} ⭐`);
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Error processing successful payment:', e);
-    }
-  }
-
-  res.sendStatus(200);
-});
-
 io.on('connection', (socket) => {
   let currentUser = null;
 
@@ -170,59 +183,46 @@ io.on('connection', (socket) => {
     if (!data || !data.telegram_id) return;
     socket._telegram_id = String(data.telegram_id);
     currentUser = await dbGetOrCreateUser(data);
-
     if (currentUser) {
       socket.emit('auth_success', currentUser);
       emitLobbies();
     }
   });
 
-  // Запрос на покупку звезд через Telegram Stars
-  socket.on('buy_stars_invoice', async (data) => {
-    const amountStars = Number(data?.amount);
+  socket.on('request_withdrawal', async (data) => {
+    const amount = Number(data?.amount);
     const tId = socket._telegram_id;
+    if (!tId || !amount || amount <= 0) return socket.emit('error_message', 'Некорректная сумма!');
 
-    if (!tId || !amountStars || amountStars <= 0) {
-      return socket.emit('error_message', 'Некорректная сумма для пополнения!');
+    const user = await dbGetOrCreateUser({ telegram_id: tId });
+    if (!user || (user.stars_balance || 0) < amount) {
+      return socket.emit('error_message', 'У вас недостаточно звезд на балансе!');
     }
 
     try {
-      const response = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-        title: `Пополнение: ${amountStars} ⭐`,
-        description: `Пополнение игрового баланса CardFool на ${amountStars} звёзд`,
-        payload: JSON.stringify({ telegram_id: tId, stars: amountStars, timestamp: Date.now() }),
-        currency: 'XTR',
-        prices: [{ label: `${amountStars} Stars`, amount: amountStars }]
-      });
-
-      if (response.data && response.data.ok) {
-        socket.emit('invoice_link_ready', { invoiceUrl: response.data.result, amount: amountStars });
-      } else {
-        socket.emit('error_message', 'Ошибка создания счета в Telegram.');
-      }
-    } catch (err) {
-      console.error('Invoice error:', err?.response?.data || err.message);
-      socket.emit('error_message', 'Не удалось выставить счет Telegram Stars.');
+      await supabase.from('withdrawals').insert([{
+        telegram_id: tId, username: user.username || user.first_name,
+        unique_id: user.unique_id, amount: amount, status: 'pending'
+      }]);
+      socket.emit('error_message', `✅ Заявка на вывод ${amount} ⭐ отправлена! Ожидайте выплаты.`);
+    } catch (e) {
+      socket.emit('error_message', 'Ошибка при создании заявки.');
     }
   });
 
   socket.on('get_user_profile', async (data) => {
     const targetId = data?.targetId ? String(data.targetId).trim() : null;
     if (!targetId) return;
-
     try {
       let { data: userProfile } = await supabase.from('users').select('*').eq('unique_id', targetId).maybeSingle();
       if (!userProfile) {
         let { data: byTg } = await supabase.from('users').select('*').eq('telegram_id', targetId).maybeSingle();
         userProfile = byTg;
       }
-      if (userProfile) {
-        socket.emit('user_profile_data', userProfile);
-      } else {
-        socket.emit('error_message', 'Профиль игрока не найден в базе.');
-      }
+      if (userProfile) socket.emit('user_profile_data', userProfile);
+      else socket.emit('error_message', 'Профиль не найден.');
     } catch (e) {
-      socket.emit('error_message', 'Ошибка при загрузке профиля.');
+      socket.emit('error_message', 'Ошибка загрузки профиля.');
     }
   });
 
@@ -258,7 +258,7 @@ io.on('connection', (socket) => {
     try {
       const { data: promo } = await supabase.from('promocodes').select('*').eq('code', promoCode).maybeSingle();
       if (!promo) return socket.emit('error_message', 'Промокод не найден!');
-      if (promo.current_activations >= promo.max_activations) return socket.emit('error_message', 'Лимит активаций исчерпан!');
+      if (promo.current_activations >= promo.max_activations) return socket.emit('error_message', 'Лимит исчерпан!');
 
       const { data: alreadyUsed } = await supabase.from('promocode_activations').select('*').eq('user_id', tId).eq('code', promoCode).maybeSingle();
       if (alreadyUsed) return socket.emit('error_message', 'Вы уже активировали этот промокод!');
@@ -271,9 +271,9 @@ io.on('connection', (socket) => {
       const updatedUser = await dbUpdateUser(tId, { stars_balance: newBalance });
 
       socket.emit('auth_success', updatedUser || user);
-      socket.emit('error_message', `🎉 Промокод активирован! Вам начислено +${promo.reward_stars} ⭐`);
+      socket.emit('error_message', `🎉 Промокод активирован! +${promo.reward_stars} ⭐`);
     } catch (e) {
-      socket.emit('error_message', 'Ошибка при активации промокода.');
+      socket.emit('error_message', 'Ошибка активации.');
     }
   });
 
@@ -304,13 +304,13 @@ io.on('connection', (socket) => {
     if (!socket._telegram_id || !uniqueId) return;
     try {
       const { data: targetUser } = await supabase.from('users').select('*').eq('unique_id', String(uniqueId).trim()).maybeSingle();
-      if (!targetUser) return socket.emit('error_message', 'Игрок с таким ID не найден!');
-      if (String(targetUser.telegram_id) === String(socket._telegram_id)) return socket.emit('error_message', 'Нельзя добавить себя в друзья!');
+      if (!targetUser) return socket.emit('error_message', 'Игрок не найден!');
+      if (String(targetUser.telegram_id) === String(socket._telegram_id)) return socket.emit('error_message', 'Нельзя добавить себя!');
 
       await supabase.from('friend_requests').upsert([{ sender_id: socket._telegram_id, receiver_id: targetUser.telegram_id, status: 'pending' }], { onConflict: ['sender_id', 'receiver_id'] });
-      socket.emit('error_message', `Заявка отправлена игроку ${targetUser.first_name || targetUser.username}!`);
+      socket.emit('error_message', `Заявка отправлена!`);
     } catch (e) {
-      socket.emit('error_message', 'Ошибка отправки заявки.');
+      socket.emit('error_message', 'Ошибка отправки.');
     }
   });
 
@@ -380,7 +380,7 @@ io.on('connection', (socket) => {
     if ((currentUser.stars_balance || 0) < table.stake) return socket.emit('error_message', 'Недостаточно звезд!');
 
     const hostUser = await dbGetOrCreateUser({ telegram_id: table.hostId });
-    if (!hostUser || (hostUser.stars_balance || 0) < table.stake) return socket.emit('error_message', 'У создателя стола недостаточно звезд!');
+    if (!hostUser || (hostUser.stars_balance || 0) < table.stake) return socket.emit('error_message', 'У создателя недостаточно звезд!');
 
     hostUser.stars_balance = Math.max(0, (hostUser.stars_balance || 0) - table.stake);
     currentUser.stars_balance = Math.max(0, (currentUser.stars_balance || 0) - table.stake);
