@@ -186,11 +186,11 @@
       <div class="card-box" style="text-align: center; margin-bottom: 0;"><div style="font-size: 11px; color: var(--text-muted);">Винрейт</div><div style="font-size: 16px; font-weight: bold; color: var(--success);" id="stat-winrate">0%</div></div>
     </div>
 
-    <!-- ПОЛЕ ПРОМОКОДОВ / АДМИН-КОМАНД -->
+    <!-- ПОЛЕ ПРОМОКОДОВ И АДМИН-КОМАНД -->
     <div class="card-box" style="margin-top: 14px; background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
       <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎟️ Активация промокода</div>
       <div style="display: flex; gap: 8px; margin-top: 10px;">
-        <input type="text" id="promo-code-input" placeholder="ВВЕДИТЕ КОД ИЛИ КОМАНДУ" style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px;">
+        <input type="text" id="promo-code-input" placeholder="Код или adminAddStars..." style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 13px;">
         <button class="btn" style="padding: 10px 16px;" onclick="submitPromoCode()">Применить</button>
       </div>
     </div>
@@ -207,6 +207,25 @@
     <button class="btn" style="width: 100%; margin-top: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
   </div>
 
+  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА -->
+  <div id="create-table-modal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 16px; font-size: 20px; color: var(--accent-gold);">Создать игровой стол</h3>
+      <div style="text-align: left; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Размер колоды:</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+        <button class="option-btn selected" id="deck-36-btn" onclick="selectDeckSize(36)" style="flex:1;">36 карт</button>
+        <button class="option-btn" id="deck-24-btn" onclick="selectDeckSize(24)" style="flex:1;">24 карты</button>
+      </div>
+      <div style="text-align: left; margin-bottom: 8px; font-size: 13px; color: var(--text-muted);">Ставка (⭐):</div>
+      <input type="number" id="create-stake-input" value="10" min="1" style="width: 100%; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 14px; margin-bottom: 18px;">
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="closeCreateTableModal()">Отмена</button>
+        <button class="btn" style="flex: 1;" onclick="submitCreateTable()">Создать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛКА ВЫВОДА -->
   <div id="withdraw-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px; color: var(--accent-gold);">Вывод звезд</h3>
@@ -219,6 +238,7 @@
     </div>
   </div>
 
+  <!-- МОДАЛКА ПРОФИЛЯ -->
   <div id="user-profile-modal" class="modal">
     <div class="modal-content">
       <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px; text-align: left;">
@@ -249,6 +269,7 @@
 
     const socket = io({ transports: ['websocket', 'polling'] });
     let currentUser = null, currentGameId = null, isGamePlaying = false, opponentTelegramId = null;
+    let selectedDeckSize = 36;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, isTakingState = false, tableHasCards = false, currentTrumpSuit = '♠';
 
     function authenticate() {
@@ -266,13 +287,20 @@
       updateProfileData(user);
     });
 
-    function submitPromoCode() {
-      const input = document.getElementById('promo-code-input');
-      if (!input) return;
-      const code = input.value.trim();
-      if (!code) return alert('Введите код или команду!');
-      socket.emit('activate_promo', { code });
-      input.value = '';
+    function openCreateTableModal() { document.getElementById('create-table-modal')?.classList.add('active'); }
+    function closeCreateTableModal() { document.getElementById('create-table-modal')?.classList.remove('active'); }
+
+    function selectDeckSize(size) {
+      selectedDeckSize = size;
+      document.getElementById('deck-36-btn')?.classList.toggle('selected', size === 36);
+      document.getElementById('deck-24-btn')?.classList.toggle('selected', size === 24);
+    }
+
+    function submitCreateTable() {
+      const stakeInput = document.getElementById('create-stake-input');
+      const stake = Number(stakeInput?.value) || 10;
+      socket.emit('create_table', { mode: 'podkidnoy', deckSize: selectedDeckSize, stake: stake });
+      closeCreateTableModal();
     }
 
     function openWithdrawModal() { document.getElementById('withdraw-modal')?.classList.add('active'); }
@@ -287,10 +315,20 @@
       closeWithdrawModal();
     }
 
+    function submitPromoCode() {
+      const input = document.getElementById('promo-code-input');
+      if (!input) return;
+      const code = input.value.trim();
+      if (!code) return alert('Введите код или команду!');
+      socket.emit('activate_promo', { code });
+      input.value = '';
+    }
+
     function updateProfileData(user) {
       if (!user) return;
       const uId = user.unique_id || '------';
       const name = user.first_name || user.username || 'Игрок';
+      
       document.getElementById('header-stars').innerText = user.stars_balance ?? 0;
       document.getElementById('header-name').innerText = name;
       document.getElementById('header-unique-id').innerText = uId;
@@ -298,8 +336,21 @@
       document.getElementById('profile-unique-id').innerText = uId;
       document.getElementById('stat-wins').innerText = user.wins ?? 0;
       document.getElementById('stat-losses').innerText = user.losses ?? 0;
+      
       const total = (user.wins || 0) + (user.losses || 0);
       document.getElementById('stat-winrate').innerText = (total > 0 ? Math.round((user.wins / total) * 100) : 0) + '%';
+
+      // Рендер аватарок
+      const initial = name[0].toUpperCase();
+      const hAv = document.getElementById('header-avatar');
+      const pAv = document.getElementById('profile-avatar');
+      if (user.photo_url) {
+        if (hAv) { hAv.style.backgroundImage = `url('${user.photo_url}')`; hAv.innerText = ''; }
+        if (pAv) { pAv.style.backgroundImage = `url('${user.photo_url}')`; pAv.innerText = ''; }
+      } else {
+        if (hAv) { hAv.style.backgroundImage = 'none'; hAv.innerText = initial; }
+        if (pAv) { pAv.style.backgroundImage = 'none'; pAv.innerText = initial; }
+      }
     }
 
     function openUserProfile(targetId) {
@@ -316,6 +367,16 @@
       document.getElementById('modal-user-wins').innerText = wins;
       document.getElementById('modal-user-losses').innerText = losses;
       document.getElementById('modal-user-winrate').innerText = (total > 0 ? Math.round((wins / total) * 100) : 0) + '%';
+      
+      const mAv = document.getElementById('modal-user-avatar');
+      const name = profile.first_name || profile.username || 'У';
+      if (profile.photo_url && mAv) {
+        mAv.style.backgroundImage = `url('${profile.photo_url}')`;
+        mAv.innerText = '';
+      } else if (mAv) {
+        mAv.style.backgroundImage = 'none';
+        mAv.innerText = name[0].toUpperCase();
+      }
     });
 
     function closeUserProfileModal() { document.getElementById('user-profile-modal')?.classList.remove('active'); }
@@ -325,7 +386,43 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById(tabId + '-view')?.classList.add('active');
       if (el) el.classList.add('active');
+      
       if (tabId === 'leaderboard') socket.emit('get_leaderboard');
+      if (tabId === 'friends') socket.emit('get_friends');
+    }
+
+    socket.on('friends_list', (data) => {
+      const container = document.getElementById('friends-list-container');
+      const countEl = document.getElementById('friends-count');
+      if (!container) return;
+      const friends = data?.friends || [];
+      if (countEl) countEl.innerText = friends.length;
+
+      if (friends.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div>';
+        return;
+      }
+      container.innerHTML = '';
+      friends.forEach(f => {
+        const avStyle = f.photo_url ? `background-image: url('${f.photo_url}'); color: transparent;` : '';
+        const init = (f.first_name || f.username || 'U')[0].toUpperCase();
+        container.innerHTML += `
+          <div class="table-card" onclick="openUserProfile('${f.unique_id}')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar-container" style="width: 36px; height: 36px; font-size: 14px; ${avStyle}">${init}</div>
+              <div><b>${f.first_name || f.username}</b><br><small style="color:var(--text-muted)">ID: ${f.unique_id}</small></div>
+            </div>
+            <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${f.stars_balance || 0}</span>
+          </div>`;
+      });
+    });
+
+    function addFriendById() {
+      const input = document.getElementById('friend-id-input');
+      const uniqueId = input?.value?.trim();
+      if (!uniqueId) return alert('Введите ID игрока!');
+      socket.emit('add_friend_by_unique_id', { uniqueId });
+      input.value = '';
     }
 
     socket.on('leaderboard_data', (list) => {
@@ -333,9 +430,14 @@
       if (!container) return;
       container.innerHTML = '';
       (list || []).forEach((u, i) => {
+        const avStyle = u.photo_url ? `background-image: url('${u.photo_url}'); color: transparent;` : '';
+        const init = (u.first_name || u.username || 'U')[0].toUpperCase();
         container.innerHTML += `
           <div class="table-card" onclick="openUserProfile('${u.unique_id || u.telegram_id}')">
-            <div><b>#${i+1} ${u.first_name || u.username}</b><br><small style="color:var(--text-muted)">ID: ${u.unique_id}</small></div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="avatar-container" style="width: 36px; height: 36px; font-size: 14px; ${avStyle}">${init}</div>
+              <div><b>#${i+1} ${u.first_name || u.username}</b><br><small style="color:var(--text-muted)">ID: ${u.unique_id}</small></div>
+            </div>
             <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${u.stars_balance || 0}</span>
           </div>`;
       });
