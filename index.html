@@ -83,7 +83,6 @@
       height: 125px; position: relative; width: 100%; margin-top: 2px; margin-bottom: 8px;
     }
 
-    /* КРАСИВЫЙ ИГРОВОЙ ДИЗАЙН КАРТ */
     .card-item {
       width: 62px; height: 90px; background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%); color: #111;
       border-radius: 10px; display: flex; flex-direction: column; justify-content: space-between;
@@ -268,7 +267,7 @@
     <button class="btn" style="width: 100%; margin-top: 4px;" onclick="claimDailyBonus()">Ежедневный бонус (+10 ⭐)</button>
   </div>
 
-  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА -->
+  <!-- МОДАЛКИ -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 12px; font-size: 18px; color: var(--accent-gold);">Создать стол</h3>
@@ -371,7 +370,7 @@
       updateProfileData(user);
     });
 
-    /* НАДЕЖНЫЙ ТАЙМЕР НА 20 СЕКУНД С АВТОМАТИЧЕСКИМ ДЕЙСТВИЕМ ИЛИ СДАЧЕЙ */
+    /* ТАЙМЕР НА 20 СЕКУНД С АВТОМАТИЧЕСКИМ ДЕЙСТВИЕМ ИЛИ ВЗЯТИЕМ */
     function startClientTimer() {
       if (timerInterval) clearInterval(timerInterval);
       turnTimeLeft = 20;
@@ -402,7 +401,6 @@
       } else if (bitoBtn && bitoBtn.style.display !== 'none') {
         handleGameAction('bito');
       } else {
-        // Если это первый ход или нет активных кнопок, отправляем таймаут / взятие на сервер
         socket.emit('game_action', { gameId: currentGameId, action: 'take' });
       }
     }
@@ -472,7 +470,6 @@
           </div>`;
       });
     });
-
     socket.on('game_state', (data) => {
       currentGameId = data.gameId;
       currentTableCards = data.tableCards || [];
@@ -525,7 +522,7 @@
       updateActionButtons();
     });
 
-    /* СОРТИРОВКА КАРТ В РУКЕ (Пики -> Крести -> Червы -> Бубны, козыри справа) */
+    /* СТРОГАЯ СОРТИРОВКА КАРТ (Пики -> Крести -> Червы -> Бубны, козыри справа) */
     function sortCards(cards) {
       const suitOrder = { '♠': 1, '♣': 2, '♥': 3, '♦': 4 };
       const rankOrder = { '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
@@ -546,7 +543,7 @@
       });
     }
 
-    /* РАСШИРЕННЫЙ КРАСИВЫЙ ДИЗАЙН КАРТ С ИНДЕКСАМИ И ЦЕНТРАЛЬНОЙ МАСТЬЮ */
+    /* РЕНДЕР КРАСИВЫХ ИГРОВЫХ КАРТ */
     socket.on('your_hand', (hand) => {
       myHandCards = sortCards(hand || []);
       const container = document.getElementById('my-hand-container');
@@ -573,7 +570,6 @@
         cardDiv.style.transform = `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${angle}deg)`;
         cardDiv.style.zIndex = 100 + idx;
 
-        // Красивое оформление с верхним левым углом, центральной крупной мастью и нижним правым перевернутым углом
         cardDiv.innerHTML = `
           <div style="font-size: 11px; line-height: 1.1; font-weight: bold;">${c.rank}<br>${c.suit}</div>
           <div style="font-size: 24px; text-align: center; margin: auto; opacity: 0.9;">${c.suit}</div>
@@ -783,7 +779,7 @@
           <div class="table-card" onclick="openUserProfile('${u.unique_id || u.telegram_id}')">
             <div style="display: flex; align-items: center; gap: 10px;">
               <div class="avatar-container" style="width: 34px; height: 34px; font-size: 13px; ${avStyle}">${init}</div>
-                    <div><b>#${i+1} ${u.first_name || u.username}</b><br><small style="color:var(--text-muted)">ID: ${u.unique_id}</small></div>
+              <div><b>#${i+1} ${u.first_name || u.username}</b><br><small style="color:var(--text-muted)">ID: ${u.unique_id}</small></div>
             </div>
             <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${u.stars_balance || 0}</span>
           </div>`;
