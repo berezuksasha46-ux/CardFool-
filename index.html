@@ -323,18 +323,17 @@
       const initData = window.Telegram?.WebApp?.initData;
 
       if (initData && initData.length > 0) {
-        // Запуск внутри Telegram Mini App
         socket.emit('auth', { initData });
       } else {
-        // Фиксированный ID для тестов в простом браузере
-        let devId = localStorage.getItem('cardfool_fixed_dev_id');
+        // Жестко фиксируем тестовый ID в localStorage браузера навсегда
+        let devId = localStorage.getItem('cardfool_permanent_dev_id');
         if (!devId) {
           devId = 'dev_' + Math.floor(100000 + Math.random() * 900000);
-          localStorage.setItem('cardfool_fixed_dev_id', devId);
+          localStorage.setItem('cardfool_permanent_dev_id', devId);
         }
         socket.emit('auth', {
           telegram_id: devId,
-          username: 'DevUser',
+          username: 'Ricky',
           first_name: '🏴 Ricky✝️',
           photo_url: null
         });
