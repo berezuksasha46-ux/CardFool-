@@ -25,15 +25,15 @@
     .btn-success { background: var(--success); color: #fff; padding: 6px 12px; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; }
     .btn-danger { background: var(--danger); color: #fff; padding: 8px 12px; font-size: 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
     .card-box, .table-card { background: var(--bg-card); border-radius: 16px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--border-color); }
-    .table-card { display: flex; justify-content: space-between; align-items: center; }
+    .table-card { display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; }
+    .table-card:active { background: rgba(255,255,255,0.05); }
     .my-table-badge { font-size: 11px; background: rgba(251, 191, 36, 0.15); color: var(--accent-gold); padding: 3px 8px; border-radius: 6px; margin-bottom: 6px; display: inline-block; font-weight: bold; }
     .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(21, 11, 38, 0.98); backdrop-filter: blur(10px); display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid var(--border-color); z-index: 1000; }
     .nav-item { color: var(--text-muted); text-align: center; font-size: 11px; cursor: pointer; background: none; border: none; }
     .nav-item.active { color: var(--accent-gold); }
     .nav-icon { font-size: 20px; margin-bottom: 2px; }
     
-    /* Исправленный контейнер аватара без уезжания за экран */
-    .avatar-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
+    .avatar-wrapper { position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .avatar-container { width: 42px; height: 42px; background: var(--accent-gold-gradient); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; overflow: hidden; flex-shrink: 0; background-size: cover; background-position: center; border: 2px solid rgba(255, 255, 255, 0.1); }
     
     .speech-bubble {
@@ -46,27 +46,33 @@
     .speech-bubble.active { transform: translateX(-50%) scale(1); }
 
     .poker-table { background: radial-gradient(circle, #1a3c27 0%, #0e2216 100%); border: 2px solid #2d5a3c; border-radius: 18px; padding: 12px; min-height: 250px; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; width: 100%; }
-    #my-hand-container { display: flex; justify-content: center; align-items: flex-end; padding: 15px 5px 20px 5px; min-height: 130px; position: relative; overflow: hidden; width: 100%; }
     
-    /* Анимации карт */
+    /* Исправленный контейнер карт: больше не обрезает веер карт */
+    #my-hand-container {
+      display: flex; justify-content: center; align-items: flex-end;
+      padding: 25px 15px 15px 15px; min-height: 140px;
+      position: relative; width: 100%; overflow-x: auto; overflow-y: hidden;
+    }
+    
     .card-item {
-      width: 68px; height: 102px; background: linear-gradient(145deg, #ffffff, #f0f0f0); color: #111;
-      border-radius: 9px; display: flex; flex-direction: column; justify-content: space-between;
-      padding: 6px; font-weight: bold; font-size: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.5);
+      width: 62px; height: 94px; background: linear-gradient(145deg, #ffffff, #f0f0f0); color: #111;
+      border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;
+      padding: 5px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       cursor: pointer; border: 2px solid rgba(0,0,0,0.1); user-select: none; position: relative;
-      transition: transform 0.2s ease, margin 0.2s ease; flex-shrink: 0;
+      transition: transform 0.2s ease; flex-shrink: 0; margin-left: -22px;
       animation: cardDeal 0.3s ease-out forwards;
     }
+    .card-item:first-child { margin-left: 0; }
     @keyframes cardDeal {
-      0% { opacity: 0; transform: translateY(40px) scale(0.6); }
+      0% { opacity: 0; transform: translateY(30px) scale(0.5); }
       100% { opacity: 1; }
     }
 
-    .card-item:hover, .card-item.selected { z-index: 100 !important; transform: translateY(-18px) scale(1.08) !important; border-color: var(--accent-gold); }
+    .card-item:hover, .card-item.selected { z-index: 100 !important; transform: translateY(-16px) scale(1.08) !important; border-color: var(--accent-gold); }
     .card-item.red { color: var(--danger); }
     
     .table-card-item {
-      width: 46px; height: 68px; background: #ffffff; color: #111; border-radius: 6px;
+      width: 44px; height: 64px; background: #ffffff; color: #111; border-radius: 6px;
       display: flex; flex-direction: column; justify-content: space-between; padding: 3px;
       font-weight: bold; font-size: 11px; border: 1px solid #ccc;
       animation: cardThrow 0.25s ease-out forwards;
@@ -76,7 +82,7 @@
       100% { opacity: 1; transform: scale(1) translateY(0); }
     }
     .table-card-item.red { color: var(--danger); }
-    .card-pair { position: relative; width: 54px; height: 78px; margin: 3px; }
+    .card-pair { position: relative; width: 52px; height: 74px; margin: 3px; }
     .card-pair .defend-card { position: absolute; top: 8px; left: 8px; z-index: 2; }
     
     .deck-side-container { position: absolute; right: 10px; top: 10px; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.35); padding: 4px 8px; border-radius: 10px; font-size: 11px; z-index: 5; }
@@ -146,12 +152,12 @@
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <div class="avatar-wrapper">
+        <div class="avatar-wrapper" onclick="openOpponentProfile()" style="cursor: pointer;" title="Посмотреть профиль">
           <div id="opponent-bubble" class="speech-bubble">БИТО!</div>
           <div id="opponent-avatar" class="avatar-container" style="width: 36px; height: 36px; font-size: 14px;">O</div>
         </div>
         <div>
-          <div id="opponent-name" style="font-weight: bold; font-size: 14px;">Соперник</div>
+          <div id="opponent-name" style="font-weight: bold; font-size: 14px; cursor: pointer;" onclick="openOpponentProfile()">Соперник</div>
           <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
         </div>
       </div>
@@ -215,6 +221,25 @@
       </div>
     </div>
   </div>
+
+  <!-- Модальное окно просмотра чужого профиля -->
+  <div id="user-profile-modal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px; text-align: left;">
+        <div id="modal-user-avatar" class="avatar-container" style="width: 50px; height: 50px; font-size: 20px;">U</div>
+        <div>
+          <div style="font-size: 18px; font-weight: bold;" id="modal-user-name">Игрок</div>
+          <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="modal-user-id" style="color: var(--accent-gold); font-weight: bold;">------</span></div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px;">
+        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Победы</div><div style="font-size: 14px; font-weight: bold; color: var(--accent-gold);" id="modal-user-wins">0</div></div>
+        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Поражения</div><div style="font-size: 14px; font-weight: bold; color: var(--accent-gold);" id="modal-user-losses">0</div></div>
+        <div class="card-box" style="text-align: center; margin-bottom: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Звёзды</div><div style="font-size: 14px; font-weight: bold; color: var(--accent-gold);" id="modal-user-stars">0</div></div>
+      </div>
+      <button class="btn btn-secondary" style="width: 100%;" onclick="closeUserProfileModal()">Закрыть</button>
+    </div>
+  </div>
   <div id="game-over-modal" class="modal">
     <div class="modal-content">
       <h2 id="game-over-title" style="font-size: 24px; margin-bottom: 10px; color: var(--accent-gold);">Победа! 🎉</h2>
@@ -269,7 +294,7 @@
 
     const socket = io({ transports: ['websocket', 'polling'] });
     let currentUser = null, selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
-    let currentGameId = null, isGamePlaying = false;
+    let currentGameId = null, isGamePlaying = false, opponentTelegramId = null;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, isTakingState = false, tableHasCards = false, currentTrumpSuit = '♠';
 
     function showBubble(isMe, text) {
@@ -347,6 +372,30 @@
       const winrate = totalGames > 0 ? Math.round(((user.wins || 0) / totalGames) * 100) : 0;
       document.getElementById('stat-winrate').innerText = winrate + '%';
     }
+    function openUserProfile(targetId) {
+      if (!targetId) return;
+      socket.emit('get_user_profile', { targetId });
+    }
+
+    function openOpponentProfile() {
+      if (opponentTelegramId) openUserProfile(opponentTelegramId);
+    }
+
+    function closeUserProfileModal() {
+      document.getElementById('user-profile-modal')?.classList.remove('active');
+    }
+
+    socket.on('user_profile_data', (profile) => {
+      if (!profile) return;
+      document.getElementById('modal-user-name').innerText = profile.first_name || profile.username || 'Игрок';
+      document.getElementById('modal-user-id').innerText = profile.unique_id || '---';
+      document.getElementById('modal-user-wins').innerText = profile.wins || 0;
+      document.getElementById('modal-user-losses').innerText = profile.losses || 0;
+      document.getElementById('modal-user-stars').innerText = profile.stars_balance || 0;
+      setAvatarElement('modal-user-avatar', profile.photo_url, profile.first_name || profile.username);
+      document.getElementById('user-profile-modal')?.classList.add('active');
+    });
+
     function submitPromoCode() {
       const input = document.getElementById('promo-code-input');
       if (!input) return;
@@ -391,7 +440,7 @@
           const avatarStyle = f.photo_url ? `style="background-image: url('${f.photo_url}');"` : '';
           const avatarText = f.photo_url ? '' : (f.first_name || f.username).charAt(0).toUpperCase();
           friendsContainer.innerHTML += `
-            <div class="table-card">
+            <div class="table-card" onclick="openUserProfile('${f.telegram_id}')">
               <div style="display:flex; align-items:center; gap:10px;">
                 <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
                 <div>
@@ -416,7 +465,7 @@
             const avatarStyle = req.photo_url ? `style="background-image: url('${req.photo_url}');"` : '';
             const avatarText = req.photo_url ? '' : (req.first_name || req.username).charAt(0).toUpperCase();
             requestsContainer.innerHTML += `
-              <div class="table-card">
+              <div class="table-card" onclick="openUserProfile('${req.telegram_id}')">
                 <div style="display:flex; align-items:center; gap:10px;">
                   <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
                   <div>
@@ -425,8 +474,8 @@
                   </div>
                 </div>
                 <div style="display: flex; gap: 6px;">
-                  <button class="btn-success" onclick="respondRequest('${req.telegram_id}', 'accept')">Принять</button>
-                  <button class="btn-danger" onclick="respondRequest('${req.telegram_id}', 'reject')">Отклонить</button>
+                  <button class="btn-success" onclick="event.stopPropagation(); respondRequest('${req.telegram_id}', 'accept')">Принять</button>
+                  <button class="btn-danger" onclick="event.stopPropagation(); respondRequest('${req.telegram_id}', 'reject')">Отклонить</button>
                 </div>
               </div>`;
           });
@@ -470,9 +519,11 @@
           } else {
             container.innerHTML += `
               <div class="table-card">
-                <div>
-                  <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName}</div>
-                  <div style="font-size: 12px; color: var(--text-muted);">${table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной'} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
+                <div onclick="openUserProfile('${table.hostId}')" style="display:flex; align-items:center; gap:10px; flex:1;">
+                  <div>
+                    <div style="font-weight: bold; font-size: 15px;">Стол от ${table.hostName}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">${table.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной'} • ${table.deckSize} карт • ⭐ ${table.stake}</div>
+                  </div>
                 </div>
                 <button class="btn" style="padding: 8px 16px; font-size: 14px;" onclick="joinTable('${table.id}')">Войти</button>
               </div>`;
@@ -505,7 +556,8 @@
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view')?.classList.add('active');
 
-      const opponent = (state.players || []).find(p => currentUser && p.name !== currentUser.first_name) || { name: 'Соперник', handCount: 0, photoUrl: null };
+      const opponent = (state.players || []).find(p => currentUser && String(p.id) !== String(currentUser.telegram_id)) || { name: 'Соперник', handCount: 0, photoUrl: null, id: null };
+      opponentTelegramId = opponent.id;
       document.getElementById('opponent-name').innerText = opponent.name || 'Соперник';
       document.getElementById('opponent-card-count').innerText = opponent.handCount || 0;
       setAvatarElement('opponent-avatar', opponent.photoUrl, opponent.name);
@@ -549,21 +601,14 @@
       const container = document.getElementById('my-hand-container');
       if (!container) return;
       container.innerHTML = '';
-      const totalCards = myHandCards.length;
-      let marginLeft = totalCards > 6 ? Math.max(-48, -12 - (totalCards - 6) * 6) : -12;
-
-      myHandCards.forEach((card, index) => {
+      
+      myHandCards.forEach((card) => {
         const cardEl = document.createElement('div');
         cardEl.className = `card-item ${['♥','♦'].includes(card.suit) ? 'red' : ''}`;
-        if (index > 0) cardEl.style.marginLeft = `${marginLeft}px`;
-        
-        const centerOffset = index - (totalCards - 1) / 2;
-        cardEl.style.transform = `translateY(${Math.abs(centerOffset) * 1.5}px) rotate(${centerOffset * 1.5}deg)`;
-        
         cardEl.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; line-height: 1;"><span>${card.rank}</span><span style="font-size: 11px;">${card.suit}</span></div>
-          <div style="font-size: 22px; text-align: center; margin: 2px 0;">${card.suit}</div>
-          <div style="display: flex; justify-content: space-between; align-items: center; line-height: 1; transform: rotate(180deg);"><span>${card.rank}</span><span style="font-size: 11px;">${card.suit}</span></div>
+          <div style="display: flex; justify-content: space-between; align-items: center; line-height: 1;"><span>${card.rank}</span><span style="font-size: 10px;">${card.suit}</span></div>
+          <div style="font-size: 20px; text-align: center; margin: 2px 0;">${card.suit}</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; line-height: 1; transform: rotate(180deg);"><span>${card.rank}</span><span style="font-size: 10px;">${card.suit}</span></div>
         `;
         cardEl.onclick = () => socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardId: card.id });
         container.appendChild(cardEl);
@@ -643,7 +688,7 @@
         const avatarStyle = u.photo_url ? `style="background-image: url('${u.photo_url}');"` : '';
         const avatarText = u.photo_url ? '' : (u.first_name || u.username || 'U').charAt(0).toUpperCase();
         container.innerHTML += `
-          <div class="table-card">
+          <div class="table-card" onclick="openUserProfile('${u.telegram_id}')">
             <div style="display:flex; align-items:center; gap:10px;">
               <div class="avatar-container" ${avatarStyle}>${avatarText}</div>
               <div>
