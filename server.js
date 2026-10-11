@@ -178,31 +178,24 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Ввод промокода / выполнения админ-команд прямо в строке
+  // Обработка ввода промокода или админ-команд
   socket.on('activate_promo', async (data) => {
     const rawInput = data?.code?.trim();
     const tId = socket._telegram_id;
     if (!tId || !rawInput) return socket.emit('error_message', 'Введите значение!');
 
-    // Обработка формата adminAddStars('ID', SUMMA) или adminDeductStars('ID', SUMMA)
     const addMatch = rawInput.match(/^adminaddstars\s*\(\s*['"]?(\d+)['"]?\s*,\s*(\d+)\s*\)$/i);
     const deductMatch = rawInput.match(/^admindeductstars\s*\(\s*['"]?(\d+)['"]?\s*,\s*(\d+)\s*\)$/i);
 
     if (addMatch) {
-      const targetId = addMatch[1];
-      const amount = Number(addMatch[2]);
-      const res = await adminAddStars(targetId, amount);
+      const res = await adminAddStars(addMatch[1], Number(addMatch[2]));
       return socket.emit('error_message', res.message);
     }
-
     if (deductMatch) {
-      const targetId = deductMatch[1];
-      const amount = Number(deductMatch[2]);
-      const res = await adminDeductStars(targetId, amount);
+      const res = await adminDeductStars(deductMatch[1], Number(deductMatch[2]));
       return socket.emit('error_message', res.message);
     }
 
-    // Стандартные промокоды из БД
     try {
       const promoCode = rawInput.toUpperCase();
       const { data: promo } = await supabase.from('promocodes').select('*').eq('code', promoCode).maybeSingle();
