@@ -166,7 +166,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Активация промокодов
   socket.on('activate_promo', async (data) => {
     const promoCode = data?.code?.trim()?.toUpperCase();
     const tId = socket._telegram_id;
@@ -362,6 +361,7 @@ io.on('connection', (socket) => {
       attackerIndex: 0,
       defenderIndex: 1,
       tableCards: [],
+      isTakingState: false,
       status: 'playing'
     };
 
@@ -396,11 +396,12 @@ function broadcastGameState(game) {
         deckCount: game.deck.length,
         trumpCard: game.trumpCard,
         tableCards: game.tableCards,
+        isTakingState: !!game.isTakingState,
         players: game.players.map(p => ({ name: p.name, photoUrl: p.photoUrl, handCount: p.hand.length }))
       });
       sock.emit('your_hand', player.hand);
       sock.emit('is_turn_data', {
-        isMyTurn: isAttacker || (isDefender && game.tableCards.some(tc => !tc.defend)),
+        isMyTurn: game.isTakingState ? isAttacker : (isAttacker || (isDefender && game.tableCards.some(tc => !tc.defend))),
         isAttacker: isAttacker
       });
     }
@@ -475,15 +476,16 @@ async function handleGameAction(socket, data) {
         game.tableCards.forEach(tc => { ranksOnTable.add(tc.attack.rank); if (tc.defend) ranksOnTable.add(tc.defend.rank); });
         if (!ranksOnTable.has(card.rank)) return;
       }
+      
       const undefendedCount = game.tableCards.filter(tc => !tc.defend).length;
-      if (undefendedCount >= game.players[game.defenderIndex].hand.length) return;
+      if (!game.isTakingState && undefendedCount >= game.players[game.defenderIndex].hand.length) return;
 
       hand.splice(cardIndex, 1);
       game.tableCards.push({ attack: card, defend: null });
       broadcastGameState(game);
       await checkGameEnd(game);
     } 
-    else if (isDefender) {
+    else if (isDefender && !game.isTakingState) {
       const activeAttack = game.tableCards.find(tc => !tc.defend);
       if (!activeAttack) return;
 
@@ -499,7 +501,27 @@ async function handleGameAction(socket, data) {
     }
   }
   else if (action === 'bito' && isAttacker) {
-    if (game.tableCards.length > 0 && game.tableCards.every(tc => tc.defend)) {
+    if (game.isTakingState) {
+      // Атакующий завершил докидывание -> защищающийся забирает карты
+      const defender = game.players[game.defenderIndex];
+      const cardsToTake = [];
+      game.tableCards.forEach(tc => {
+        cardsToTake.push(tc.attack);
+        if (tc.defend) cardsToTake.push(tc.defend);
+      });
+      defender.hand.push(...cardsToTake);
+      game.tableCards = [];
+      game.isTakingState = false;
+
+      io.to(game.gameId).emit('player_action_notify', { playerId: defender.id, text: 'ЗАБРАЛ!' });
+
+      replenishHands(game);
+      broadcastGameState(game);
+      await checkGameEnd(game);
+    } else if (game.tableCards.length > 0 && game.tableCards.every(tc => tc.defend)) {
+      // Обычное бито
+      io.to(game.gameId).emit('player_action_notify', { playerId: game.players[playerIdx].id, text: 'БИТО!' });
+      
       game.tableCards = [];
       replenishHands(game);
       const temp = game.attackerIndex;
@@ -509,14 +531,11 @@ async function handleGameAction(socket, data) {
       await checkGameEnd(game);
     }
   }
-  else if (action === 'take' && isDefender) {
-    const cardsToTake = [];
-    game.tableCards.forEach(tc => { cardsToTake.push(tc.attack); if (tc.defend) cardsToTake.push(tc.defend); });
-    game.players[playerIdx].hand.push(...cardsToTake);
-    game.tableCards = [];
-    replenishHands(game);
+  else if (action === 'take' && isDefender && !game.isTakingState) {
+    // Защищающийся нажал Взять -> переводим в состояние ожидания докидывания
+    game.isTakingState = true;
+    io.to(game.gameId).emit('player_action_notify', { playerId: game.players[playerIdx].id, text: 'БЕРУ...' });
     broadcastGameState(game);
-    await checkGameEnd(game);
   }
 }
 
