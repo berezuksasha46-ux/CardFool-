@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -187,18 +186,30 @@
       <div class="card-box" style="text-align: center; margin-bottom: 0;"><div style="font-size: 11px; color: var(--text-muted);">Винрейт</div><div style="font-size: 16px; font-weight: bold; color: var(--success);" id="stat-winrate">0%</div></div>
     </div>
 
-    <!-- ПОКУПКА ЗВЕЗД TELEGRAM STARS -->
+    <!-- КНОПКИ ВВОДА И ВЫВОДА СРЕДСТВ -->
     <div class="card-box" style="margin-top: 14px; background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
-      <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">⭐ Пополнение звёзд (Telegram Stars)</div>
-      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">1 Telegram Star = 1 Игровая звезда ⭐</div>
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-        <button class="btn" style="padding: 8px; font-size: 13px;" onclick="buyStars(50)">+50 ⭐</button>
-        <button class="btn" style="padding: 8px; font-size: 13px;" onclick="buyStars(100)">+100 ⭐</button>
-        <button class="btn" style="padding: 8px; font-size: 13px;" onclick="buyStars(250)">+250 ⭐</button>
+      <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">💳 Управление балансом</div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Пополнение и вывод через администратора</div>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" style="flex: 1; padding: 10px; font-size: 14px;" onclick="alert('Для пополнения напишите администратору в Telegram и укажите свой ID!')">Пополнить</button>
+        <button class="btn btn-secondary" style="flex: 1; padding: 10px; font-size: 14px; border-color: var(--accent-gold);" onclick="openWithdrawModal()">Вывести</button>
       </div>
     </div>
 
     <button class="btn" style="width: 100%; margin-top: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
+  </div>
+
+  <!-- МОДАЛКА ВЫВОДА -->
+  <div id="withdraw-modal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 16px; font-size: 20px; color: var(--accent-gold);">Вывод звезд</h3>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Введите количество звезд для вывода:</p>
+      <input type="number" id="withdraw-amount-input" placeholder="Количество ⭐" style="width: 100%; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 10px; font-size: 14px; margin-bottom: 14px;">
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="closeWithdrawModal()">Отмена</button>
+        <button class="btn" style="flex: 1;" onclick="submitWithdraw()">Запросить</button>
+      </div>
+    </div>
   </div>
 
   <div id="user-profile-modal" class="modal">
@@ -248,21 +259,23 @@
       updateProfileData(user);
     });
 
-    // Функция вызова оплаты Telegram Stars
-    function buyStars(amount) {
-      if (!window.Telegram?.WebApp?.openInvoice) {
-        return alert('Оплата Telegram Stars доступна только внутри приложения Telegram!');
-      }
-      socket.emit('buy_stars_invoice', { amount });
+    function openWithdrawModal() {
+      document.getElementById('withdraw-modal')?.classList.add('active');
     }
 
-    socket.on('invoice_link_ready', (data) => {
-      if (data?.invoiceUrl && window.Telegram?.WebApp?.openInvoice) {
-        Telegram.WebApp.openInvoice(data.invoiceUrl, (status) => {
-          if (status === 'paid') alert('🎉 Оплата успешно завершена!');
-        });
-      }
-    });
+    function closeWithdrawModal() {
+      document.getElementById('withdraw-modal')?.classList.remove('active');
+    }
+
+    function submitWithdraw() {
+      const input = document.getElementById('withdraw-amount-input');
+      const amount = Number(input?.value);
+      if (!amount || amount <= 0) return alert('Введите корректную сумму!');
+      
+      socket.emit('request_withdrawal', { amount });
+      input.value = '';
+      closeWithdrawModal();
+    }
 
     function updateProfileData(user) {
       if (!user) return;
