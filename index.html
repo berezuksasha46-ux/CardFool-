@@ -319,33 +319,30 @@
     let currentGameId = null, isGamePlaying = false;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
-    // Гарантированное получение БЕССРОЧНОГО Telegram ID
     function getTelegramUserData() {
-      let tgUser = tg?.initDataUnsafe?.user;
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 
       if (tgUser && tgUser.id) {
-        const u = {
+        const validUser = {
           telegram_id: String(tgUser.id),
-          username: tgUser.username || ('User_' + tgUser.id),
-          first_name: tgUser.first_name || (tgUser.username ? tgUser.username : 'Игрок'),
+          username: tgUser.username || ('user_' + tgUser.id),
+          first_name: tgUser.first_name || 'Игрок',
           photo_url: tgUser.photo_url || null
         };
-        localStorage.setItem('cardfool_tg_id', u.telegram_id);
-        return u;
+        localStorage.setItem('cardfool_real_tg_id', validUser.telegram_id);
+        return validUser;
       }
 
-      // Защитный механизм: Если приложение запущено вне Telegram,
-      // мы фиксируем ЕДИНЫЙ постоянный ID на этом устройстве навсегда
-      let persistentDevId = localStorage.getItem('cardfool_tg_id') || localStorage.getItem('cardfool_dev_fixed_id');
-      if (!persistentDevId) {
-        persistentDevId = 'dev_user_' + Math.floor(100000 + Math.random() * 900000);
-        localStorage.setItem('cardfool_dev_fixed_id', persistentDevId);
+      let savedId = localStorage.getItem('cardfool_real_tg_id') || localStorage.getItem('cardfool_dev_id');
+      if (!savedId) {
+        savedId = 'dev_' + Math.floor(100000 + Math.random() * 900000);
+        localStorage.setItem('cardfool_dev_id', savedId);
       }
 
       return {
-        telegram_id: persistentDevId,
-        username: 'DevUser_' + persistentDevId.slice(-4),
-        first_name: 'Тестовый Игрок',
+        telegram_id: savedId,
+        username: 'DevUser',
+        first_name: '🏴 Ricky✝️',
         photo_url: null
       };
     }
@@ -361,8 +358,7 @@
     socket.on('connect', () => { authenticate(); });
     authenticate();
 
-    // Защитный вызов через 400мс
-    setTimeout(() => { authenticate(); }, 400);
+    setTimeout(() => { authenticate(); }, 500);
 
     socket.on('auth_success', (user) => {
       currentUser = user;
@@ -770,6 +766,7 @@
 
     function claimDailyBonus() { socket.emit('claim_daily'); }
     socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
+    socket.on('daily_error', (d) => alert(d.message));
     socket.on('error_message', (msg) => alert(msg));
   </script>
 </body>
