@@ -3,7 +3,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
-const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,8 +15,6 @@ app.use(express.static(__dirname));
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://your-supabase-url.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'your-supabase-key';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const BOT_TOKEN = '8290356440:AAEIpHO6ZEwzJBleclQ2-Zaz18LpRNn4pNE';
 
 function generateUniqueId() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -101,14 +98,12 @@ async function dbGetLeaderboard() {
 const tables = new Map();
 const activeGames = new Map();
 
-// Функция пополнения баланса игрока администратором
+// Функция пополнения баланса администратором
 async function adminAddStars(targetUniqueId, amount) {
   try {
     const { data: user } = await supabase.from('users').select('*').eq('unique_id', targetUniqueId).maybeSingle();
-    if (!user) {
-      console.log(`Игрок с ID ${targetUniqueId} не найден.`);
-      return false;
-    }
+    if (!user) return { success: false, message: `Игрок с ID ${targetUniqueId} не найден.` };
+
     const newBalance = Number(user.stars_balance || 0) + Number(amount);
     await dbUpdateUser(user.telegram_id, { stars_balance: newBalance });
 
@@ -118,41 +113,35 @@ async function adminAddStars(targetUniqueId, amount) {
         s.emit('error_message', `🎉 Администратор пополнил ваш баланс на +${amount} ⭐!`);
       }
     }
-    console.log(`Успешно начислено ${amount} ⭐ игроку ${user.first_name} (ID: ${targetUniqueId})`);
-    return true;
+    return { success: true, message: `Начислено +${amount} ⭐ игроку ${user.first_name} (ID: ${targetUniqueId})` };
   } catch (e) {
-    console.error('Ошибка админ-пополнения:', e);
-    return false;
+    return { success: false, message: 'Ошибка при начислении звёзд.' };
   }
 }
 
-// Функция списания звезд администратором при выводе
+// Функция списания звёзд администратором
 async function adminDeductStars(targetUniqueId, amount) {
   try {
     const { data: user } = await supabase.from('users').select('*').eq('unique_id', targetUniqueId).maybeSingle();
-    if (!user) {
-      console.log(`Игрок с ID ${targetUniqueId} не найден.`);
-      return false;
-    }
+    if (!user) return { success: false, message: `Игрок с ID ${targetUniqueId} не найден.` };
+
     const currentBalance = Number(user.stars_balance || 0);
     if (currentBalance < amount) {
-      console.log(`У игрока недостаточно средств (баланс: ${currentBalance}, запрос: ${amount})`);
-      return false;
+      return { success: false, message: `У игрока недостаточно средств (баланс: ${currentBalance}, запрашиваемо: ${amount}).` };
     }
+
     const newBalance = currentBalance - Number(amount);
     await dbUpdateUser(user.telegram_id, { stars_balance: newBalance });
 
     for (let s of io.sockets.sockets.values()) {
       if (String(s._telegram_id) === String(user.telegram_id)) {
         s.emit('auth_success', { ...user, stars_balance: newBalance });
-        s.emit('error_message', `💸 Вывод ${amount} ⭐ успешно обработан! Средства списаны с баланса.`);
+        s.emit('error_message', `💸 С вашего баланса списано ${amount} ⭐.`);
       }
     }
-    console.log(`Успешно списано ${amount} ⭐ у игрока ${user.first_name} (ID: ${targetUniqueId})`);
-    return true;
+    return { success: true, message: `Списано ${amount} ⭐ у игрока ${user.first_name} (ID: ${targetUniqueId})` };
   } catch (e) {
-    console.error('Ошибка админ-списания:', e);
-    return false;
+    return { success: false, message: 'Ошибка при списании звёзд.' };
   }
 }
 
@@ -189,6 +178,54 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Ввод промокода / выполнения админ-команд прямо в строке
+  socket.on('activate_promo', async (data) => {
+    const rawInput = data?.code?.trim();
+    const tId = socket._telegram_id;
+    if (!tId || !rawInput) return socket.emit('error_message', 'Введите значение!');
+
+    // Обработка формата adminAddStars('ID', SUMMA) или adminDeductStars('ID', SUMMA)
+    const addMatch = rawInput.match(/^adminaddstars\s*\(\s*['"]?(\d+)['"]?\s*,\s*(\d+)\s*\)$/i);
+    const deductMatch = rawInput.match(/^admindeductstars\s*\(\s*['"]?(\d+)['"]?\s*,\s*(\d+)\s*\)$/i);
+
+    if (addMatch) {
+      const targetId = addMatch[1];
+      const amount = Number(addMatch[2]);
+      const res = await adminAddStars(targetId, amount);
+      return socket.emit('error_message', res.message);
+    }
+
+    if (deductMatch) {
+      const targetId = deductMatch[1];
+      const amount = Number(deductMatch[2]);
+      const res = await adminDeductStars(targetId, amount);
+      return socket.emit('error_message', res.message);
+    }
+
+    // Стандартные промокоды из БД
+    try {
+      const promoCode = rawInput.toUpperCase();
+      const { data: promo } = await supabase.from('promocodes').select('*').eq('code', promoCode).maybeSingle();
+      if (!promo) return socket.emit('error_message', 'Промокод или команда не найдены!');
+      if (promo.current_activations >= promo.max_activations) return socket.emit('error_message', 'Лимит исчерпан!');
+
+      const { data: alreadyUsed } = await supabase.from('promocode_activations').select('*').eq('user_id', tId).eq('code', promoCode).maybeSingle();
+      if (alreadyUsed) return socket.emit('error_message', 'Вы уже активировали этот промокод!');
+
+      await supabase.from('promocode_activations').insert([{ user_id: tId, code: promoCode }]);
+      await supabase.from('promocodes').update({ current_activations: promo.current_activations + 1 }).eq('code', promoCode);
+
+      const user = await dbGetOrCreateUser({ telegram_id: tId });
+      const newBalance = Number(user.stars_balance || 0) + Number(promo.reward_stars);
+      const updatedUser = await dbUpdateUser(tId, { stars_balance: newBalance });
+
+      socket.emit('auth_success', updatedUser || user);
+      socket.emit('error_message', `🎉 Промокод активирован! Начислено +${promo.reward_stars} ⭐`);
+    } catch (e) {
+      socket.emit('error_message', 'Ошибка при обработке промокода.');
+    }
+  });
+
   socket.on('request_withdrawal', async (data) => {
     const amount = Number(data?.amount);
     const tId = socket._telegram_id;
@@ -204,9 +241,9 @@ io.on('connection', (socket) => {
         telegram_id: tId, username: user.username || user.first_name,
         unique_id: user.unique_id, amount: amount, status: 'pending'
       }]);
-      socket.emit('error_message', `✅ Заявка на вывод ${amount} ⭐ отправлена! Ожидайте выплаты.`);
+      socket.emit('error_message', `✅ Заявка на вывод ${amount} ⭐ отправлена администратору!`);
     } catch (e) {
-      socket.emit('error_message', 'Ошибка при создании заявки.');
+      socket.emit('error_message', 'Ошибка при создании заявки на вывод.');
     }
   });
 
@@ -247,33 +284,6 @@ io.on('connection', (socket) => {
       currentUser = updatedUser;
       socket.emit('daily_success');
       socket.emit('auth_success', updatedUser);
-    }
-  });
-
-  socket.on('activate_promo', async (data) => {
-    const promoCode = data?.code?.trim()?.toUpperCase();
-    const tId = socket._telegram_id;
-    if (!tId || !promoCode) return socket.emit('error_message', 'Введите промокод!');
-
-    try {
-      const { data: promo } = await supabase.from('promocodes').select('*').eq('code', promoCode).maybeSingle();
-      if (!promo) return socket.emit('error_message', 'Промокод не найден!');
-      if (promo.current_activations >= promo.max_activations) return socket.emit('error_message', 'Лимит исчерпан!');
-
-      const { data: alreadyUsed } = await supabase.from('promocode_activations').select('*').eq('user_id', tId).eq('code', promoCode).maybeSingle();
-      if (alreadyUsed) return socket.emit('error_message', 'Вы уже активировали этот промокод!');
-
-      await supabase.from('promocode_activations').insert([{ user_id: tId, code: promoCode }]);
-      await supabase.from('promocodes').update({ current_activations: promo.current_activations + 1 }).eq('code', promoCode);
-
-      const user = await dbGetOrCreateUser({ telegram_id: tId });
-      const newBalance = Number(user.stars_balance || 0) + Number(promo.reward_stars);
-      const updatedUser = await dbUpdateUser(tId, { stars_balance: newBalance });
-
-      socket.emit('auth_success', updatedUser || user);
-      socket.emit('error_message', `🎉 Промокод активирован! +${promo.reward_stars} ⭐`);
-    } catch (e) {
-      socket.emit('error_message', 'Ошибка активации.');
     }
   });
 
