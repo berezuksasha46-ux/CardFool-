@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
+const querystring = require('querystring');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,48 +21,71 @@ function generateUniqueId() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function dbGetOrCreateUser(telegramId, userData = {}) {
-  const cleanId = String(telegramId).trim();
-  if (!cleanId || cleanId === 'undefined' || cleanId === 'null') return null;
+// Извлечение и валидация данных пользователя из Telegram initData
+function parseInitData(initDataRaw) {
+  if (!initDataRaw) return null;
+  try {
+    const parsed = querystring.parse(initDataRaw);
+    if (!parsed.user) return null;
+    const userObj = JSON.parse(parsed.user);
+    return {
+      telegram_id: String(userObj.id),
+      username: userObj.username || ('user_' + userObj.id),
+      first_name: userObj.first_name || 'Игрок',
+      photo_url: userObj.photo_url || null,
+      start_param: parsed.start_param || null
+    };
+  } catch (e) {
+    return null;
+  }
+}
 
-  const cleanName = userData.first_name || (userData.username ? userData.username.split('@')[0] : 'Игрок');
-  const photoUrl = userData.photo_url || null;
+async function dbGetOrCreateUser(userData) {
+  if (!userData || !userData.telegram_id) return null;
+  const cleanId = String(userData.telegram_id).trim();
 
   try {
-    let { data, error } = await supabase.from('users').select('*').eq('telegram_id', cleanId).single();
-    
-    if (error && error.code === 'PGRST116') {
+    let { data, error } = await supabase.from('users').select('*').eq('telegram_id', cleanId).maybeSingle();
+
+    if (!data) {
+      // Создаем нового игрока
       const newUser = {
         telegram_id: cleanId,
         unique_id: generateUniqueId(),
-        username: userData.username || cleanName,
-        first_name: cleanName,
-        photo_url: photoUrl,
+        username: userData.username,
+        first_name: userData.first_name,
+        photo_url: userData.photo_url,
         stars_balance: 50,
         wins: 0,
         losses: 0,
         level: 1,
         last_daily_claim: null
       };
+
       const { data: inserted, error: insertErr } = await supabase.from('users').insert([newUser]).select().single();
       if (insertErr) throw insertErr;
+
+      // Обработка реферала при создании первого профиля
+      if (userData.start_param) {
+        processReferral(inserted.telegram_id, userData.start_param);
+      }
+
       return inserted;
-    } else if (error) {
-      throw error;
     }
 
+    // Обновляем аватарку и имя, если они изменились в Telegram
     const updatePayload = {};
     if (!data.unique_id) {
       data.unique_id = generateUniqueId();
       updatePayload.unique_id = data.unique_id;
     }
-    if (photoUrl && data.photo_url !== photoUrl) {
-      data.photo_url = photoUrl;
-      updatePayload.photo_url = photoUrl;
+    if (userData.photo_url && data.photo_url !== userData.photo_url) {
+      data.photo_url = userData.photo_url;
+      updatePayload.photo_url = userData.photo_url;
     }
-    if (cleanName && data.first_name !== cleanName && cleanName !== 'Игрок') {
-      data.first_name = cleanName;
-      updatePayload.first_name = cleanName;
+    if (userData.first_name && data.first_name !== userData.first_name) {
+      data.first_name = userData.first_name;
+      updatePayload.first_name = userData.first_name;
     }
 
     if (Object.keys(updatePayload).length > 0) {
@@ -71,19 +95,31 @@ async function dbGetOrCreateUser(telegramId, userData = {}) {
 
     return data;
   } catch (err) {
-    console.error(`Ошибка Supabase для ID ${cleanId}:`, err.message);
+    console.error(`Ошибка БД (dbGetOrCreateUser): ${err.message}`);
     return null;
+  }
+}
+
+async function processReferral(newUserId, referrerUniqueId) {
+  try {
+    const { data: referrer } = await supabase.from('users').select('*').eq('unique_id', String(referrerUniqueId).trim()).maybeSingle();
+    if (referrer && String(referrer.telegram_id) !== String(newUserId)) {
+      const bonusBalance = Number(referrer.stars_balance || 0) + 10;
+      await supabase.from('users').update({ stars_balance: bonusBalance }).eq('telegram_id', referrer.telegram_id);
+    }
+  } catch (e) {
+    console.error('Ошибка начисления реферала:', e.message);
   }
 }
 
 async function dbUpdateUser(telegramId, updateFields) {
   const cleanId = String(telegramId).trim();
   try {
-    const { data, error } = await supabase.from('users').update(updateFields).eq('telegram_id', cleanId).select().single();
+    const { data, error } = await supabase.from('users').update(updateFields).eq('telegram_id', cleanId).select().maybeSingle();
     if (error) throw error;
     return data;
   } catch (err) {
-    console.error(`Ошибка обновления пользователя ${cleanId}:`, err.message);
+    console.error(`Ошибка обновления пользователя ${cleanId}: ${err.message}`);
     return null;
   }
 }
@@ -94,7 +130,6 @@ async function dbGetLeaderboard() {
     if (error) throw error;
     return data || [];
   } catch (err) {
-    console.error('Ошибка получения лидборда:', err.message);
     return [];
   }
 }
@@ -124,26 +159,31 @@ function createDeck(deckSize) {
 io.on('connection', (socket) => {
   let currentUser = null;
 
-  async function ensureUser() {
-    if (!currentUser && socket._telegram_id) {
-      currentUser = await dbGetOrCreateUser(socket._telegram_id, {});
-    }
-    return currentUser;
-  }
-
   socket.on('auth', async (data) => {
-    const { telegram_id, username, first_name, photo_url } = data || {};
-    if (!telegram_id) return;
-    socket._telegram_id = String(telegram_id);
-    currentUser = await dbGetOrCreateUser(telegram_id, { username, first_name, photo_url });
+    let userData = null;
+
+    if (data?.initData) {
+      userData = parseInitData(data.initData);
+    }
+
+    if (!userData && data?.telegram_id) {
+      userData = {
+        telegram_id: String(data.telegram_id),
+        username: data.username || 'DevUser',
+        first_name: data.first_name || 'Игрок',
+        photo_url: data.photo_url || null
+      };
+    }
+
+    if (!userData || !userData.telegram_id) return;
+
+    socket._telegram_id = userData.telegram_id;
+    currentUser = await dbGetOrCreateUser(userData);
+
     if (currentUser) {
       socket.emit('auth_success', currentUser);
       emitLobbies();
     }
-  });
-
-  socket.on('set_socket_user', (telegram_id) => { 
-    if (telegram_id) socket._telegram_id = String(telegram_id); 
   });
 
   socket.on('get_lobbies', () => { emitLobbies(socket); });
@@ -154,15 +194,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('claim_daily', async () => {
-    const tId = socket._telegram_id;
-    if (!tId || tId === 'undefined' || tId === 'null') {
-      return socket.emit('daily_error', { message: 'Ошибка авторизации! Перезапустите приложение.' });
-    }
+    if (!socket._telegram_id) return socket.emit('daily_error', { message: 'Ошибка авторизации!' });
 
-    let user = await dbGetOrCreateUser(tId, {});
-    if (!user) return socket.emit('daily_error', { message: 'Пользователь не найден' });
+    let user = await dbGetOrCreateUser({ telegram_id: socket._telegram_id });
+    if (!user) return socket.emit('daily_error', { message: 'Профиль не найден' });
 
-    const now = Date.now();
+    const now = Math.floor(Date.now());
     const COOLDOWN = 24 * 60 * 60 * 1000;
     
     if (user.last_daily_claim && (now - Number(user.last_daily_claim) < COOLDOWN)) {
@@ -170,8 +207,8 @@ io.on('connection', (socket) => {
       return socket.emit('daily_error', { message: `Бонус уже получен! Приходите через ${leftHours} ч.` });
     }
 
-    const newBalance = (user.stars_balance || 0) + 10;
-    const updatedUser = await dbUpdateUser(tId, { 
+    const newBalance = Number(user.stars_balance || 0) + 10;
+    const updatedUser = await dbUpdateUser(socket._telegram_id, { 
       stars_balance: newBalance, 
       last_daily_claim: now 
     });
@@ -181,13 +218,15 @@ io.on('connection', (socket) => {
       socket.emit('daily_success');
       socket.emit('auth_success', updatedUser);
     } else {
-      socket.emit('daily_error', { message: 'Ошибка сохранения бонуса в БД' });
+      user.stars_balance = newBalance;
+      user.last_daily_claim = now;
+      socket.emit('daily_success');
+      socket.emit('auth_success', user);
     }
   });
 
-  socket.on('get_friends', async (data) => {
-    const user = await ensureUser();
-    const tId = data?.telegram_id || user?.telegram_id || socket._telegram_id;
+  socket.on('get_friends', async () => {
+    const tId = socket._telegram_id;
     if (!tId) return;
 
     try {
@@ -214,24 +253,23 @@ io.on('connection', (socket) => {
   });
 
   socket.on('add_friend_by_unique_id', async (data) => {
-    const user = await ensureUser();
     const { uniqueId } = data || {};
-    if (!user || !uniqueId) return;
+    if (!socket._telegram_id || !uniqueId) return;
 
     try {
-      const { data: targetUser, error } = await supabase.from('users').select('*').eq('unique_id', String(uniqueId).trim()).single();
-      if (error || !targetUser) {
+      const { data: targetUser } = await supabase.from('users').select('*').eq('unique_id', String(uniqueId).trim()).maybeSingle();
+      if (!targetUser) {
         socket.emit('error_message', 'Игрок с таким ID не найден!');
         return;
       }
 
-      if (String(targetUser.telegram_id) === String(user.telegram_id)) {
+      if (String(targetUser.telegram_id) === String(socket._telegram_id)) {
         socket.emit('error_message', 'Нельзя отправить заявку самому себе!');
         return;
       }
 
       await supabase.from('friend_requests').upsert([
-        { sender_id: user.telegram_id, receiver_id: targetUser.telegram_id, status: 'pending' }
+        { sender_id: socket._telegram_id, receiver_id: targetUser.telegram_id, status: 'pending' }
       ], { onConflict: ['sender_id', 'receiver_id'] });
 
       socket.emit('error_message', `Заявка отправлена игроку ${targetUser.first_name || targetUser.username}!`);
@@ -241,31 +279,28 @@ io.on('connection', (socket) => {
   });
 
   socket.on('respond_friend_request', async (data) => {
-    const user = await ensureUser();
     const { senderId, action } = data || {};
-    if (!user || !senderId) return;
+    if (!socket._telegram_id || !senderId) return;
 
     try {
       if (action === 'accept') {
         await supabase.from('friends').insert([
-          { user_id: user.telegram_id, friend_id: senderId },
-          { user_id: senderId, friend_id: user.telegram_id }
+          { user_id: socket._telegram_id, friend_id: senderId },
+          { user_id: senderId, friend_id: socket._telegram_id }
         ]);
       }
-      await supabase.from('friend_requests').delete().eq('sender_id', senderId).eq('receiver_id', user.telegram_id);
+      await supabase.from('friend_requests').delete().eq('sender_id', senderId).eq('receiver_id', socket._telegram_id);
 
       socket.emit('error_message', action === 'accept' ? 'Заявка принята!' : 'Заявка отклонена.');
-      socket.emit('get_friends', { telegram_id: user.telegram_id });
+      socket.emit('get_friends');
     } catch (e) {
       socket.emit('error_message', 'Ошибка обработки заявки.');
     }
   });
 
   socket.on('leave_waiting_table', async (tableId) => {
-    const user = await ensureUser();
-    if (!user) return;
     const table = tables.get(tableId);
-    if (table && String(table.hostId) === String(user.telegram_id)) {
+    if (table && String(table.hostId) === String(socket._telegram_id)) {
       tables.delete(tableId);
       socket.leave(tableId);
       socket.emit('table_deleted');
@@ -275,11 +310,10 @@ io.on('connection', (socket) => {
   });
 
   socket.on('create_table', async (config) => {
-    const user = await ensureUser();
-    if (!user) return;
+    if (!currentUser) return;
 
     for (let [tId, t] of tables.entries()) {
-      if (String(t.hostId) === String(user.telegram_id)) {
+      if (String(t.hostId) === String(currentUser.telegram_id)) {
         socket.emit('table_created', tId);
         return;
       }
@@ -288,7 +322,7 @@ io.on('connection', (socket) => {
     const { mode, deckSize, stake } = config || {};
     const currentStake = Number(stake) || 10;
 
-    if ((user.stars_balance || 0) < currentStake) {
+    if ((currentUser.stars_balance || 0) < currentStake) {
       socket.emit('error_message', 'Недостаточно звезд на балансе!');
       return;
     }
@@ -296,9 +330,9 @@ io.on('connection', (socket) => {
     const tableId = 'table_' + Math.random().toString(36).substring(2, 9);
     const newTable = {
       id: tableId,
-      hostId: String(user.telegram_id),
-      hostName: user.first_name || user.username,
-      hostPhoto: user.photo_url || null,
+      hostId: String(currentUser.telegram_id),
+      hostName: currentUser.first_name || currentUser.username,
+      hostPhoto: currentUser.photo_url || null,
       mode: mode || 'podkidnoy',
       deckSize: Number(deckSize) || 36,
       stake: currentStake,
@@ -312,15 +346,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join_table', async (data) => {
-    const user = await ensureUser();
-    if (!user) return;
+    if (!currentUser) return;
 
     const tableId = typeof data === 'object' ? (data.tableId || data.gameId) : data;
     const table = tables.get(tableId);
 
     if (activeGames.has(tableId)) {
       const existingGame = activeGames.get(tableId);
-      const player = existingGame.players.find(p => String(p.id) === String(user.telegram_id));
+      const player = existingGame.players.find(p => String(p.id) === String(currentUser.telegram_id));
       if (player) player.socketId = socket.id;
       
       socket.join(tableId);
@@ -333,27 +366,27 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (String(table.hostId) === String(user.telegram_id)) {
+    if (String(table.hostId) === String(currentUser.telegram_id)) {
       socket.emit('table_created', tableId);
       return;
     }
 
-    if ((user.stars_balance || 0) < table.stake) {
+    if ((currentUser.stars_balance || 0) < table.stake) {
       socket.emit('error_message', 'Недостаточно звезд для входа!');
       return;
     }
 
-    const hostUser = await dbGetOrCreateUser(table.hostId, {});
+    const hostUser = await dbGetOrCreateUser({ telegram_id: table.hostId });
     if (!hostUser || (hostUser.stars_balance || 0) < table.stake) {
       socket.emit('error_message', 'У создателя стола недостаточно звезд!');
       return;
     }
 
     hostUser.stars_balance = Math.max(0, (hostUser.stars_balance || 0) - table.stake);
-    user.stars_balance = Math.max(0, (user.stars_balance || 0) - table.stake);
+    currentUser.stars_balance = Math.max(0, (currentUser.stars_balance || 0) - table.stake);
 
     await dbUpdateUser(hostUser.telegram_id, { stars_balance: hostUser.stars_balance });
-    await dbUpdateUser(user.telegram_id, { stars_balance: user.stars_balance });
+    await dbUpdateUser(currentUser.telegram_id, { stars_balance: currentUser.stars_balance });
 
     table.status = 'playing';
     const deck = createDeck(table.deckSize);
@@ -370,7 +403,7 @@ io.on('connection', (socket) => {
       trumpCard,
       players: [
         { id: String(hostUser.telegram_id), name: hostUser.first_name || hostUser.username, photoUrl: hostUser.photo_url, level: hostUser.level || 1, hand: p1Hand, socketId: null },
-        { id: String(user.telegram_id), name: user.first_name || user.username, photoUrl: user.photo_url, level: user.level || 1, hand: p2Hand, socketId: socket.id }
+        { id: String(currentUser.telegram_id), name: currentUser.first_name || currentUser.username, photoUrl: currentUser.photo_url, level: currentUser.level || 1, hand: p2Hand, socketId: socket.id }
       ],
       attackerIndex: 0,
       defenderIndex: 1,
@@ -387,7 +420,7 @@ io.on('connection', (socket) => {
     }
 
     socket.join(tableId);
-    socket.emit('auth_success', user);
+    socket.emit('auth_success', currentUser);
     activeGames.set(tableId, gameState);
     tables.delete(tableId);
     emitLobbies();
@@ -395,7 +428,6 @@ io.on('connection', (socket) => {
   });
 
   socket.on('game_action', async (data) => {
-    await ensureUser();
     handleGameAction(socket, data);
   });
 
@@ -451,8 +483,8 @@ async function checkGameEnd(game) {
     const totalPot = game.stake * 2;
     const prize = Math.round(totalPot * 0.9);
 
-    const wUser = await dbGetOrCreateUser(winner.id, {});
-    const lUser = await dbGetOrCreateUser(loser.id, {});
+    const wUser = await dbGetOrCreateUser({ telegram_id: winner.id });
+    const lUser = await dbGetOrCreateUser({ telegram_id: loser.id });
 
     wUser.stars_balance = (wUser.stars_balance || 0) + prize;
     wUser.wins = (wUser.wins || 0) + 1;
