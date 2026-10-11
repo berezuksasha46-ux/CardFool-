@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -81,22 +80,23 @@
 
     #my-hand-container {
       display: flex; justify-content: center; align-items: flex-end;
-      height: 115px; position: relative; width: 100%; margin-top: 2px; margin-bottom: 8px;
+      height: 125px; position: relative; width: 100%; margin-top: 2px; margin-bottom: 8px;
     }
 
+    /* КРАСИВЫЙ ИГРОВОЙ ДИЗАЙН КАРТ */
     .card-item {
-      width: 56px; height: 82px; background: #ffffff; color: #111;
-      border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between;
-      padding: 5px; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-      cursor: pointer; border: 1px solid #ccc; position: absolute; transform-origin: bottom center;
-      transition: transform 0.2s ease;
+      width: 62px; height: 90px; background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%); color: #111;
+      border-radius: 10px; display: flex; flex-direction: column; justify-content: space-between;
+      padding: 6px; font-weight: bold; box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+      cursor: pointer; border: 1px solid #d1d5db; position: absolute; transform-origin: bottom center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .card-item:hover, .card-item:active { transform: translateY(-18px) scale(1.1) rotate(0deg) !important; z-index: 500 !important; border-color: var(--accent-gold); }
+    .card-item:hover, .card-item:active { transform: translateY(-20px) scale(1.12) rotate(0deg) !important; z-index: 500 !important; border-color: var(--accent-gold); box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4); }
     .card-item.red { color: var(--danger); }
 
-    .table-card-item { width: 42px; height: 60px; background: #fff; color: #111; border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between; padding: 4px; font-weight: bold; font-size: 11px; box-shadow: 0 3px 6px rgba(0,0,0,0.3); }
+    .table-card-item { width: 44px; height: 64px; background: #fff; color: #111; border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between; padding: 4px; font-weight: bold; font-size: 11px; box-shadow: 0 3px 6px rgba(0,0,0,0.3); border: 1px solid #ccc; }
     .table-card-item.red { color: var(--danger); }
-    .card-pair { position: relative; width: 50px; height: 70px; margin: 2px; }
+    .card-pair { position: relative; width: 52px; height: 74px; margin: 2px; }
     .card-pair .defend-card { position: absolute; top: 10px; left: 10px; z-index: 2; }
 
     .nav-bar { 
@@ -371,7 +371,7 @@
       updateProfileData(user);
     });
 
-    /* ГАРАНТИРОВАННЫЙ ТАЙМЕР НА 20 СЕКУНД С АВТО-ПОРАЖЕНИЕМ */
+    /* НАДЕЖНЫЙ ТАЙМЕР НА 20 СЕКУНД С АВТОМАТИЧЕСКИМ ДЕЙСТВИЕМ ИЛИ СДАЧЕЙ */
     function startClientTimer() {
       if (timerInterval) clearInterval(timerInterval);
       turnTimeLeft = 20;
@@ -402,7 +402,8 @@
       } else if (bitoBtn && bitoBtn.style.display !== 'none') {
         handleGameAction('bito');
       } else {
-        socket.emit('game_action', { gameId: currentGameId, action: 'timeout_loss' });
+        // Если это первый ход или нет активных кнопок, отправляем таймаут / взятие на сервер
+        socket.emit('game_action', { gameId: currentGameId, action: 'take' });
       }
     }
 
@@ -524,7 +525,7 @@
       updateActionButtons();
     });
 
-    /* СТРОГАЯ СОРТИРОВКА КАРТ В РУКЕ ПО ПРАВИЛАМ ДУРАКА */
+    /* СОРТИРОВКА КАРТ В РУКЕ (Пики -> Крести -> Червы -> Бубны, козыри справа) */
     function sortCards(cards) {
       const suitOrder = { '♠': 1, '♣': 2, '♥': 3, '♦': 4 };
       const rankOrder = { '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
@@ -534,7 +535,7 @@
         const bIsTrump = b.suit === currentTrumpSuit ? 1 : 0;
 
         if (aIsTrump !== bIsTrump) {
-          return aIsTrump - bIsTrump; // Козыри всегда уходят вправо
+          return aIsTrump - bIsTrump;
         }
 
         if (a.suit !== b.suit) {
@@ -545,6 +546,7 @@
       });
     }
 
+    /* РАСШИРЕННЫЙ КРАСИВЫЙ ДИЗАЙН КАРТ С ИНДЕКСАМИ И ЦЕНТРАЛЬНОЙ МАСТЬЮ */
     socket.on('your_hand', (hand) => {
       myHandCards = sortCards(hand || []);
       const container = document.getElementById('my-hand-container');
@@ -556,7 +558,7 @@
 
       const maxAngle = Math.min(total * 4, 30);
       const angleStep = total > 1 ? (maxAngle * 2) / (total - 1) : 0;
-      const cardOverlap = Math.min(28, 180 / total);
+      const cardOverlap = Math.min(30, 190 / total);
 
       myHandCards.forEach((c, idx) => {
         const isRed = ['♥', '♦'].includes(c.suit) ? 'red' : '';
@@ -571,7 +573,12 @@
         cardDiv.style.transform = `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${angle}deg)`;
         cardDiv.style.zIndex = 100 + idx;
 
-        cardDiv.innerHTML = `<div>${c.rank}</div><div style="text-align:right; font-size:16px;">${c.suit}</div>`;
+        // Красивое оформление с верхним левым углом, центральной крупной мастью и нижним правым перевернутым углом
+        cardDiv.innerHTML = `
+          <div style="font-size: 11px; line-height: 1.1; font-weight: bold;">${c.rank}<br>${c.suit}</div>
+          <div style="font-size: 24px; text-align: center; margin: auto; opacity: 0.9;">${c.suit}</div>
+          <div style="font-size: 11px; line-height: 1.1; font-weight: bold; transform: rotate(180deg); text-align: right;">${c.rank}<br>${c.suit}</div>
+        `;
         cardDiv.onclick = () => playCard(c.id);
         container.appendChild(cardDiv);
       });
@@ -743,7 +750,7 @@
         return;
       }
       container.innerHTML = '';
-      friends.friends.forEach(f => {
+      friends.forEach(f => {
         const avStyle = f.photo_url ? `background-image: url('${f.photo_url}'); color: transparent;` : '';
         const init = (f.first_name || f.username || 'U')[0].toUpperCase();
         container.innerHTML += `
@@ -776,16 +783,4 @@
           <div class="table-card" onclick="openUserProfile('${u.unique_id || u.telegram_id}')">
             <div style="display: flex; align-items: center; gap: 10px;">
               <div class="avatar-container" style="width: 34px; height: 34px; font-size: 13px; ${avStyle}">${init}</div>
-              <div><b>#${i+1} ${u.first_name || u.username}</b><br><small style="color:var(--text-muted)">ID: ${u.unique_id}</small></div>
-            </div>
-            <span style="color:var(--accent-gold); font-weight:bold;">⭐ ${u.stars_balance || 0}</span>
-          </div>`;
-      });
-    });
-
-    socket.on('error_message', (msg) => alert(msg));
-    function claimDailyBonus() { socket.emit('claim_daily'); }
-    socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
-  </script>
-</body>
-</html>
+              <div><b>#${i+1} ${
