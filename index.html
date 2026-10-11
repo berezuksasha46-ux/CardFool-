@@ -195,7 +195,6 @@
         Приглашайте игроков в бота <b style="color:#fff;">@GOCardFoolbot</b>. Вы получаете <b style="color:var(--accent-gold);">+10 ⭐</b> за каждого друга и пожизненные <b style="color:var(--success);">+5%</b> от всех его ставок!
       </div>
 
-      <!-- СТАТИСТИКА РЕФЕРАЛОВ (Счетчик + Заработок) -->
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; background: rgba(0,0,0,0.3); padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08);">
         <div style="text-align: center;">
           <div style="font-size: 10px; color: var(--text-muted); font-weight: 700;">ПЕРЕШЛИ ПО ССЫЛКЕ</div>
@@ -783,7 +782,7 @@
       if (tabId === 'friends') socket.emit('get_friends');
     }
 
-    /* ОБНОВЛЕНИЕ ДАННЫХ ДРУЗЕЙ И РЕФЕРАЛОВ СО СЧЕТЧИКАМИ И ЗАРАБОТКОМ */
+    /* РЕФЕРАЛЫ: СТРОГИЙ УЧЕТ С СЕРВЕРА БЕЗ ЛОЖНЫХ СРАБАТЫВАНИЙ */
     socket.on('friends_list', (data) => {
       const container = document.getElementById('friends-list-container');
       const countEl = document.getElementById('friends-count');
@@ -792,15 +791,16 @@
 
       if (!container) return;
       const friends = data?.friends || [];
-      const refCount = data?.referralCount ?? friends.length;
-      const refEarned = data?.referralEarned ?? (friends.length * 10);
+      
+      const refCount = Number(data?.referralCount ?? 0);
+      const refEarned = Number(data?.referralEarned ?? 0);
 
       if (countEl) countEl.innerText = friends.length;
       if (refCountBadge) refCountBadge.innerText = refCount;
       if (refEarnedBadge) refEarnedBadge.innerText = refEarned + ' ⭐';
 
       if (friends.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список рефералов пуст</div>';
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список друзей пуст</div>';
         return;
       }
       container.innerHTML = '';
