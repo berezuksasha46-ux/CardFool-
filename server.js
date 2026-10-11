@@ -71,7 +71,7 @@ async function dbGetOrCreateUser(telegramId, userData = {}) {
 
     return data;
   } catch (err) {
-    console.error(` Ошибка Supabase для ID ${cleanId}:`, err.message);
+    console.error(`Ошибка Supabase для ID ${cleanId}:`, err.message);
     return null;
   }
 }
@@ -83,7 +83,7 @@ async function dbUpdateUser(telegramId, updateFields) {
     if (error) throw error;
     return data;
   } catch (err) {
-    console.error(` Ошибка обновления пользователя ${cleanId}:`, err.message);
+    console.error(`Ошибка обновления пользователя ${cleanId}:`, err.message);
     return null;
   }
 }
@@ -154,22 +154,35 @@ io.on('connection', (socket) => {
   });
 
   socket.on('claim_daily', async () => {
-    const user = await ensureUser();
-    if (!user) return socket.emit('daily_error', { message: 'Ошибка авторизации' });
+    const tId = socket._telegram_id;
+    if (!tId || tId === 'undefined' || tId === 'null') {
+      return socket.emit('daily_error', { message: 'Ошибка авторизации! Перезапустите приложение.' });
+    }
+
+    let user = await dbGetOrCreateUser(tId, {});
+    if (!user) return socket.emit('daily_error', { message: 'Пользователь не найден' });
 
     const now = Date.now();
     const COOLDOWN = 24 * 60 * 60 * 1000;
-    if (user.last_daily_claim && (now - user.last_daily_claim < COOLDOWN)) {
-      const leftHours = Math.ceil((COOLDOWN - (now - user.last_daily_claim)) / (1000 * 60 * 60));
+    
+    if (user.last_daily_claim && (now - Number(user.last_daily_claim) < COOLDOWN)) {
+      const leftHours = Math.ceil((COOLDOWN - (now - Number(user.last_daily_claim))) / (1000 * 60 * 60));
       return socket.emit('daily_error', { message: `Бонус уже получен! Приходите через ${leftHours} ч.` });
     }
 
-    user.stars_balance = (user.stars_balance || 0) + 10;
-    user.last_daily_claim = now;
-    await dbUpdateUser(user.telegram_id, { stars_balance: user.stars_balance, last_daily_claim: now });
-    
-    socket.emit('daily_success');
-    socket.emit('auth_success', user);
+    const newBalance = (user.stars_balance || 0) + 10;
+    const updatedUser = await dbUpdateUser(tId, { 
+      stars_balance: newBalance, 
+      last_daily_claim: now 
+    });
+
+    if (updatedUser) {
+      currentUser = updatedUser;
+      socket.emit('daily_success');
+      socket.emit('auth_success', updatedUser);
+    } else {
+      socket.emit('daily_error', { message: 'Ошибка сохранения бонуса в БД' });
+    }
   });
 
   socket.on('get_friends', async (data) => {
