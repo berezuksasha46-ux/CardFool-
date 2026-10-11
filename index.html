@@ -196,7 +196,7 @@
 
     <div class="card-box" style="background: linear-gradient(135deg, #1d1033 0%, #150b26 100%);">
       <div style="font-weight: bold; font-size: 16px; margin-bottom: 6px; color: var(--accent-gold);">🎁 Реферальная система</div>
-      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Приглашайте друзей по вашей личной ссылке (+10 ⭐).</div>
+      <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Приглашайте друзей по вашей личной ссылке (+10 ⭐ за каждого игрока).</div>
       <button class="btn" style="width: 100%;" onclick="copyReferralLink()">Скопировать реферальную ссылку</button>
     </div>
 
@@ -319,46 +319,30 @@
     let currentGameId = null, isGamePlaying = false;
     let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, tableHasCards = false, currentTrumpSuit = '♠';
 
-    function getTelegramUserData() {
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-
-      if (tgUser && tgUser.id) {
-        const validUser = {
-          telegram_id: String(tgUser.id),
-          username: tgUser.username || ('user_' + tgUser.id),
-          first_name: tgUser.first_name || 'Игрок',
-          photo_url: tgUser.photo_url || null
-        };
-        localStorage.setItem('cardfool_real_tg_id', validUser.telegram_id);
-        return validUser;
-      }
-
-      let savedId = localStorage.getItem('cardfool_real_tg_id') || localStorage.getItem('cardfool_dev_id');
-      if (!savedId) {
-        savedId = 'dev_' + Math.floor(100000 + Math.random() * 900000);
-        localStorage.setItem('cardfool_dev_id', savedId);
-      }
-
-      return {
-        telegram_id: savedId,
-        username: 'DevUser',
-        first_name: '🏴 Ricky✝️',
-        photo_url: null
-      };
-    }
-
-    let userData = getTelegramUserData();
-
     function authenticate() {
-      userData = getTelegramUserData();
-      socket.emit('set_socket_user', userData.telegram_id);
-      socket.emit('auth', userData);
+      const initData = window.Telegram?.WebApp?.initData;
+
+      if (initData && initData.length > 0) {
+        // Запуск внутри Telegram Mini App
+        socket.emit('auth', { initData });
+      } else {
+        // Фиксированный ID для тестов в простом браузере
+        let devId = localStorage.getItem('cardfool_fixed_dev_id');
+        if (!devId) {
+          devId = 'dev_' + Math.floor(100000 + Math.random() * 900000);
+          localStorage.setItem('cardfool_fixed_dev_id', devId);
+        }
+        socket.emit('auth', {
+          telegram_id: devId,
+          username: 'DevUser',
+          first_name: '🏴 Ricky✝️',
+          photo_url: null
+        });
+      }
     }
 
     socket.on('connect', () => { authenticate(); });
     authenticate();
-
-    setTimeout(() => { authenticate(); }, 500);
 
     socket.on('auth_success', (user) => {
       currentUser = user;
@@ -413,7 +397,7 @@
       if (el) el.classList.add('active');
 
       if (tabId === 'lobbies') socket.emit('get_lobbies');
-      else if (tabId === 'friends') socket.emit('get_friends', { telegram_id: userData.telegram_id });
+      else if (tabId === 'friends') socket.emit('get_friends');
       else if (tabId === 'leaderboard') loadLeaderboard();
     }
 
@@ -496,7 +480,7 @@
     }
 
     function copyReferralLink() {
-      const refLink = `https://t.me/GOCardFoolbot/app?startapp=${currentUser?.unique_id || userData.telegram_id}`;
+      const refLink = `https://t.me/GOCardFoolbot/app?startapp=${currentUser?.unique_id || ''}`;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(refLink).then(() => alert('📋 Реферальная ссылка скопирована!')).catch(() => prompt('Скопируйте ссылку:', refLink));
       } else {
@@ -514,7 +498,7 @@
 
       if (data.tables && data.tables.length > 0) {
         data.tables.forEach(table => {
-          const isMy = String(table.hostId) === String(userData.telegram_id);
+          const isMy = currentUser && String(table.hostId) === String(currentUser.telegram_id);
           if (isMy) {
             hasMyWaitingTable = true;
             currentGameId = table.id;
@@ -557,7 +541,7 @@
 
     function submitCreateTable() {
       closeCreateTableModal();
-      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake), telegram_id: userData.telegram_id, first_name: userData.first_name, photo_url: userData.photo_url });
+      socket.emit('create_table', { mode: selectedGameMode, deckSize: Number(selectedDeckSize), stake: Number(selectedStake) });
     }
 
     socket.on('table_created', (tId) => {
@@ -577,7 +561,7 @@
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('game-view')?.classList.add('active');
 
-      const opponent = (state.players || []).find(p => p.name !== userData.first_name) || { name: 'Соперник', handCount: 0, photoUrl: null };
+      const opponent = (state.players || []).find(p => currentUser && p.name !== currentUser.first_name) || { name: 'Соперник', handCount: 0, photoUrl: null };
       document.getElementById('opponent-name').innerText = opponent.name || 'Соперник';
       document.getElementById('opponent-card-count').innerText = opponent.handCount || 0;
       setAvatarElement('opponent-avatar', opponent.photoUrl, opponent.name);
