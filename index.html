@@ -207,7 +207,7 @@
     <button class="btn" style="width: 100%; margin-top: 10px;" onclick="claimDailyBonus()">Получить ежедневный бонус (+10 ⭐)</button>
   </div>
 
-  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА С ВЫБОРОМ СТАВОК И РЕЖИМОВ -->
+  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px; color: var(--accent-gold);">Создать игровой стол</h3>
@@ -241,7 +241,6 @@
     </div>
   </div>
 
-  <!-- МОДАЛКА ВЫВОДА -->
   <div id="withdraw-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 16px; font-size: 20px; color: var(--accent-gold);">Вывод звезд</h3>
@@ -254,7 +253,6 @@
     </div>
   </div>
 
-  <!-- МОДАЛКА ПРОФИЛЯ -->
   <div id="user-profile-modal" class="modal">
     <div class="modal-content">
       <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px; text-align: left;">
@@ -284,11 +282,9 @@
     if (tg) { tg.ready(); if (tg.expand) tg.expand(); }
 
     const socket = io({ transports: ['websocket', 'polling'] });
-    let currentUser = null, currentGameId = null, isGamePlaying = false, opponentTelegramId = null;
-    let selectedGameMode = 'podkidnoy';
-    let selectedDeckSize = 36;
-    let selectedStake = 10;
-    let myHandCards = [], isMyTurnFlag = false, isMyAttackTurn = false, isTakingState = false, tableHasCards = false, currentTrumpSuit = '♠';
+    let currentUser = null, currentGameId = null, currentTableId = null;
+    let selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
+    let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false, currentTrumpCard = null;
 
     function authenticate() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -334,6 +330,158 @@
       });
       closeCreateTableModal();
     }
+
+    socket.on('table_created', (tId) => {
+      currentTableId = tId;
+      document.getElementById('my-waiting-table-box').style.display = 'block';
+    });
+
+    socket.on('table_deleted', () => {
+      currentTableId = null;
+      document.getElementById('my-waiting-table-box').style.display = 'none';
+    });
+
+    function leaveCurrentWaitingTable() {
+      if (currentTableId) socket.emit('leave_waiting_table', currentTableId);
+    }
+
+    function joinTable(tId) {
+      socket.emit('join_table', tId);
+    }
+
+    socket.on('lobbies_list', (data) => {
+      const container = document.getElementById('tables-container');
+      if (!container) return;
+      const tables = data?.tables || [];
+      
+      let isMyTableOpen = false;
+      tables.forEach(t => { if (currentUser && String(t.hostId) === String(currentUser.telegram_id)) isMyTableOpen = true; });
+      document.getElementById('my-waiting-table-box').style.display = isMyTableOpen ? 'block' : 'none';
+
+      const availableTables = tables.filter(t => !currentUser || String(t.hostId) !== String(currentUser.telegram_id));
+
+      if (availableTables.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 50px;">Нет активных столов. Создайте свой!</div>';
+        return;
+      }
+
+      container.innerHTML = '';
+      availableTables.forEach(t => {
+        const modeText = t.mode === 'perevodnoy' ? 'Переводной' : 'Подкидной';
+        container.innerHTML += `
+          <div class="table-card" onclick="joinTable('${t.id}')">
+            <div>
+              <b>${t.hostName}</b> <small style="color:var(--text-muted);">(${modeText}, ${t.deckSize}к)</small>
+              <br><small style="color:var(--accent-gold);">Ставка: ${t.stake} ⭐</small>
+            </div>
+            <button class="btn" style="padding:6px 14px; font-size:12px;">Играть</button>
+          </div>`;
+      });
+    });
+
+    socket.on('game_state', (data) => {
+      currentGameId = data.gameId;
+      switchTab('game');
+
+      document.getElementById('deck-count').innerText = data.deckCount;
+      if (data.trumpCard) {
+        currentTrumpCard = data.trumpCard;
+        const isRed = ['♥', '♦'].includes(data.trumpCard.suit);
+        const view = document.getElementById('deck-card-view');
+        if (view) {
+          view.innerHTML = `${data.trumpCard.rank}<br>${data.trumpCard.suit}`;
+          view.style.color = isRed ? 'var(--danger)' : '#111';
+        }
+      }
+
+      const opponent = data.players.find(p => currentUser && String(p.id) !== String(currentUser.telegram_id));
+      if (opponent) {
+        document.getElementById('opponent-name').innerText = opponent.name;
+        document.getElementById('opponent-card-count').innerText = opponent.handCount;
+        const opAv = document.getElementById('opponent-avatar');
+        if (opponent.photoUrl && opAv) {
+          opAv.style.backgroundImage = `url('${opponent.photoUrl}')`;
+          opAv.innerText = '';
+        } else if (opAv) {
+          opAv.style.backgroundImage = 'none';
+          opAv.innerText = (opponent.name || 'O')[0].toUpperCase();
+        }
+      }
+
+      const tableSlot = document.getElementById('table-cards-slot');
+      if (tableSlot) {
+        tableSlot.innerHTML = '';
+        data.tableCards.forEach(pair => {
+          const pairDiv = document.createElement('div');
+          pairDiv.className = 'card-pair';
+
+          const attRed = ['♥', '♦'].includes(pair.attack.suit) ? 'red' : '';
+          pairDiv.innerHTML = `
+            <div class="table-card-item ${attRed}">
+              <div>${pair.attack.rank}</div>
+              <div style="text-align:right;">${pair.attack.suit}</div>
+            </div>`;
+
+          if (pair.defend) {
+            const defRed = ['♥', '♦'].includes(pair.defend.suit) ? 'red' : '';
+            pairDiv.innerHTML += `
+              <div class="table-card-item defend-card ${defRed}">
+                <div>${pair.defend.rank}</div>
+                <div style="text-align:right;">${pair.defend.suit}</div>
+              </div>`;
+          }
+          tableSlot.appendChild(pairDiv);
+        });
+      }
+    });
+
+    socket.on('your_hand', (hand) => {
+      myHandCards = hand || [];
+      const handContainer = document.getElementById('my-hand-container');
+      if (!handContainer) return;
+      handContainer.innerHTML = '';
+
+      myHandCards.forEach(c => {
+        const isRed = ['♥', '♦'].includes(c.suit) ? 'red' : '';
+        const cardDiv = document.createElement('div');
+        cardDiv.className = `card-item ${isRed}`;
+        cardDiv.innerHTML = `<div>${c.rank}</div><div style="text-align:right; font-size:18px;">${c.suit}</div>`;
+        cardDiv.onclick = () => playCard(c.id);
+        handContainer.appendChild(cardDiv);
+      });
+    });
+
+    socket.on('is_turn_data', (data) => {
+      isMyTurnFlag = data.isMyTurn;
+      isAttackerFlag = data.isAttacker;
+
+      const indicator = document.getElementById('turn-indicator');
+      const bitoBtn = document.getElementById('action-btn-bito');
+      const takeBtn = document.getElementById('action-btn-take');
+
+      if (indicator) {
+        indicator.innerText = isMyTurnFlag ? 'Ваш ход!' : 'Ход соперника...';
+      }
+
+      if (bitoBtn) bitoBtn.style.display = (isMyTurnFlag && isAttackerFlag) ? 'inline-block' : 'none';
+      if (takeBtn) takeBtn.style.display = (isMyTurnFlag && !isAttackerFlag) ? 'inline-block' : 'none';
+    });
+
+    function playCard(cardId) {
+      if (!currentGameId || !isMyTurnFlag) return;
+      socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardId });
+    }
+
+    function handleGameAction(action) {
+      if (!currentGameId) return;
+      socket.emit('game_action', { gameId: currentGameId, action });
+    }
+
+    socket.on('game_over', (data) => {
+      if (data.won) alert(`🎉 Поздравляем с победой! Вы выиграли +${data.prize} ⭐`);
+      else alert('💔 Вы проиграли матч.');
+      switchTab('lobbies');
+    });
 
     function openWithdrawModal() { document.getElementById('withdraw-modal')?.classList.add('active'); }
     function closeWithdrawModal() { document.getElementById('withdraw-modal')?.classList.remove('active'); }
@@ -415,9 +563,20 @@
     function switchTab(tabId, el) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById(tabId + '-view')?.classList.add('active');
-      if (el) el.classList.add('active');
       
+      const targetView = document.getElementById(tabId + '-view');
+      if (targetView) targetView.classList.add('active');
+
+      if (el && el.classList) el.classList.add('active');
+      else {
+        const navBtns = document.querySelectorAll('.nav-item');
+        if (tabId === 'lobbies' && navBtns[0]) navBtns[0].classList.add('active');
+        if (tabId === 'friends' && navBtns[1]) navBtns[1].classList.add('active');
+        if (tabId === 'leaderboard' && navBtns[2]) navBtns[2].classList.add('active');
+        if (tabId === 'profile' && navBtns[3]) navBtns[3].classList.add('active');
+      }
+      
+      if (tabId === 'lobbies') socket.emit('get_lobbies');
       if (tabId === 'leaderboard') socket.emit('get_leaderboard');
       if (tabId === 'friends') socket.emit('get_friends');
     }
