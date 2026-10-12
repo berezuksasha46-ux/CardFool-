@@ -71,6 +71,7 @@ function createDeck(size) {
   }
   return deck;
 }
+
 io.on('connection', (socket) => {
   socket.on('auth', (data) => {
     const { telegram_id, username, first_name, photo_url, refId } = data;
@@ -92,7 +93,8 @@ io.on('connection', (socket) => {
         referral_earned: 0,
         friends: [],
         activated_promos: [],
-        last_daily: 0
+        last_daily: 0,
+        is_online: true
       };
       users[telegram_id] = user;
       uniqueIdToTgId[newUniqueId] = telegram_id;
@@ -111,12 +113,35 @@ io.on('connection', (socket) => {
       user.username = username || user.username;
       user.first_name = first_name || user.first_name;
       user.photo_url = photo_url || user.photo_url;
+      user.is_online = true;
     }
 
     socket.userId = user.telegram_id;
     socket.emit('auth_success', user);
     socket.emit('lobbies_list', { tables: Object.values(lobbies) });
     socket.emit('friend_requests_update', friendRequests[user.telegram_id] || []);
+
+    socket.on('disconnect', () => {
+      if (users[socket.userId]) users[socket.userId].is_online = false;
+    });
+  });
+
+  socket.on('get_user_profile', (data) => {
+    const targetTgId = uniqueIdToTgId[data.targetId];
+    if (!targetTgId) return;
+    const targetUser = users[targetTgId];
+    if (targetUser) {
+      socket.emit('user_profile_data', {
+        first_name: targetUser.first_name,
+        unique_id: targetUser.unique_id,
+        photo_url: targetUser.photo_url,
+        wins: targetUser.wins,
+        losses: targetUser.losses,
+        referral_count: targetUser.referral_count,
+        stars_balance: targetUser.stars_balance,
+        is_online: targetUser.is_online
+      });
+    }
   });
 
   socket.on('send_friend_request', (data) => {
@@ -238,13 +263,11 @@ io.on('connection', (socket) => {
     const host = users[table.hostId];
     if (!host) return;
 
-    // Списание ставок строго при старте игры
     host.stars_balance -= table.stake;
     guest.stars_balance -= table.stake;
     delete lobbies[tableId];
     io.emit('lobbies_list', { tables: Object.values(lobbies) });
 
-    // Обновляем баланс в UI обоих игроков
     io.sockets.sockets.forEach(s => {
       if (s.userId === host.telegram_id) s.emit('auth_success', host);
       if (s.userId === guest.telegram_id) s.emit('auth_success', guest);
@@ -381,7 +404,7 @@ function checkGameOver(gameId) {
       const loserIdx = p0Empty ? 1 : 0;
 
       const totalBank = game.stake * 2;
-      const prize = Math.floor(totalBank * 0.9); // 10% системная комиссия
+      const prize = Math.floor(totalBank * 0.9);
 
       const winner = users[game.players[winnerIdx].id];
       const loser = users[game.players[loserIdx].id];
@@ -404,4 +427,4 @@ function checkGameOver(gameId) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`CardFool Swiss Watch Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`CardFool Swiss Ultimate Server running on port ${PORT}`));
