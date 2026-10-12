@@ -63,14 +63,42 @@
       box-shadow: 0 4px 14px rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.25);
     }
 
-    .action-toast {
-      position: absolute; top: -40px; left: 50%; transform: translateX(-50%) scale(0);
-      background: var(--accent-gold-gradient); color: #000; font-weight: 900; font-size: 12px;
-      padding: 6px 16px; border-radius: 18px; white-space: nowrap;
-      box-shadow: 0 6px 25px rgba(245,158,11,0.7);
-      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease-out; opacity: 0; pointer-events: none; z-index: 200;
+    /* ВЕРСТКА КОЛЕСА ФОРТУНЫ */
+    .wheel-container {
+      position: relative; width: 260px; height: 260px; margin: 0 auto 16px auto;
+      display: flex; align-items: center; justify-content: center;
     }
-    .action-toast.show { transform: translateX(-50%) scale(1); opacity: 1; }
+    .wheel-pointer {
+      position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent;
+      border-top: 24px solid var(--accent-gold); z-index: 50; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.8));
+    }
+    .wheel-spinner {
+      width: 100%; height: 100%; border-radius: 50%;
+      border: 6px solid var(--accent-gold);
+      box-shadow: var(--gold-glow), inset 0 0 30px rgba(0,0,0,0.8);
+      position: relative; overflow: hidden;
+      transition: transform 5s cubic-bezier(0.15, 0.85, 0.15, 1);
+      background: conic-gradient(
+        #ef4444 0deg 45deg,
+        #3b82f6 45deg 90deg,
+        #10b981 90deg 135deg,
+        #8b5cf6 135deg 180deg,
+        #f59e0b 180deg 225deg,
+        #ec4899 225deg 270deg,
+        #6366f1 270deg 315deg,
+        #14b8a6 315deg 360deg
+      );
+    }
+    .wheel-center-cap {
+      position: absolute; width: 54px; height: 54px; background: radial-gradient(circle, #ffe066 0%, #b45309 100%);
+      border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 15px rgba(0,0,0,0.8);
+      z-index: 10; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 18px; color: #000;
+    }
+    .wheel-label {
+      position: absolute; width: 100%; height: 100%; text-align: center; font-weight: 900; font-size: 13px; color: #fff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    }
 
     .poker-table { 
       background: radial-gradient(circle at center, #1e5c38 0%, #082113 100%); 
@@ -84,7 +112,7 @@
       display: inline-flex; align-items: center; gap: 6px;
       background: rgba(0, 0, 0, 0.85); border: 1.5px solid rgba(251, 191, 36, 0.8);
       color: var(--accent-gold); padding: 5px 16px; border-radius: 16px;
-      font-size: 13px; font-weight: 900; margin-top: 4px; box-shadow: var(--gold-glow);
+      font-size: 13px; font-weight: 900; box-shadow: var(--gold-glow);
     }
 
     .deck-side-container { 
@@ -96,14 +124,8 @@
     .deck-stack { width: 40px; height: 54px; background: #1c0e38; border-radius: 8px; border: 1.5px solid var(--accent-gold); position: relative; box-shadow: 0 4px 12px rgba(0,0,0,0.7); }
     .trump-preview { position: absolute; bottom: -5px; right: -10px; width: 32px; height: 42px; background: #fff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.7); border: 1px solid #ddd; }
 
-    #table-cards-slot {
-      display: flex; gap: 8px; min-height: 85px; justify-content: center; align-items: center; flex-wrap: wrap; margin: auto 0;
-    }
-
-    #my-hand-container {
-      display: flex; justify-content: center; align-items: flex-end;
-      height: 150px; position: relative; width: 100%; margin-top: 2px; margin-bottom: 8px;
-    }
+    #table-cards-slot { display: flex; gap: 8px; min-height: 85px; justify-content: center; align-items: center; flex-wrap: wrap; margin: auto 0; }
+    #my-hand-container { display: flex; justify-content: center; align-items: flex-end; height: 150px; position: relative; width: 100%; margin-top: 2px; margin-bottom: 8px; }
 
     .card-item {
       width: 70px; height: 104px; 
@@ -182,7 +204,52 @@
     </div>
     <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 14px;">Нет активных столов. Создайте свой и позовите друга!</div></div>
   </div>
-  <!-- ВКЛАДКА 2: ДРУЗЬЯ И РЕФЕРАЛЫ -->
+
+  <!-- ВКЛАДКА 2: КОЛЕСО ФОРТУНЫ -->
+  <div id="wheel-view" class="view">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h2 style="font-size: 22px; font-weight: 900;">Колесо Фортуны</h2>
+      <div class="timer-badge" id="wheel-timer-badge">⏳ <span id="wheel-timer-sec">7</span>s</div>
+    </div>
+
+    <!-- КОЛЕСО -->
+    <div class="wheel-container">
+      <div class="wheel-pointer"></div>
+      <div class="wheel-spinner" id="wheel-spinner-elem">
+        <div class="wheel-label" style="transform: rotate(22.5deg) translateY(24px);">0.5x</div>
+        <div class="wheel-label" style="transform: rotate(67.5deg) translateY(24px);">1.5x</div>
+        <div class="wheel-label" style="transform: rotate(112.5deg) translateY(24px);">0x</div>
+        <div class="wheel-label" style="transform: rotate(157.5deg) translateY(24px);">2x</div>
+        <div class="wheel-label" style="transform: rotate(202.5deg) translateY(24px);">0.5x</div>
+        <div class="wheel-label" style="transform: rotate(247.5deg) translateY(24px);">1.2x</div>
+        <div class="wheel-label" style="transform: rotate(292.5deg) translateY(24px);">0x</div>
+        <div class="wheel-label" style="transform: rotate(337.5deg) translateY(24px);">3x</div>
+      </div>
+      <div class="wheel-center-cap">🎰</div>
+    </div>
+
+    <!-- ФОРМА СТАВКИ -->
+    <div class="card-box" style="margin-bottom: 12px;">
+      <div style="font-size: 12px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px;">Ваша ставка на этот раунд:</div>
+      <input type="number" id="wheel-stake-input" placeholder="Введите сумму ⭐" style="width: 100%; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 800; outline: none; margin-bottom: 10px;">
+      
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
+        <button class="option-btn" onclick="setWheelStake(10)">10 ⭐</button>
+        <button class="option-btn" onclick="setWheelStake(25)">25 ⭐</button>
+        <button class="option-btn" onclick="setWheelStake(50)">50 ⭐</button>
+        <button class="option-btn" onclick="setWheelStake(100)">100 ⭐</button>
+      </div>
+      
+      <button class="btn" id="wheel-place-btn" style="width: 100%; padding: 14px; font-size: 16px;" onclick="placeWheelBet()">🔥 Ставка!</button>
+    </div>
+
+    <!-- СПИСОК ИГРОКОВ РАУНДА -->
+    <div style="font-size: 14px; font-weight: 900; margin-bottom: 8px;">Ставки в текущем раунде:</div>
+    <div id="wheel-bets-list" class="card-box" style="min-height: 80px; padding: 10px;">
+      <div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 15px;">Ожидание первых ставок...</div>
+    </div>
+  </div>
+  <!-- ВКЛАДКА 3: ДРУЗЬЯ И РЕФЕРАЛЫ -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Друзья и рефералы</h2>
     
@@ -221,7 +288,7 @@
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список друзей пуст</div></div>
   </div>
 
-  <!-- ВКЛАДКА 3: ИГРА -->
+  <!-- ВКЛАДКА 4: ИГРА -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 10px;">
@@ -267,13 +334,13 @@
       <button id="action-btn-take" class="btn btn-secondary" style="display: none; width: 90%; padding: 14px; font-size: 17px; border-color: var(--accent-gold);" onclick="handleGameAction('take')">Взять</button>
     </div>
   </div>
-  <!-- ВКЛАДКА 4: ЛИДЕРЫ -->
+  <!-- ВКЛАДКА 5: ЛИДЕРЫ -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Зал славы 🏆</h2>
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 40px;">Загрузка рейтинга...</div></div>
   </div>
 
-  <!-- ВКЛАДКА 5: ПРОФИЛЬ -->
+  <!-- ВКЛАДКА 6: ПРОФИЛЬ -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Ваш профиль</h2>
     <div class="card-box">
@@ -370,9 +437,10 @@
     </div>
   </div>
 
-  <!-- НИЖНЯЯ НАВИГАЦИЯ -->
+  <!-- ОБНОВЛЕННАЯ НАВИГАЦИОННАЯ ПАНЕЛЬ С КОЛЕСОМ МЕЖДУ СТОЛАМИ И ДРУЗЬЯМИ -->
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
+    <button class="nav-item" onclick="switchTab('wheel', this)"><div class="nav-icon">🎡</div><div>Колесо</div></button>
     <button class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><div>Друзья</div></button>
     <button class="nav-item" onclick="switchTab('leaderboard', this)"><div class="nav-icon">🏆</div><div>Лидеры</div></button>
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
@@ -387,12 +455,15 @@
     let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false, currentTableCards = [], isTakingStateFlag = false;
     let timerInterval = null, turnTimeLeft = 20, currentTrumpSuit = '♠';
 
+    /* Переменные для Колеса Фортуны */
+    let currentWheelRotation = 0;
+    let currentWheelBetsList = [];
+
     function authenticate() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
       let telegram_id = tgUser?.id ? String(tgUser.id) : (localStorage.getItem('cardfool_id') || 'browser_' + Math.floor(100000 + Math.random() * 900000));
       localStorage.setItem('cardfool_id', telegram_id);
 
-      // Считываем start_param (передается черезпрямую ссылку t.me/GOCardFoolbot/app?startapp=ID)
       const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param || localStorage.getItem('cardfool_ref');
       if (startParam && startParam !== telegram_id) {
         localStorage.setItem('cardfool_ref', startParam);
@@ -514,6 +585,83 @@
           </div>`;
       });
     });
+    /* ЛОГИКА КОЛЕСА ФОРТУНЫ */
+    function setWheelStake(val) {
+      const inp = document.getElementById('wheel-stake-input');
+      if (inp) inp.value = val;
+    }
+
+    function placeWheelBet() {
+      const inp = document.getElementById('wheel-stake-input');
+      const stake = Number(inp?.value);
+      if (!stake || stake <= 0) return alert('Введите корректную ставку!');
+      if (currentUser && currentUser.stars_balance < stake) return alert('Недостаточно звезд на балансе!');
+      
+      socket.emit('wheel_place_bet', { amount: stake });
+    }
+
+    socket.on('wheel_bet_accepted', (data) => {
+      if (currentUser) {
+        currentUser.stars_balance = data.newBalance;
+        updateProfileData(currentUser);
+      }
+      alert('🔥 Ставка принята!');
+    });
+
+    socket.on('wheel_state', (data) => {
+      const timerSecElem = document.getElementById('wheel-timer-sec');
+      const badge = document.getElementById('wheel-timer-badge');
+      const btn = document.getElementById('wheel-place-btn');
+      
+      if (timerSecElem) timerSecElem.innerText = data.timeLeft;
+      
+      if (data.isSpinning) {
+        if (badge) badge.innerText = '🌀 Вращение...';
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+      } else {
+        if (badge) badge.innerHTML = `⏳ <span id="wheel-timer-sec">${data.timeLeft}</span>s`;
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      }
+
+      /* Обновляем список ставок в этом раунде */
+      currentWheelBetsList = data.bets || [];
+      const betsListElem = document.getElementById('wheel-bets-list');
+      if (betsListElem) {
+        if (currentWheelBetsList.length === 0) {
+          betsListElem.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 15px;">Ожидание первых ставок...</div>';
+        } else {
+          betsListElem.innerHTML = '';
+          currentWheelBetsList.forEach(b => {
+            betsListElem.innerHTML += `
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div style="font-size: 13px; font-weight: 800;">${b.name}</div>
+                <div style="font-size: 13px; font-weight: 900; color: var(--accent-gold);">⭐ ${b.amount}</div>
+              </div>`;
+          });
+        }
+      }
+    });
+
+    socket.on('wheel_spin_result', (data) => {
+      const spinner = document.getElementById('wheel-spinner-elem');
+      if (!spinner) return;
+
+      /* Задаем угол вращения: 5 полных оборотов + угол нужного сектора */
+      const targetDeg = data.targetDegree;
+      currentWheelRotation += (360 * 5) + targetDeg - (currentWheelRotation % 360);
+      spinner.style.transform = `rotate(${currentWheelRotation}deg)`;
+
+      setTimeout(() => {
+        if (data.winAmount > 0) {
+          alert(`🎉 Поздравляем! Выпал мультипликатор ${data.multiplier}x! Ваш выигрыш: +${data.winAmount} ⭐`);
+        }
+        if (data.newBalance !== undefined && currentUser) {
+          currentUser.stars_balance = data.newBalance;
+          updateProfileData(currentUser);
+        }
+      }, 5200);
+    });
+
     socket.on('game_state', (data) => {
       currentGameId = data.gameId;
       currentTableCards = data.tableCards || [];
@@ -579,7 +727,7 @@
         }
 
         if (a.suit !== b.suit) {
-          return (suitOrder[a.suit] || 99) - (suitOrder[b.suit] || 99);
+          return (suitOrder[a.suit] || 99) - (suitOrder[a.suit] || 99);
         }
 
         return (rankOrder[a.rank] || 0) - (rankOrder[b.rank] || 0);
@@ -695,7 +843,6 @@
       input.value = '';
     }
 
-    /* ПРЯМАЯ РЕФЕРАЛЬНАЯ ССЫЛКА ЧЕРЕЗ /app?startapp= */
     function copyReferralLink() {
       if (!currentUser?.unique_id) return alert('Сначала авторизуйтесь!');
       const link = `https://t.me/GOCardFoolbot/app?startapp=${currentUser.unique_id}`;
@@ -774,9 +921,10 @@
       else {
         const navBtns = document.querySelectorAll('.nav-item');
         if (tabId === 'lobbies' && navBtns[0]) navBtns[0].classList.add('active');
-        if (tabId === 'friends' && navBtns[1]) navBtns[1].classList.add('active');
-        if (tabId === 'leaderboard' && navBtns[2]) navBtns[2].classList.add('active');
-        if (tabId === 'profile' && navBtns[3]) navBtns[3].classList.add('active');
+        if (tabId === 'wheel' && navBtns[1]) navBtns[1].classList.add('active');
+        if (tabId === 'friends' && navBtns[2]) navBtns[2].classList.add('active');
+        if (tabId === 'leaderboard' && navBtns[3]) navBtns[3].classList.add('active');
+        if (tabId === 'profile' && navBtns[4]) navBtns[4].classList.add('active');
       }
       
       if (tabId === 'lobbies' && !currentGameId) socket.emit('get_lobbies');
@@ -784,7 +932,6 @@
       if (tabId === 'friends') socket.emit('get_friends');
     }
 
-    /* РЕФЕРАЛЫ: СТРОГИЙ УЧЕТ С СЕРВЕРА БЕЗ ЛОЖНЫХ СРАБАТЫВАНИЙ */
     socket.on('friends_list', (data) => {
       const container = document.getElementById('friends-list-container');
       const countEl = document.getElementById('friends-count');
