@@ -6,6 +6,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+// 🛠 Обязательная строка, чтобы сервер отдавал index.html и файлы игры
+app.use(express.static(__dirname));
+
 // Хранилища данных в памяти
 const users = {};           // { telegram_id: userObject }
 const uniqueIdToTgId = {};  // { unique_id: telegram_id }
