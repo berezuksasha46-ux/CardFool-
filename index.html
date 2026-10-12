@@ -41,7 +41,7 @@
       background: var(--accent-gold-gradient); color: #000; border: none; 
       padding: 14px 24px; font-weight: 900; font-size: 15px; border-radius: 16px; 
       cursor: pointer; box-shadow: 0 6px 22px rgba(245, 158, 11, 0.4);
-      transition: transform 0.12s ease, box-shadow 0.15s ease;
+      transition: transform 0.12s ease;
     }
     .btn:active { transform: scale(0.95); }
     .btn-secondary { background: rgba(36, 17, 68, 0.92); color: #fff; border: 1px solid var(--border-color); }
@@ -52,7 +52,7 @@
       border-radius: 22px; padding: 16px; margin-bottom: 14px; 
       border: 1px solid var(--border-color); box-shadow: 0 12px 35px rgba(0,0,0,0.65); 
     }
-    .table-card { display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
+    .table-card { display: flex; justify-content: space-between; align-items: center; }
 
     .avatar-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
     .avatar-container { 
@@ -98,51 +98,12 @@
       text-shadow: 0 2px 4px rgba(0,0,0,0.9);
     }
 
-    .poker-table { 
-      background: radial-gradient(circle at center, #1e5c38 0%, #082113 100%); 
-      border: 3px solid #348e58; border-radius: 28px; padding: 14px; 
-      min-height: 240px; display: flex; flex-direction: column; justify-content: space-between; 
-      position: relative; width: 100%; margin-bottom: 8px; 
-    }
-
     .timer-badge {
       display: inline-flex; align-items: center; gap: 6px;
       background: rgba(0, 0, 0, 0.85); border: 1.5px solid rgba(251, 191, 36, 0.8);
       color: var(--accent-gold); padding: 5px 16px; border-radius: 16px;
-      font-size: 13px; font-weight: 900;
+      font-size: 13px; font-weight: 900; box-shadow: var(--gold-glow);
     }
-
-    .deck-side-container { 
-      position: absolute; right: 12px; top: 12px; 
-      display: flex; align-items: center; gap: 10px; 
-      background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 16px; font-size: 12px; z-index: 10;
-    }
-    .deck-stack { width: 40px; height: 54px; background: #1c0e38; border-radius: 8px; border: 1.5px solid var(--accent-gold); position: relative; }
-    .trump-preview { position: absolute; bottom: -5px; right: -10px; width: 32px; height: 42px; background: #fff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: #111; }
-
-    #table-cards-slot { display: flex; gap: 8px; min-height: 85px; justify-content: center; align-items: center; flex-wrap: wrap; margin: auto 0; }
-    #my-hand-container { display: flex; justify-content: center; align-items: flex-end; height: 150px; position: relative; width: 100%; margin-bottom: 8px; }
-
-    .card-item {
-      width: 66px; height: 98px; 
-      background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); 
-      color: #0f172a; border-radius: 12px; 
-      display: flex; flex-direction: column; justify-content: space-between;
-      padding: 6px 7px; font-weight: 900; 
-      cursor: pointer; border: 1px solid #cbd5e1; 
-      position: absolute; transform-origin: bottom center;
-      transition: transform 0.2s ease, border-color 0.2s;
-    }
-    .card-item:hover, .card-item:active { 
-      transform: translateY(-28px) scale(1.18) rotate(0deg) !important; 
-      z-index: 500 !important; border-color: var(--accent-gold); 
-    }
-    .card-item.red { color: #dc2626; }
-
-    .table-card-item { width: 48px; height: 68px; background: #fff; color: #111; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between; padding: 4px 6px; font-weight: bold; font-size: 11px; border: 1px solid #ccc; }
-    .table-card-item.red { color: #dc2626; }
-    .card-pair { position: relative; width: 56px; height: 80px; margin: 3px; }
-    .card-pair .defend-card { position: absolute; top: 12px; left: 12px; z-index: 2; }
 
     .nav-bar { 
       position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
@@ -153,12 +114,6 @@
     .nav-item { color: var(--text-muted); text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; background: none; border: none; }
     .nav-item.active { color: var(--accent-gold); font-weight: 900; }
     .nav-icon { font-size: 22px; margin-bottom: 2px; }
-
-    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
-    .modal.active { display: flex; }
-    .modal-content { background: #160a2d; width: 100%; max-width: 390px; border-radius: 26px; padding: 24px; border: 1px solid var(--border-color); text-align: center; }
-    .option-btn { background: #251346; border: 1px solid var(--border-color); color: #fff; padding: 12px 14px; border-radius: 14px; cursor: pointer; font-size: 13px; font-weight: 700; }
-    .option-btn.selected { background: var(--accent-gold-gradient) !important; color: #000 !important; font-weight: 900; border-color: transparent !important; }
   </style>
 </head>
 <body>
@@ -173,26 +128,8 @@
     <div style="background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.4); padding: 5px 14px; border-radius: 20px; color: var(--accent-gold); font-weight: 900; font-size: 13px;">⭐ <span id="header-stars">0</span></div>
   </div>
 
-  <!-- ВКЛАДКА 1: СТОЛЫ -->
-  <div id="lobbies-view" class="view active">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-      <h2 style="font-size: 22px; font-weight: 900;">Игровые столы</h2>
-      <button class="btn" style="padding: 10px 18px; font-size: 13px;" onclick="openCreateTableModal()">⚔ Создать стол</button>
-    </div>
-    <div id="my-waiting-table-box" style="display: none;" class="card-box" style="border-color: var(--accent-gold);">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <div style="font-size: 11px; color: var(--accent-gold); font-weight: 900; text-transform: uppercase;">Ваш открытый стол</div>
-          <div style="font-size: 14px; font-weight: 800; margin-top: 2px;">Ожидание соперника...</div>
-        </div>
-        <button class="btn-danger" onclick="leaveCurrentWaitingTable()">✖ Отмена</button>
-      </div>
-    </div>
-    <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 14px;">Нет активных столов. Создайте свой!</div></div>
-  </div>
-
-  <!-- ВКЛАДКА 2: КОЛЕСО ФОРТУНЫ (СИНХРОНИЗИРОВАННЫЕ СЕКТОРЫ) -->
-  <div id="wheel-view" class="view">
+  <!-- ВКЛАДКА 1: КОЛЕСО ФОРТУНЫ -->
+  <div id="wheel-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h2 style="font-size: 22px; font-weight: 900;">Колесо Фортуны</h2>
       <div class="timer-badge" id="wheel-timer-badge">⏳ <span id="wheel-timer-sec">7</span>s</div>
@@ -216,14 +153,6 @@
     <div class="card-box" style="margin-bottom: 12px;">
       <div style="font-size: 12px; color: var(--text-muted); font-weight: 800; margin-bottom: 8px;">Ваша ставка на этот раунд:</div>
       <input type="number" id="wheel-stake-input" placeholder="Введите сумму ⭐" style="width: 100%; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: 800; outline: none; margin-bottom: 10px;">
-      
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
-        <button class="option-btn" onclick="setWheelStake(10)">10 ⭐</button>
-        <button class="option-btn" onclick="setWheelStake(25)">25 ⭐</button>
-        <button class="option-btn" onclick="setWheelStake(50)">50 ⭐</button>
-        <button class="option-btn" onclick="setWheelStake(100)">100 ⭐</button>
-      </div>
-      
       <button class="btn" id="wheel-place-btn" style="width: 100%; padding: 14px; font-size: 16px;" onclick="placeWheelBet()">🔥 Ставка!</button>
     </div>
 
@@ -232,72 +161,8 @@
       <div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 15px;">Ожидание первых ставок...</div>
     </div>
   </div>
-  <!-- ВКЛАДКА 3: ДРУЗЬЯ (ИСПРАВЛЕН ЗАГОЛОВОК) -->
-  <div id="friends-view" class="view">
-    <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Друзья и рефералы</h2>
-    
-    <div class="card-box" style="background: linear-gradient(135deg, #311559 0%, #120726 100%); border: 1px solid rgba(251, 191, 36, 0.4); text-align: left; padding: 18px;">
-      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-        <span style="font-size: 22px;">🎁</span>
-        <span style="font-weight: 900; font-size: 16px; color: var(--accent-gold);">Партнерская программа</span>
-      </div>
-      <div style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
-        Приглашайте игроков через прямую ссылку. Вы получаете <b style="color:var(--accent-gold);">+10 ⭐</b> за каждого друга и пожизненные <b style="color:var(--success);">+5%</b> от всех его ставок!
-      </div>
-      <button class="btn" style="width: 100%; padding: 13px; font-size: 13px;" onclick="copyReferralLink()">✨ Скопировать реферальную ссылку</button>
-    </div>
 
-    <div style="font-size: 15px; font-weight: 900; margin-bottom: 10px;">Список друзей (<span id="friends-count">0</span>)</div>
-    <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список друзей пуст</div></div>
-  </div>
-
-  <!-- ВКЛАДКА 4: ИГРА -->
-  <div id="game-view" class="view">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <div class="avatar-wrapper">
-          <div id="opponent-avatar" class="avatar-container" style="width: 38px; height: 38px; font-size: 13px;">O</div>
-        </div>
-        <div>
-          <div id="opponent-name" style="font-weight: 900; font-size: 14px; color: var(--accent-gold);">Соперник</div>
-          <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="poker-table">
-      <div class="deck-side-container">
-        <div style="text-align: right; line-height: 1.1;">
-          <div style="font-size: 9px; color: var(--text-muted);">Колода</div>
-          <div style="font-weight: 900; font-size: 13px;" id="deck-count">36</div>
-        </div>
-        <div class="deck-stack"><div id="deck-card-view" class="trump-preview">♠</div></div>
-      </div>
-      
-      <div style="text-align: center;">
-        <div id="turn-indicator" style="font-weight: 900; font-size: 14px; color: var(--accent-gold);">Ожидание...</div>
-        <div id="timer-badge" class="timer-badge">⏳ <span id="timer-seconds">20</span>s</div>
-      </div>
-
-      <div id="table-cards-slot"></div>
-    </div>
-    
-    <div style="font-size: 11px; color: var(--text-muted); font-weight: 800; margin-bottom: 4px;">Ваши карты:</div>
-    <div id="my-hand-container"></div>
-
-    <div style="display: flex; justify-content: center; gap: 10px; margin-top: 14px; min-height: 52px;">
-      <button id="action-btn-bito" class="btn" style="display: none; width: 45%; padding: 14px; font-size: 16px;" onclick="handleGameAction('bito')">Бито</button>
-      <button id="action-btn-take" class="btn btn-secondary" style="display: none; width: 45%; padding: 14px; font-size: 16px; border-color: var(--accent-gold);" onclick="handleGameAction('take')">Взять</button>
-    </div>
-  </div>
-
-  <!-- ВКЛАДКА 5: ЛИДЕРЫ -->
-  <div id="leaderboard-view" class="view">
-    <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Зал славы 🏆</h2>
-    <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 40px;">Загрузка рейтинга...</div></div>
-  </div>
-
-  <!-- ВКЛАДКА 6: ПРОФИЛЬ -->
+  <!-- ВКЛАДКА 2: ПРОФИЛЬ И ПРОМОКОДЫ -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Ваш профиль</h2>
     <div class="card-box">
@@ -309,33 +174,20 @@
         </div>
       </div>
     </div>
-    
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Победы</div><div style="font-size: 16px; font-weight: 900; color: var(--accent-gold);" id="stat-wins">0</div></div>
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Поражения</div><div style="font-size: 16px; font-weight: 900; color: var(--danger);" id="stat-losses">0</div></div>
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 10px; color: var(--text-muted);">Винрейт</div><div style="font-size: 16px; font-weight: 900; color: var(--success);" id="stat-winrate">0%</div></div>
+
+    <div class="card-box">
+      <div style="font-weight: 900; font-size: 14px; margin-bottom: 8px; color: var(--accent-gold);">🎟️ Активировать промокод</div>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="promo-code-input" placeholder="Код (например SUPERRICKY)..." style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px 12px; border-radius: 12px; font-size: 13px; outline: none;">
+        <button class="btn" style="padding: 10px 16px; font-size: 13px;" onclick="submitPromoCode()">OK</button>
+      </div>
     </div>
 
     <button class="btn" style="width: 100%; margin-top: 4px; padding: 14px;" onclick="claimDailyBonus()">🎁 Ежедневный бонус (+10 ⭐)</button>
   </div>
 
-  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА -->
-  <div id="create-table-modal" class="modal">
-    <div class="modal-content">
-      <h3 style="margin-bottom: 14px; font-size: 19px; font-weight: 900; color: var(--accent-gold);">Создание стола</h3>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-secondary" style="flex: 1;" onclick="closeCreateTableModal()">Отмена</button>
-        <button class="btn" style="flex: 1;" onclick="submitCreateTable()">Создать</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- НИЖНЯЯ НАВИГАЦИЯ -->
   <div class="nav-bar">
-    <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
-    <button class="nav-item" onclick="switchTab('wheel', this)"><div class="nav-icon">🎡</div><div>Колесо</div></button>
-    <button class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><div>Друзья</div></button>
-    <button class="nav-item" onclick="switchTab('leaderboard', this)"><div class="nav-icon">🏆</div><div>Лидеры</div></button>
+    <button class="nav-item active" onclick="switchTab('wheel', this)"><div class="nav-icon">🎡</div><div>Колесо</div></button>
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
   </div>
 
@@ -344,9 +196,7 @@
     if (tg) { tg.ready(); if (tg.expand) tg.expand(); }
 
     const socket = io({ transports: ['websocket', 'polling'] });
-    let currentUser = null, currentGameId = null, currentTableId = null;
-    let selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
-    let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false, currentTableCards = [];
+    let currentUser = null;
     let currentWheelRotation = 0;
 
     function authenticate() {
@@ -370,66 +220,25 @@
       updateProfileData(user);
     });
 
-    function openCreateTableModal() { document.getElementById('create-table-modal')?.classList.add('active'); }
-    function closeCreateTableModal() { document.getElementById('create-table-modal')?.classList.remove('active'); }
-    function submitCreateTable() {
-      socket.emit('create_table', { mode: selectedGameMode, deckSize: selectedDeckSize, stake: selectedStake });
-      closeCreateTableModal();
-    }
-
-    socket.on('table_created', (tId) => { 
-      currentTableId = tId; 
-      document.getElementById('my-waiting-table-box').style.display = 'block'; 
-    });
-    
-    socket.on('table_deleted', () => { 
-      currentTableId = null; 
-      document.getElementById('my-waiting-table-box').style.display = 'none'; 
-    });
-
-    function leaveCurrentWaitingTable() { 
-      if (currentTableId) {
-        socket.emit('leave_waiting_table', currentTableId);
-        currentTableId = null;
-        document.getElementById('my-waiting-table-box').style.display = 'none';
-      }
-    }
-
-    function joinTable(tId) { socket.emit('join_table', tId); }
-
-    socket.on('lobbies_list', (data) => {
-      const container = document.getElementById('tables-container');
-      if (!container) return;
-      const tables = data?.tables || [];
-      const availableTables = tables.filter(t => !currentUser || String(t.hostId) !== String(currentUser.telegram_id));
-      
-      if (availableTables.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 14px;">Нет активных столов. Создайте свой!</div>';
-        return;
-      }
-      container.innerHTML = '';
-      availableTables.forEach(t => {
-        container.innerHTML += `
-          <div class="table-card" onclick="joinTable('${t.id}')">
-            <div>
-              <b style="font-size: 15px;">${t.hostName}</b><br>
-              <small style="color:var(--accent-gold); font-weight:800;">Ставка: ${t.stake} ⭐</small>
-            </div>
-            <button class="btn" style="padding:8px 14px; font-size:12px;">Играть</button>
-          </div>`;
-      });
-    });
-
-    // КОЛЕСО ФОРТУНЫ
-    function setWheelStake(val) { document.getElementById('wheel-stake-input').value = val; }
     function placeWheelBet() {
       const stake = Number(document.getElementById('wheel-stake-input')?.value);
-      if (!stake || stake <= 0) return alert('Введите ставку!');
+      if (!stake || stake <= 0) return alert('Введите корректную ставку!');
       socket.emit('wheel_place_bet', { amount: stake });
     }
 
     socket.on('wheel_state', (data) => {
       document.getElementById('wheel-timer-sec').innerText = data.timeLeft;
+      const badge = document.getElementById('wheel-timer-badge');
+      const btn = document.getElementById('wheel-place-btn');
+      
+      if (data.isSpinning) {
+        badge.innerText = '🌀 Вращение...';
+        btn.disabled = true; btn.style.opacity = '0.5';
+      } else {
+        badge.innerHTML = `⏳ <span id="wheel-timer-sec">${data.timeLeft}</span>s`;
+        btn.disabled = false; btn.style.opacity = '1';
+      }
+
       const betsList = document.getElementById('wheel-bets-list');
       if (data.bets && data.bets.length > 0) {
         betsList.innerHTML = data.bets.map(b => `<div style="display:flex;justify-content:space-between;padding:4px 0;"><b>${b.name}</b><span style="color:var(--accent-gold)">⭐ ${b.amount}</span></div>`).join('');
@@ -453,80 +262,14 @@
       }, 5200);
     });
 
-    socket.on('game_state', (data) => {
-      currentGameId = data.gameId;
-      currentTableCards = data.tableCards || [];
-      switchTab('game');
-
-      document.getElementById('deck-count').innerText = data.deckCount;
-      if (data.trumpCard) {
-        const isRed = ['♥', '♦'].includes(data.trumpCard.suit);
-        const view = document.getElementById('deck-card-view');
-        view.innerHTML = `${data.trumpCard.rank}<br>${data.trumpCard.suit}`;
-        view.style.color = isRed ? '#dc2626' : '#111';
-      }
-
-      const tableSlot = document.getElementById('table-cards-slot');
-      tableSlot.innerHTML = '';
-      currentTableCards.forEach(pair => {
-        const attRed = ['♥', '♦'].includes(pair.attack.suit) ? 'red' : '';
-        let pairHtml = `<div class="card-pair"><div class="table-card-item ${attRed}"><div>${pair.attack.rank}</div><div>${pair.attack.suit}</div></div>`;
-        if (pair.defend) {
-          const defRed = ['♥', '♦'].includes(pair.defend.suit) ? 'red' : '';
-          pairHtml += `<div class="table-card-item defend-card ${defRed}"><div>${pair.defend.rank}</div><div>${pair.defend.suit}</div></div>`;
-        }
-        pairHtml += `</div>`;
-        tableSlot.innerHTML += pairHtml;
-      });
-      updateActionButtons();
-    });
-
-    socket.on('your_hand', (hand) => {
-      myHandCards = hand || [];
-      const container = document.getElementById('my-hand-container');
-      container.innerHTML = '';
-      const total = myHandCards.length;
-      if (total === 0) return;
-
-      myHandCards.forEach((c, idx) => {
-        const isRed = ['♥', '♦'].includes(c.suit) ? 'red' : '';
-        const cardDiv = document.createElement('div');
-        cardDiv.className = `card-item ${isRed}`;
-        const xOffset = (idx - (total - 1) / 2) * 36;
-        cardDiv.style.transform = `translateX(${xOffset}px)`;
-        cardDiv.style.zIndex = 100 + idx;
-        cardDiv.innerHTML = `<div>${c.rank}<br>${c.suit}</div><div style="font-size:20px;text-align:center;margin:auto;">${c.suit}</div><div style="transform:rotate(180deg);">${c.rank}<br>${c.suit}</div>`;
-        cardDiv.onclick = () => socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardId: c.id });
-        container.appendChild(cardDiv);
-      });
-    });
-
-    socket.on('is_turn_data', (data) => {
-      isMyTurnFlag = data.isMyTurn;
-      isAttackerFlag = data.isAttacker;
-      document.getElementById('turn-indicator').innerText = isMyTurnFlag ? '⭐ Ваш ход!' : '⏳ Ход соперника...';
-      updateActionButtons();
-    });
-
-    function updateActionButtons() {
-      const bitoBtn = document.getElementById('action-btn-bito');
-      const takeBtn = document.getElementById('action-btn-take');
-      const tableHasCards = currentTableCards.length > 0;
-      const allDefended = tableHasCards && currentTableCards.every(tc => tc.defend !== null);
-
-      bitoBtn.style.display = (isMyTurnFlag && isAttackerFlag && tableHasCards && allDefended) ? 'block' : 'none';
-      takeBtn.style.display = (isMyTurnFlag && !isAttackerFlag && tableHasCards) ? 'block' : 'none';
+    function submitPromoCode() {
+      const code = document.getElementById('promo-code-input').value.trim();
+      if (!code) return alert('Введите промокод!');
+      socket.emit('activate_promo', { code });
+      document.getElementById('promo-code-input').value = '';
     }
 
-    function handleGameAction(action) {
-      if (currentGameId) socket.emit('game_action', { gameId: currentGameId, action });
-    }
-
-    socket.on('game_over', (data) => {
-      currentGameId = null;
-      alert(data.won ? `🎉 Победа! +${data.prize} ⭐` : '💔 Поражение.');
-      switchTab('lobbies');
-    });
+    function claimDailyBonus() { socket.emit('claim_daily'); }
 
     function updateProfileData(user) {
       if (!user) return;
@@ -535,8 +278,6 @@
       document.getElementById('header-unique-id').innerText = user.unique_id;
       document.getElementById('profile-name').innerText = user.first_name;
       document.getElementById('profile-unique-id').innerText = user.unique_id;
-      document.getElementById('stat-wins').innerText = user.wins ?? 0;
-      document.getElementById('stat-losses').innerText = user.losses ?? 0;
     }
 
     function switchTab(tabId, el) {
@@ -544,26 +285,146 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById(tabId + '-view')?.classList.add('active');
       if (el) el.classList.add('active');
-      if (tabId === 'lobbies') socket.emit('get_lobbies');
-      if (tabId === 'friends') socket.emit('get_friends');
-      if (tabId === 'leaderboard') socket.emit('get_leaderboard');
     }
 
-    socket.on('friends_list', (data) => {
-      const container = document.getElementById('friends-list-container');
-      document.getElementById('friends-count').innerText = data.friends.length;
-      container.innerHTML = data.friends.length === 0 ? '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Список друзей пуст</div>' : 
-        data.friends.map(f => `<div class="table-card"><b>${f.first_name}</b><span style="color:var(--accent-gold)">⭐ ${f.stars_balance}</span></div>`).join('');
-    });
-
-    socket.on('leaderboard_data', (list) => {
-      document.getElementById('leaderboard-list').innerHTML = (list || []).map((u, i) => `<div class="table-card"><b>#${i+1} ${u.first_name}</b><span style="color:var(--accent-gold)">⭐ ${u.stars_balance}</span></div>`).join('');
-    });
-
     socket.on('error_message', (msg) => alert(msg));
-    function claimDailyBonus() { socket.emit('claim_daily'); }
-    socket.on('daily_success', () => alert('Ежедневный бонус получен (+10 ⭐)!'));
-    function copyReferralLink() { alert('Ссылка скопирована!'); }
   </script>
 </body>
 </html>
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const path = require('path');
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
+
+app.use(express.static(__dirname));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+const users = {};           
+const uniqueIdToTgId = {};  
+
+// Непрерывный цикл Колеса Фортуны (работает независимо от активности игроков)
+const wheelMultipliers = [3, 0.5, 1.5, 0, 2, 0.5, 1.2, 0];
+let wheelTimer = 7;
+let wheelIsSpinning = false;
+let wheelBets = [];
+
+setInterval(() => {
+  if (!wheelIsSpinning) {
+    wheelTimer--;
+    if (wheelTimer <= 0) {
+      wheelIsSpinning = true;
+      wheelTimer = 5;
+
+      const winningIndex = Math.floor(Math.random() * 8);
+      const targetMultiplier = wheelMultipliers[winningIndex];
+      const targetDegree = (7 - winningIndex) * 45 + 22.5;
+
+      wheelBets.forEach((bet) => {
+        const player = users[bet.telegram_id];
+        if (!player) return;
+        const winAmount = Math.floor(bet.amount * targetMultiplier);
+        player.stars_balance += winAmount;
+
+        io.sockets.sockets.forEach((s) => {
+          if (s.userId === player.telegram_id) {
+            s.emit('wheel_spin_result', { targetDegree, multiplier: targetMultiplier, winAmount, newBalance: player.stars_balance });
+          }
+        });
+      });
+
+      io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: true, bets: wheelBets });
+
+      setTimeout(() => {
+        wheelIsSpinning = false;
+        wheelTimer = 7;
+        wheelBets = []; 
+        io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: false, bets: wheelBets });
+      }, 5000);
+    } else {
+      io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: false, bets: wheelBets });
+    }
+  }
+}, 1000);
+io.on('connection', (socket) => {
+  socket.on('auth', (data) => {
+    const { telegram_id, username, first_name } = data;
+    if (!telegram_id) return;
+
+    let user = users[telegram_id];
+    if (!user) {
+      const newUniqueId = Math.floor(100000 + Math.random() * 900000).toString();
+      user = {
+        telegram_id: String(telegram_id),
+        username: username || 'Игрок',
+        first_name: first_name || 'Игрок',
+        stars_balance: 0, // Баланс при первом входе строго 0
+        unique_id: newUniqueId,
+        activated_promos: [],
+        last_daily: 0
+      };
+      users[telegram_id] = user;
+      uniqueIdToTgId[newUniqueId] = telegram_id;
+    }
+
+    socket.userId = user.telegram_id;
+    socket.emit('auth_success', user);
+  });
+
+  // Активация промокодов
+  socket.on('activate_promo', (data) => {
+    const user = users[socket.userId];
+    if (!user) return;
+    const code = (data?.code || '').trim().toUpperCase();
+
+    if (user.activated_promos.includes(code)) {
+      return socket.emit('error_message', 'Вы уже активировали этот промокод!');
+    }
+
+    let reward = 0;
+    if (code === 'SUPERRICKY') reward = 50;
+    else if (code === 'BETATEST') reward = 150;
+    else return socket.emit('error_message', 'Неверный промокод!');
+
+    user.activated_promos.push(code);
+    user.stars_balance += reward;
+    socket.emit('auth_success', user);
+    socket.emit('error_message', `🎉 Промокод активирован! Начислено +${reward} ⭐`);
+  });
+
+  socket.on('wheel_place_bet', (data) => {
+    if (wheelIsSpinning) return socket.emit('error_message', 'Раунд уже вращается, дождитесь следующего!');
+    const user = users[socket.userId];
+    const amount = Number(data?.amount);
+    if (!user || !amount || amount <= 0 || user.stars_balance < amount) return socket.emit('error_message', 'Недостаточно звезд на балансе!');
+
+    user.stars_balance -= amount;
+    const existing = wheelBets.find(b => b.telegram_id === user.telegram_id);
+    if (existing) existing.amount += amount;
+    else wheelBets.push({ telegram_id: user.telegram_id, name: user.first_name, amount });
+
+    socket.emit('wheel_bet_accepted', { newBalance: user.stars_balance });
+    io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: false, bets: wheelBets });
+  });
+
+  // Ежедневный бонус с кулдауном 24 часа
+  socket.on('claim_daily', () => {
+    const user = users[socket.userId];
+    if (!user) return;
+    const now = Date.now();
+    if (user.last_daily && now - user.last_daily < 86400000) {
+      const hoursLeft = Math.ceil((86400000 - (now - user.last_daily)) / 3600000);
+      return socket.emit('error_message', `⏰ Бонус будет доступен через ${hoursLeft} ч.`);
+    }
+    user.last_daily = now;
+    user.stars_balance += 10;
+    socket.emit('auth_success', user);
+    socket.emit('error_message', '🎁 Ежедневный бонус получен (+10 ⭐)!');
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`CardFool Royal VIP Server running on port ${PORT}`));
