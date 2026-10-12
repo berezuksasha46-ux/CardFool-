@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,8 +11,35 @@ const io = new Server(server, { cors: { origin: '*' } });
 app.use(express.static(__dirname));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-const users = {};           
-const uniqueIdToTgId = {};  
+const DB_FILE = path.join(__dirname, 'database.json');
+
+// ЗАГРУЗКА И АВТОСОХРАНЕНИЕ БАЗЫ ДАННЫХ В ФАЙЛ
+let users = {};
+let uniqueIdToTgId = {};
+
+function loadDatabase() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+      users = data.users || {};
+      uniqueIdToTgId = data.uniqueIdToTgId || {};
+      console.log('БД успешно загружена из диска!');
+    }
+  } catch (err) {
+    console.error('Ошибка чтения БД:', err);
+  }
+}
+
+function saveDatabase() {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify({ users, uniqueIdToTgId }, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Ошибка сохранения БД:', err);
+  }
+}
+
+loadDatabase();
+
 const lobbies = {};         
 const activeGames = {};     
 const friendRequests = {}; 
@@ -44,6 +72,7 @@ setInterval(() => {
           }
         });
       });
+      saveDatabase();
 
       io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: true, bets: wheelBets, targetDegree });
 
@@ -109,11 +138,13 @@ io.on('connection', (socket) => {
           referrer.referral_earned += 10;
         }
       }
+      saveDatabase();
     } else {
       user.username = username || user.username;
       user.first_name = first_name || user.first_name;
       user.photo_url = photo_url || user.photo_url;
       user.is_online = true;
+      saveDatabase();
     }
 
     socket.userId = user.telegram_id;
@@ -122,7 +153,10 @@ io.on('connection', (socket) => {
     socket.emit('friend_requests_update', friendRequests[user.telegram_id] || []);
 
     socket.on('disconnect', () => {
-      if (users[socket.userId]) users[socket.userId].is_online = false;
+      if (users[socket.userId]) {
+        users[socket.userId].is_online = false;
+        saveDatabase();
+      }
     });
   });
 
@@ -173,14 +207,14 @@ io.on('connection', (socket) => {
       if (sender) {
         if (!recipient.friends.includes(sender.unique_id)) recipient.friends.push(sender.unique_id);
         if (!sender.friends.includes(recipient.unique_id)) sender.friends.push(recipient.unique_id);
+        saveDatabase();
       }
     }
     reqList.splice(reqIdx, 1);
     socket.emit('friend_requests_update', reqList);
     socket.emit('auth_success', recipient);
   });
-
-  socket.on('get_friends', () => {
+socket.on('get_friends', () => {
     if (!socket.userId) return;
     const user = users[socket.userId];
     if (!user) return;
@@ -202,6 +236,7 @@ io.on('connection', (socket) => {
 
     user.activated_promos.push(code);
     user.stars_balance += reward;
+    saveDatabase();
     socket.emit('auth_success', user);
     socket.emit('error_message', `🎉 Промокод активирован! Начислено +${reward} ⭐`);
   });
@@ -224,6 +259,7 @@ io.on('connection', (socket) => {
         if (comm > 0) { refUser.stars_balance += comm; refUser.referral_earned += comm; }
       }
     }
+    saveDatabase();
 
     socket.emit('wheel_bet_accepted', { newBalance: user.stars_balance });
     io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: false, bets: wheelBets });
@@ -265,6 +301,8 @@ io.on('connection', (socket) => {
 
     host.stars_balance -= table.stake;
     guest.stars_balance -= table.stake;
+    saveDatabase();
+
     delete lobbies[tableId];
     io.emit('lobbies_list', { tables: Object.values(lobbies) });
 
@@ -360,6 +398,7 @@ io.on('connection', (socket) => {
     }
     user.last_daily = now;
     user.stars_balance += 10;
+    saveDatabase();
     socket.emit('auth_success', user);
     socket.emit('error_message', '🎁 Бонус получен (+10 ⭐)!');
   });
@@ -412,6 +451,8 @@ function checkGameOver(gameId) {
       if (winner) { winner.wins = (winner.wins || 0) + 1; winner.stars_balance += prize; }
       if (loser) { loser.losses = (loser.losses || 0) + 1; }
 
+      saveDatabase();
+
       io.sockets.sockets.forEach((s) => {
         if (s.userId === game.players[winnerIdx].id) {
           s.emit('game_over', { won: true, prize });
@@ -427,4 +468,4 @@ function checkGameOver(gameId) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`CardFool Swiss Ultimate Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`CardFool Persistent Server running on port ${PORT}`));
