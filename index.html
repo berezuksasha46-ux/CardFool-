@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CardFool Ultimate Swiss</title>
+  <title>CardFool Swiss Watch Persistent</title>
   
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
@@ -302,7 +302,7 @@
     </div>
   </div>
 
-  <!-- ВКЛАДКА 5: ЗАЛ СЛАВЫ (С АВАТАРКАМИ И ID) -->
+  <!-- ВКЛАДКА 5: ЗАЛ СЛАВЫ -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Зал славы 🏆</h2>
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 40px;">Загрузка рейтинга...</div></div>
@@ -423,7 +423,10 @@
 
     function authenticate() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      let telegram_id = localStorage.getItem('cardfool_id') || (tgUser?.id ? String(tgUser.id) : 'browser_' + Math.floor(100000 + Math.random() * 900000));
+      let telegram_id = tgUser?.id ? String(tgUser.id) : localStorage.getItem('cardfool_id');
+      if (!telegram_id) {
+        telegram_id = 'browser_' + Math.floor(100000 + Math.random() * 900000);
+      }
       localStorage.setItem('cardfool_id', telegram_id);
 
       const urlParams = new URLSearchParams(window.location.search);
@@ -567,7 +570,6 @@
       }, 5200);
     });
 
-    // СТРОГАЯ СОРТИРОВКА КАРТ: Пика (♠) -> Креста (♣) -> Чирва (♥) -> Бубна (♦), козыри всегда справа
     const rankWeight = { '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14 };
     const suitOrder = { '♠': 1, '♣': 2, '♥': 3, '♦': 4 };
 
@@ -859,21 +861,4 @@
         const avatarStyle = u.photo_url ? `background-image: url('${u.photo_url}')` : '';
         const initial = u.photo_url ? '' : (u.first_name || 'U')[0].toUpperCase();
         return `
-          <div class="table-card" onclick="openUserProfile('${u.unique_id}')">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-weight: 900; color: var(--accent-gold); width: 24px;">#${i+1}</span>
-              <div class="avatar-wrapper"><div class="avatar-container" style="width: 38px; height: 38px; font-size: 14px; ${avatarStyle}">${initial}</div></div>
-              <div>
-                <b style="font-size: 14px;">${u.first_name}</b><br>
-                <small style="color:var(--text-muted)">ID: ${u.unique_id}</small>
-              </div>
-            </div>
-            <span style="color:var(--accent-gold); font-weight: 900;">⭐ ${u.stars_balance}</span>
-          </div>`;
-      }).join('');
-    });
-
-    socket.on('error_message', (msg) => alert(msg));
-  </script>
-</body>
-</html>
+          <d
