@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CardFool Mini App</title>
+  <title>CardFool Royal VIP</title>
   
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
@@ -100,8 +100,8 @@
 
     .poker-table { 
       background: radial-gradient(circle at center, #1e5c38 0%, #082113 100%); 
-      border: 3px solid #348e58; border-radius: 28px; padding: 14px; 
-      min-height: 240px; display: flex; flex-direction: column; justify-content: space-between; 
+      border: 3px solid #348e58; border-radius: 28px; padding: 12px; 
+      min-height: 220px; display: flex; flex-direction: column; justify-content: space-between; 
       position: relative; width: 100%; margin-bottom: 8px; 
     }
 
@@ -113,36 +113,37 @@
     }
 
     .deck-side-container { 
-      position: absolute; right: 12px; top: 12px; 
-      display: flex; align-items: center; gap: 10px; 
-      background: rgba(0,0,0,0.7); padding: 6px 12px; border-radius: 16px; font-size: 12px; z-index: 10;
+      position: absolute; right: 10px; top: 10px; 
+      display: flex; align-items: center; gap: 8px; 
+      background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 14px; font-size: 12px; z-index: 10;
     }
-    .deck-stack { width: 40px; height: 54px; background: #1c0e38; border-radius: 8px; border: 1.5px solid var(--accent-gold); position: relative; }
-    .trump-preview { position: absolute; bottom: -5px; right: -10px; width: 32px; height: 42px; background: #fff; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: #111; }
+    .deck-stack { width: 36px; height: 50px; background: #1c0e38; border-radius: 6px; border: 1.5px solid var(--accent-gold); position: relative; }
+    .trump-preview { position: absolute; bottom: -4px; right: -8px; width: 28px; height: 38px; background: #fff; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #111; }
 
-    #table-cards-slot { display: flex; gap: 8px; min-height: 85px; justify-content: center; align-items: center; flex-wrap: wrap; margin: auto 0; }
-    #my-hand-container { display: flex; justify-content: center; align-items: flex-end; height: 150px; position: relative; width: 100%; margin-bottom: 8px; }
+    #table-cards-slot { display: flex; gap: 6px; min-height: 80px; justify-content: center; align-items: center; flex-wrap: wrap; margin: auto 0; }
+    #my-hand-container { display: flex; justify-content: center; align-items: flex-end; height: 145px; position: relative; width: 100%; margin-bottom: 8px; }
 
+    /* ЧЕТКИЙ И АККУРАТНЫЙ ДИЗАЙН КАРТ БЕЗ ВЫХОДА ЗА РАМКИ */
     .card-item {
-      width: 66px; height: 98px; 
+      width: 60px; height: 90px; 
       background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); 
-      color: #0f172a; border-radius: 12px; 
+      color: #0f172a; border-radius: 10px; 
       display: flex; flex-direction: column; justify-content: space-between;
-      padding: 6px 7px; font-weight: 900; 
+      padding: 5px 6px; font-weight: 900; font-size: 12px;
       cursor: pointer; border: 1px solid #cbd5e1; 
       position: absolute; transform-origin: bottom center;
       transition: transform 0.2s ease, border-color 0.2s;
     }
     .card-item:hover, .card-item:active { 
-      transform: translateY(-28px) scale(1.18) rotate(0deg) !important; 
+      transform: translateY(-24px) scale(1.15) rotate(0deg) !important; 
       z-index: 500 !important; border-color: var(--accent-gold); 
     }
     .card-item.red { color: #dc2626; }
 
-    .table-card-item { width: 48px; height: 68px; background: #fff; color: #111; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between; padding: 4px 6px; font-weight: bold; font-size: 11px; border: 1px solid #ccc; }
+    .table-card-item { width: 44px; height: 62px; background: #fff; color: #111; border-radius: 7px; display: flex; flex-direction: column; justify-content: space-between; padding: 3px 5px; font-weight: bold; font-size: 10px; border: 1px solid #ccc; }
     .table-card-item.red { color: #dc2626; }
-    .card-pair { position: relative; width: 56px; height: 80px; margin: 3px; }
-    .card-pair .defend-card { position: absolute; top: 12px; left: 12px; z-index: 2; }
+    .card-pair { position: relative; width: 52px; height: 75px; margin: 2px; }
+    .card-pair .defend-card { position: absolute; top: 10px; left: 10px; z-index: 2; }
 
     .nav-bar { 
       position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
@@ -233,7 +234,7 @@
     </div>
   </div>
 
-  <!-- ВКЛАДКА 3: ДРУЗЬЯ И ЗАЯВКИ ПО ID -->
+  <!-- ВКЛАДКА 3: ДРУЗЬЯ И РЕФЕРАЛЫ -->
   <div id="friends-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Друзья и рефералы</h2>
 
@@ -273,6 +274,8 @@
           <div style="font-size: 11px; color: var(--text-muted);">Карт в руке: <span id="opponent-card-count">0</span></div>
         </div>
       </div>
+      <!-- ТАЙМЕР ХОДА 20 СЕКУНД -->
+      <div class="timer-badge" id="game-turn-timer-badge">⏱️ <span id="game-turn-sec">20</span>s</div>
     </div>
 
     <div class="poker-table">
@@ -306,7 +309,7 @@
     <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 40px;">Загрузка рейтинга...</div></div>
   </div>
 
-  <!-- ВКЛАДКА 6: ПРОФИЛЬ С ПОЛНОЙ СТАТИСТИКОЙ -->
+  <!-- ВКЛАДКА 6: ПРОФИЛЬ СО СТАТИСТИКОЙ -->
   <div id="profile-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Ваш профиль</h2>
     <div class="card-box">
@@ -320,7 +323,7 @@
       </div>
     </div>
 
-    <!-- Полный блок статистики -->
+    <!-- Статистика -->
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
       <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Победы</div><div style="font-size: 15px; font-weight: 900; color: var(--accent-gold);" id="stat-wins">0</div></div>
       <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Поражения</div><div style="font-size: 15px; font-weight: 900; color: var(--danger);" id="stat-losses">0</div></div>
@@ -339,7 +342,7 @@
     <button class="btn" style="width: 100%; margin-top: 4px; padding: 14px;" onclick="claimDailyBonus()">🎁 Ежедневный бонус (+10 ⭐)</button>
   </div>
 
-  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА (ПОДКИДНОЙ / ПЕРЕВОДНОЙ / КАРТЫ / СТАВКИ) -->
+  <!-- МОДАЛКА СОЗДАНИЯ СТОЛА -->
   <div id="create-table-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 14px; font-size: 19px; font-weight: 900; color: var(--accent-gold);">Создание стола</h3>
@@ -390,6 +393,7 @@
     let selectedGameMode = 'podkidnoy', selectedDeckSize = 36, selectedStake = 10;
     let myHandCards = [], isMyTurnFlag = false, isAttackerFlag = false, currentTableCards = [];
     let currentWheelRotation = 0;
+    let turnTimerInterval = null;
 
     function authenticate() {
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -495,223 +499,16 @@
     }
 
     socket.on('wheel_state', (data) => {
-      document.getElementById('wheel-timer-sec').innerText = data.timeLeft;
       const badge = document.getElementById('wheel-timer-badge');
+      const timerSec = document.getElementById('wheel-timer-sec');
       const btn = document.getElementById('wheel-place-btn');
-      
-      if (data.isSpinning) {
-        badge.innerText = '🌀 Вращение...';
-        btn.disabled = true; btn.style.opacity = '0.5';
-      } else {
-        badge.innerHTML = `⏳ <span id="wheel-timer-sec">${data.timeLeft}</span>s`;
-        btn.disabled = false; btn.style.opacity = '1';
-      }
-
       const betsList = document.getElementById('wheel-bets-list');
-      if (data.bets && data.bets.length > 0) {
-        betsList.innerHTML = data.bets.map(b => `<div style="display:flex;justify-content:space-between;padding:4px 0;"><b>${b.name}</b><span style="color:var(--accent-gold)">⭐ ${b.amount}</span></div>`).join('');
-      } else {
-        betsList.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 15px;">Ожидание первых ставок...</div>';
-      }
-    });
 
-    socket.on('wheel_spin_result', (data) => {
-      const spinner = document.getElementById('wheel-spinner-elem');
-      if (!spinner) return;
-      currentWheelRotation += (360 * 5) + data.targetDegree - (currentWheelRotation % 360);
-      spinner.style.transform = `rotate(${currentWheelRotation}deg)`;
+      if (timerSec) timerSec.innerText = data.timeLeft;
 
-      setTimeout(() => {
-        alert(`🎉 Выпал мультипликатор ${data.multiplier}x! Выигрыш: +${data.winAmount} ⭐`);
-        if (currentUser && data.newBalance !== undefined) {
-          currentUser.stars_balance = data.newBalance;
-          updateProfileData(currentUser);
-        }
-      }, 5200);
-    });
+      if (data.isSpinning) {
+        if (badge) badge.innerHTML = '🌀 Вращение...';
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
 
-    // ОТОБРАЖЕНИЕ КАРТ В РУКЕ ВЕЕРОМ (ДУГОЙ)
-    socket.on('your_hand', (hand) => {
-      myHandCards = hand || [];
-      const container = document.getElementById('my-hand-container');
-      container.innerHTML = '';
-      const total = myHandCards.length;
-      if (total === 0) return;
-
-      myHandCards.forEach((c, idx) => {
-        const isRed = ['♥', '♦'].includes(c.suit) ? 'red' : '';
-        const cardDiv = document.createElement('div');
-        cardDiv.className = `card-item ${isRed}`;
-
-        const mid = (total - 1) / 2;
-        const xOffset = (idx - mid) * 32;
-        const rot = (idx - mid) * 6; // Вращение для эффекта дуги
-        const yOffset = Math.abs(idx - mid) * 5;
-
-        cardDiv.style.transform = `translateX(${xOffset}px) translateY(${yOffset}px) rotate(${rot}deg)`;
-        cardDiv.style.zIndex = 100 + idx;
-        cardDiv.innerHTML = `<div>${c.rank}<br>${c.suit}</div><div style="font-size:20px;text-align:center;margin:auto;">${c.suit}</div><div style="transform:rotate(180deg);">${c.rank}<br>${c.suit}</div>`;
-        cardDiv.onclick = () => socket.emit('game_action', { gameId: currentGameId, action: 'play_card', cardId: c.id });
-        container.appendChild(cardDiv);
-      });
-    });
-
-    socket.on('game_state', (data) => {
-      currentGameId = data.gameId;
-      currentTableCards = data.tableCards || [];
-      switchTab('game');
-
-      document.getElementById('deck-count').innerText = data.deckCount;
-      if (data.trumpCard) {
-        const isRed = ['♥', '♦'].includes(data.trumpCard.suit);
-        const view = document.getElementById('deck-card-view');
-        view.innerHTML = `${data.trumpCard.rank}<br>${data.trumpCard.suit}`;
-        view.style.color = isRed ? '#dc2626' : '#111';
-      }
-
-      if (data.players) {
-        const opp = data.players.find(p => p.id !== currentUser.telegram_id);
-        if (opp) {
-          document.getElementById('opponent-name').innerText = opp.name;
-          document.getElementById('opponent-card-count').innerText = opp.handCount;
-        }
-      }
-
-      const tableSlot = document.getElementById('table-cards-slot');
-      tableSlot.innerHTML = '';
-      currentTableCards.forEach(pair => {
-        const attRed = ['♥', '♦'].includes(pair.attack.suit) ? 'red' : '';
-        let pairHtml = `<div class="card-pair"><div class="table-card-item ${attRed}"><div>${pair.attack.rank}</div><div>${pair.attack.suit}</div></div>`;
-        if (pair.defend) {
-          const defRed = ['♥', '♦'].includes(pair.defend.suit) ? 'red' : '';
-          pairHtml += `<div class="table-card-item defend-card ${defRed}"><div>${pair.defend.rank}</div><div>${pair.defend.suit}</div></div>`;
-        }
-        pairHtml += `</div>`;
-        tableSlot.innerHTML += pairHtml;
-      });
-      updateActionButtons();
-    });
-
-    socket.on('is_turn_data', (data) => {
-      isMyTurnFlag = data.isMyTurn;
-      isAttackerFlag = data.isAttacker;
-      document.getElementById('turn-indicator').innerText = isMyTurnFlag ? '⭐ Ваш ход!' : '⏳ Ход соперника...';
-      updateActionButtons();
-    });
-
-    function updateActionButtons() {
-      const bitoBtn = document.getElementById('action-btn-bito');
-      const takeBtn = document.getElementById('action-btn-take');
-      const tableHasCards = currentTableCards.length > 0;
-      const allDefended = tableHasCards && currentTableCards.every(tc => tc.defend !== null);
-
-      bitoBtn.style.display = (isMyTurnFlag && isAttackerFlag && tableHasCards && allDefended) ? 'block' : 'none';
-      takeBtn.style.display = (isMyTurnFlag && !isAttackerFlag && tableHasCards) ? 'block' : 'none';
-    }
-
-    function handleGameAction(action) {
-      if (currentGameId) socket.emit('game_action', { gameId: currentGameId, action });
-    }
-
-    socket.on('game_over', (data) => {
-      currentGameId = null;
-      alert(data.won ? `🎉 Победа! Вы выиграли банк +${data.prize} ⭐ (комиссия 10%)` : '💔 Поражение в игре.');
-      switchTab('lobbies');
-    });
-
-    function updateProfileData(user) {
-      if (!user) return;
-      document.getElementById('header-stars').innerText = user.stars_balance ?? 0;
-      document.getElementById('header-name').innerText = user.first_name;
-      document.getElementById('header-unique-id').innerText = user.unique_id;
-
-      if (user.photo_url) {
-        document.getElementById('header-avatar').style.backgroundImage = `url('${user.photo_url}')`;
-        document.getElementById('header-avatar').innerText = '';
-        document.getElementById('profile-avatar').style.backgroundImage = `url('${user.photo_url}')`;
-        document.getElementById('profile-avatar').innerText = '';
-      } else {
-        const initial = (user.first_name || 'U')[0].toUpperCase();
-        document.getElementById('header-avatar').innerText = initial;
-        document.getElementById('profile-avatar').innerText = initial;
-      }
-
-      document.getElementById('profile-name').innerText = user.first_name;
-      document.getElementById('profile-unique-id').innerText = user.unique_id;
-
-      const wins = user.wins || 0;
-      const losses = user.losses || 0;
-      const totalGames = wins + losses;
-      const winrate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
-
-      document.getElementById('stat-wins').innerText = wins;
-      document.getElementById('stat-losses').innerText = losses;
-      document.getElementById('stat-winrate').innerText = winrate + '%';
-      document.getElementById('stat-referrals').innerText = user.referral_count || 0;
-    }
-
-    function sendFriendRequest() {
-      const targetId = document.getElementById('add-friend-id-input').value.trim();
-      if (!targetId) return alert('Введите ID!');
-      socket.emit('send_friend_request', { targetId });
-      document.getElementById('add-friend-id-input').value = '';
-    }
-
-    socket.on('friend_requests_update', (requests) => {
-      const box = document.getElementById('friend-requests-box');
-      const list = document.getElementById('friend-requests-list');
-      if (requests && requests.length > 0) {
-        box.style.display = 'block';
-        list.innerHTML = requests.map(r => `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
-            <b>${r.fromName} (ID: ${r.fromUniqueId})</b>
-            <div style="display:flex; gap:4px;">
-              <button class="btn" style="padding:4px 8px; font-size:11px;" onclick="socket.emit('respond_friend_request', {fromTgId:'${r.fromTgId}', accept:true})">✔</button>
-              <button class="btn-danger" style="padding:4px 8px; font-size:11px;" onclick="socket.emit('respond_friend_request', {fromTgId:'${r.fromTgId}', accept:false})">✖</button>
-            </div>
-          </div>`).join('');
-      } else {
-        box.style.display = 'none';
-      }
-    });
-
-    socket.on('friends_list', (data) => {
-      const container = document.getElementById('friends-list-container');
-      document.getElementById('friends-count').innerText = data.friends.length;
-      container.innerHTML = data.friends.length === 0 ? '<div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div>' : 
-        data.friends.map(f => `<div class="table-card"><b>${f.first_name} (ID: ${f.unique_id})</b><span style="color:var(--accent-gold)">⭐ ${f.stars_balance}</span></div>`).join('');
-    });
-
-    function submitPromoCode() {
-      const code = document.getElementById('promo-code-input').value.trim();
-      if (!code) return alert('Введите промокод!');
-      socket.emit('activate_promo', { code });
-      document.getElementById('promo-code-input').value = '';
-    }
-
-    function claimDailyBonus() { socket.emit('claim_daily'); }
-
-    function copyReferralLink() {
-      if (!currentUser) return;
-      const link = `https://t.me/YourBotName/app?startapp=${currentUser.unique_id}`;
-      navigator.clipboard.writeText(link).then(() => alert('Реферальная ссылка скопирована!'));
-    }
-
-    function switchTab(tabId, el) {
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById(tabId + '-view')?.classList.add('active');
-      if (el) el.classList.add('active');
-      if (tabId === 'lobbies') socket.emit('get_lobbies');
-      if (tabId === 'friends') socket.emit('get_friends');
-      if (tabId === 'leaderboard') socket.emit('get_leaderboard');
-    }
-
-    socket.on('leaderboard_data', (list) => {
-      document.getElementById('leaderboard-list').innerHTML = (list || []).map((u, i) => `<div class="table-card"><b>#${i+1} ${u.first_name}</b><span style="color:var(--accent-gold)">⭐ ${u.stars_balance}</span></div>`).join('');
-    });
-
-    socket.on('error_message', (msg) => alert(msg));
-  </script>
-</body>
-</html>
+        if (data.targetDegree !== undefined) {
+          const spinner = document.getEle
