@@ -1,3 +1,145 @@
+  socket.on('game_action', (data) => {
+    const { gameId, action, cardId } = data;
+    const game = activeGames[gameId];
+    if (!game) return;
+
+    const pIdx = game.players.findIndex(p => p.id === socket.userId);
+    if (pIdx === -1) return;
+
+    const isAttacker = (pIdx === game.attackerIdx);
+    const isDefender = (pIdx === game.defenderIdx);
+
+    if (action === 'play_card') {
+      const hand = game.players[pIdx].hand;
+      const cardIdx = hand.findIndex(c => c.id === cardId);
+      if (cardIdx === -1) return;
+      const card = hand[cardIdx];
+
+      if (isAttacker) {
+        if (game.tableCards.length > 0) {
+          const valid = game.tableCards.some(pair => pair.attack.rank === card.rank || (pair.defend && pair.defend.rank === card.rank));
+          if (!valid) return;
+        }
+        hand.splice(cardIdx, 1);
+        game.tableCards.push({ attack: card, defend: null });
+        broadcastGameState(gameId);
+      } else if (isDefender) {
+        const openPair = game.tableCards.find(p => p.defend === null);
+        if (!openPair) return;
+        const attCard = openPair.attack;
+        const isTrump = card.suit === game.trumpCard.suit;
+        const isAttTrump = attCard.suit === game.trumpCard.suit;
+        const rankOrder = { '6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14 };
+        const canBeat = (isTrump && !isAttTrump) || (card.suit === attCard.suit && rankOrder[card.rank] > rankOrder[attCard.rank]);
+
+        if (!canBeat) return;
+        hand.splice(cardIdx, 1);
+        openPair.defend = card;
+        broadcastGameState(gameId);
+      }
+    } else if (action === 'bito' && isAttacker) {
+      game.tableCards = [];
+      refillHands(game);
+      game.attackerIdx = game.defenderIdx;
+      game.defenderIdx = (game.attackerIdx === 0 ? 1 : 0);
+      broadcastGameState(gameId);
+      checkGameOver(gameId);
+    } else if (action === 'take' && isDefender) {
+      const defHand = game.players[game.defenderIdx].hand;
+      game.tableCards.forEach(pair => { defHand.push(pair.attack); if (pair.defend) defHand.push(pair.defend); });
+      game.tableCards = [];
+      refillHands(game);
+      broadcastGameState(gameId);
+      checkGameOver(gameId);
+    }
+  });
+
+  // Ежедневный бонус с КД 24 часа
+  socket.on('claim_daily', () => {
+    const user = users[socket.userId];
+    if (!user) return;
+    const now = Date.now();
+    if (user.last_daily && now - user.last_daily < 86400000) {
+      const hoursLeft = Math.ceil((86400000 - (now - user.last_daily)) / 3600000);
+      return socket.emit('error_message', `⏰ Бонус будет доступен через ${hoursLeft} ч.`);
+    }
+    user.last_daily = now;
+    user.stars_balance += 10;
+    socket.emit('auth_success', user);
+    socket.emit('daily_success');
+  });
+
+  socket.on('get_user_profile', (data) => {
+    const target = users[uniqueIdToTgId[data.targetId] || data.targetId];
+    if (target) socket.emit('user_profile_data', target);
+  });
+
+  socket.on('get_leaderboard', () => {
+    const sorted = Object.values(users).sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 20);
+    socket.emit('leaderboard_data', sorted);
+  });
+});
+
+function refillHands(game) {
+  [game.attackerIdx, game.defenderIdx].forEach(idx => {
+    while (game.players[idx].hand.length < 6 && game.deck.length > 0) {
+      game.players[idx].hand.push(game.deck.pop());
+    }
+  });
+}
+
+function broadcastGameState(gameId) {
+  const game = activeGames[gameId];
+  if (!game) return;
+
+  io.sockets.sockets.forEach((s) => {
+    const pIdx = game.players.findIndex(p => p.id === s.userId);
+    if (pIdx === -1) return;
+    const p = game.players[pIdx];
+    const opponent = game.players[pIdx === 0 ? 1 : 0];
+
+    s.emit('game_state', {
+      gameId: game.id,
+      deckCount: game.deck.length,
+      trumpCard: game.trumpCard,
+      tableCards: game.tableCards,
+      players: [
+        { id: p.id, name: p.name, photoUrl: p.photoUrl, handCount: p.hand.length },
+        { id: opponent.id, name: opponent.name, photoUrl: opponent.photoUrl, handCount: opponent.hand.length }
+      ]
+    });
+    s.emit('your_hand', p.hand);
+    s.emit('is_turn_data', { isMyTurn: true, isAttacker: (pIdx === game.attackerIdx) });
+  });
+}
+
+function checkGameOver(gameId) {
+  const game = activeGames[gameId];
+  if (!game) return;
+  if (game.deck.length === 0) {
+    const p0Empty = game.players[0].hand.length === 0;
+    const p1Empty = game.players[1].hand.length === 0;
+    if (p0Empty || p1Empty) {
+      const winnerIdx = p0Empty ? 0 : 1;
+      const loserIdx = p0Empty ? 1 : 0;
+      const prize = game.stake * 2;
+      const winner = users[game.players[winnerIdx].id];
+      const loser = users[game.players[loserIdx].id];
+
+      if (winner) { winner.wins = (winner.wins || 0) + 1; winner.stars_balance += prize; }
+      if (loser) { loser.losses = (loser.losses || 0) + 1; }
+
+      io.sockets.sockets.forEach((s) => {
+        if (s.userId === game.players[winnerIdx].id) s.emit('game_over', { won: true, prize });
+        else if (s.userId === game.players[loserIdx].id) s.emit('game_over', { won: false, prize: 0 });
+      });
+      delete activeGames[gameId];
+    }
+  }
+}
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`CardFool VIP Server running on port ${PORT}`));
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
