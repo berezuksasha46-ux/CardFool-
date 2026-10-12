@@ -825,7 +825,7 @@
       }).join('');
     });
 
-    function submitPromoCode() {
+     function submitPromoCode() {
       const code = document.getElementById('promo-code-input').value.trim();
       if (!code) return alert('Введите промокод!');
       socket.emit('activate_promo', { code });
@@ -861,4 +861,21 @@
         const avatarStyle = u.photo_url ? `background-image: url('${u.photo_url}')` : '';
         const initial = u.photo_url ? '' : (u.first_name || 'U')[0].toUpperCase();
         return `
-          <d
+          <div class="table-card" onclick="openUserProfile('${u.unique_id}')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-weight: 900; color: var(--accent-gold); width: 24px;">#${i+1}</span>
+              <div class="avatar-wrapper"><div class="avatar-container" style="width: 38px; height: 38px; font-size: 14px; ${avatarStyle}">${initial}</div></div>
+              <div>
+                <b style="font-size: 14px;">${u.first_name}</b><br>
+                <small style="color:var(--text-muted)">ID: ${u.unique_id}</small>
+              </div>
+            </div>
+            <span style="color:var(--accent-gold); font-weight: 900;">⭐ ${u.stars_balance}</span>
+          </div>`;
+      }).join('');
+    });
+
+    socket.on('error_message', (msg) => alert(msg));
+  </script>
+</body>
+</html>
