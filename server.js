@@ -15,7 +15,8 @@ const uniqueIdToTgId = {};
 const lobbies = {};         
 const activeGames = {};     
 
-// Колесо фортуны с точным совпадением секторов с фронтендом
+// Колесо фортуны с независимым непрерывным таймером
+const wheelMultipliers = [3, 0.5, 1.5, 0, 2, 0.5, 1.2, 0];
 let wheelTimer = 7;
 let wheelIsSpinning = false;
 let wheelBets = [];
@@ -27,9 +28,8 @@ setInterval(() => {
       wheelIsSpinning = true;
       wheelTimer = 5;
 
-      const multipliers = [3, 0.5, 1.5, 0, 2, 0.5, 1.2, 0];
       const winningIndex = Math.floor(Math.random() * 8);
-      const targetMultiplier = multipliers[winningIndex];
+      const targetMultiplier = wheelMultipliers[winningIndex];
       const targetDegree = (7 - winningIndex) * 45 + 22.5;
 
       wheelBets.forEach((bet) => {
@@ -46,6 +46,7 @@ setInterval(() => {
       });
 
       io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: true, bets: wheelBets });
+
       setTimeout(() => {
         wheelIsSpinning = false;
         wheelTimer = 7;
@@ -87,15 +88,46 @@ io.on('connection', (socket) => {
         wins: 0, losses: 0,
         unique_id: newUniqueId,
         referrer_id: null,
+        activated_promos: [],
         last_daily: 0
       };
       users[telegram_id] = user;
       uniqueIdToTgId[newUniqueId] = telegram_id;
+
+      if (refId && refId !== newUniqueId && refId !== String(telegram_id)) {
+        const referrerTgId = uniqueIdToTgId[refId] || refId;
+        const referrer = users[referrerTgId];
+        if (referrer) {
+          user.referrer_id = referrer.unique_id;
+          referrer.stars_balance += 10;
+        }
+      }
     }
 
     socket.userId = user.telegram_id;
     socket.emit('auth_success', user);
     socket.emit('lobbies_list', { tables: Object.values(lobbies) });
+  });
+
+  // Обработка промокодов SUPERRICKY и BETATEST
+  socket.on('activate_promo', (data) => {
+    const user = users[socket.userId];
+    if (!user) return;
+    const code = (data?.code || '').trim().toUpperCase();
+
+    if (user.activated_promos.includes(code)) {
+      return socket.emit('error_message', 'Вы уже активировали этот промокод!');
+    }
+
+    let reward = 0;
+    if (code === 'SUPERRICKY') reward = 50;
+    else if (code === 'BETATEST') reward = 150;
+    else return socket.emit('error_message', 'Неверный промокод!');
+
+    user.activated_promos.push(code);
+    user.stars_balance += reward;
+    socket.emit('auth_success', user);
+    socket.emit('error_message', `🎉 Промокод активирован! Начислено +${reward} ⭐`);
   });
 
   socket.on('get_friends', () => {
@@ -109,7 +141,7 @@ io.on('connection', (socket) => {
     if (wheelIsSpinning) return socket.emit('error_message', 'Раунд уже начался!');
     const user = users[socket.userId];
     const amount = Number(data?.amount);
-    if (!user || !amount || amount <= 0 || user.stars_balance < amount) return socket.emit('error_message', 'Недостаточно звезд!');
+    if (!user || !amount || amount <= 0 || user.stars_balance < amount) return socket.emit('error_message', 'Недостаточно средств!');
 
     user.stars_balance -= amount;
     const existing = wheelBets.find(b => b.telegram_id === user.telegram_id);
@@ -122,7 +154,7 @@ io.on('connection', (socket) => {
 
   socket.on('create_table', (data) => {
     const user = users[socket.userId];
-    if (!user || user.stars_balance < data.stake) return socket.emit('error_message', 'Недостаточно звезд!');
+    if (!user || user.stars_balance < (data.stake || 10)) return socket.emit('error_message', 'Недостаточно звезд!');
 
     Object.keys(lobbies).forEach(id => { if (lobbies[id].hostId === user.telegram_id) delete lobbies[id]; });
 
@@ -143,7 +175,7 @@ io.on('connection', (socket) => {
   socket.on('join_table', (tableId) => {
     const table = lobbies[tableId];
     const guest = users[socket.userId];
-    if (!table || !guest || guest.stars_balance < table.stake) return socket.emit('error_message', 'Ошибка подключения к столу!');
+    if (!table || !guest || guest.stars_balance < table.stake) return socket.emit('error_message', 'Ошибка подключения!');
 
     const host = users[table.hostId];
     host.stars_balance -= table.stake;
@@ -186,7 +218,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Ежедневный бонус с КД 24 часа
   socket.on('claim_daily', () => {
     const user = users[socket.userId];
     if (!user) return;
@@ -198,7 +229,7 @@ io.on('connection', (socket) => {
     user.last_daily = now;
     user.stars_balance += 10;
     socket.emit('auth_success', user);
-    socket.emit('daily_success');
+    socket.emit('error_message', '🎁 Бонус получен (+10 ⭐)!');
   });
 
   socket.on('get_leaderboard', () => {
@@ -225,4 +256,4 @@ function broadcastGameState(gameId) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`CardFool Royal VIP Server running on port ${PORT}`));
