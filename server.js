@@ -14,9 +14,8 @@ const users = {};
 const uniqueIdToTgId = {};  
 const lobbies = {};         
 const activeGames = {};     
-const friendRequests = {}; // { targetTgId: [ { fromTgId, fromName, fromUniqueId } ] }
+const friendRequests = {}; 
 
-// Сектора колеса фортуны по часовой стрелке
 const wheelMultipliers = [3, 0.5, 1.5, 0, 2, 0.5, 1.2, 0];
 let wheelTimer = 7;
 let wheelIsSpinning = false;
@@ -46,7 +45,7 @@ setInterval(() => {
         });
       });
 
-      io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: true, bets: wheelBets });
+      io.emit('wheel_state', { timeLeft: wheelTimer, isSpinning: true, bets: wheelBets, targetDegree });
 
       setTimeout(() => {
         wheelIsSpinning = false;
@@ -85,7 +84,7 @@ io.on('connection', (socket) => {
         username: username || 'Игрок',
         first_name: first_name || 'Игрок',
         photo_url: photo_url || '',
-        stars_balance: 0, // Стартовый баланс строго 0
+        stars_balance: 0, 
         wins: 0, losses: 0,
         unique_id: newUniqueId,
         referrer_id: null,
@@ -120,7 +119,6 @@ io.on('connection', (socket) => {
     socket.emit('friend_requests_update', friendRequests[user.telegram_id] || []);
   });
 
-  // Заявка в друзья по ID
   socket.on('send_friend_request', (data) => {
     const sender = users[socket.userId];
     if (!sender) return;
@@ -165,7 +163,6 @@ io.on('connection', (socket) => {
     socket.emit('friends_list', { friends: friendsList });
   });
 
-  // Активация промокодов
   socket.on('activate_promo', (data) => {
     const user = users[socket.userId];
     if (!user) return;
@@ -195,7 +192,6 @@ io.on('connection', (socket) => {
     if (existing) existing.amount += amount;
     else wheelBets.push({ telegram_id: user.telegram_id, name: user.first_name, amount });
 
-    // 5% отчислений рефереру
     if (user.referrer_id) {
       const refUser = users[uniqueIdToTgId[user.referrer_id]];
       if (refUser) {
@@ -242,25 +238,31 @@ io.on('connection', (socket) => {
     const host = users[table.hostId];
     if (!host) return;
 
+    // Списание ставок строго при старте игры
     host.stars_balance -= table.stake;
     guest.stars_balance -= table.stake;
     delete lobbies[tableId];
     io.emit('lobbies_list', { tables: Object.values(lobbies) });
+
+    // Обновляем баланс в UI обоих игроков
+    io.sockets.sockets.forEach(s => {
+      if (s.userId === host.telegram_id) s.emit('auth_success', host);
+      if (s.userId === guest.telegram_id) s.emit('auth_success', guest);
+    });
 
     const gameId = 'game_' + Math.random().toString(36).substring(2, 9);
     const deck = createDeck(table.deckSize);
     activeGames[gameId] = {
       id: gameId, stake: table.stake, mode: table.mode, deck, trumpCard: deck[deck.length - 1], tableCards: [],
       players: [
-        { id: host.telegram_id, name: host.first_name, hand: deck.splice(0, 6) },
-        { id: guest.telegram_id, name: guest.first_name, hand: deck.splice(0, 6) }
+        { id: host.telegram_id, name: host.first_name, photo_url: host.photo_url, hand: deck.splice(0, 6) },
+        { id: guest.telegram_id, name: guest.first_name, photo_url: guest.photo_url, hand: deck.splice(0, 6) }
       ],
       attackerIdx: 0, defenderIdx: 1
     };
     broadcastGameState(gameId);
   });
 
-  // Логика игры (Атака, Защита, Перевод)
   socket.on('game_action', (data) => {
     const game = activeGames[data.gameId];
     if (!game) return;
@@ -285,7 +287,6 @@ io.on('connection', (socket) => {
         game.tableCards.push({ attack: card, defend: null });
         broadcastGameState(data.gameId);
       } else if (isDefender) {
-        // Переводной режим
         const canTransfer = game.mode === 'perevodnoy' && game.tableCards.length > 0 && game.tableCards.every(pair => pair.defend === null) && game.tableCards[0].attack.rank === card.rank;
         if (canTransfer) {
           hand.splice(cardIdx, 1);
@@ -337,7 +338,7 @@ io.on('connection', (socket) => {
     user.last_daily = now;
     user.stars_balance += 10;
     socket.emit('auth_success', user);
-    socket.emit('error_message', '🎁 Ежедневный бонус получен (+10 ⭐)!');
+    socket.emit('error_message', '🎁 Бонус получен (+10 ⭐)!');
   });
 
   socket.on('get_leaderboard', () => {
@@ -357,9 +358,15 @@ function broadcastGameState(gameId) {
   io.sockets.sockets.forEach((s) => {
     const pIdx = game.players.findIndex(p => p.id === s.userId);
     if (pIdx === -1) return;
-    s.emit('game_state', { gameId: game.id, deckCount: game.deck.length, trumpCard: game.trumpCard, tableCards: game.tableCards, players: game.players.map(p => ({ id: p.id, name: p.name, handCount: p.hand.length })) });
+    s.emit('game_state', { 
+      gameId: game.id, 
+      deckCount: game.deck.length, 
+      trumpCard: game.trumpCard, 
+      tableCards: game.tableCards, 
+      players: game.players.map(p => ({ id: p.id, name: p.name, photo_url: p.photo_url, handCount: p.hand.length })) 
+    });
     s.emit('your_hand', game.players[pIdx].hand);
-    s.emit('is_turn_data', { isMyTurn: true, isAttacker: (pIdx === game.attackerIdx) });
+    s.emit('is_turn_data', { isMyTurn: (pIdx === game.attackerIdx || pIdx === game.defenderIdx), isAttacker: (pIdx === game.attackerIdx) });
   });
 }
 
@@ -373,9 +380,8 @@ function checkGameOver(gameId) {
       const winnerIdx = p0Empty ? 0 : 1;
       const loserIdx = p0Empty ? 1 : 0;
 
-      // Вычисление банка с комиссией 10%
       const totalBank = game.stake * 2;
-      const prize = Math.floor(totalBank * 0.9);
+      const prize = Math.floor(totalBank * 0.9); // 10% системная комиссия
 
       const winner = users[game.players[winnerIdx].id];
       const loser = users[game.players[loserIdx].id];
@@ -384,8 +390,13 @@ function checkGameOver(gameId) {
       if (loser) { loser.losses = (loser.losses || 0) + 1; }
 
       io.sockets.sockets.forEach((s) => {
-        if (s.userId === game.players[winnerIdx].id) s.emit('game_over', { won: true, prize });
-        else if (s.userId === game.players[loserIdx].id) s.emit('game_over', { won: false, prize: 0 });
+        if (s.userId === game.players[winnerIdx].id) {
+          s.emit('game_over', { won: true, prize });
+          s.emit('auth_success', winner);
+        } else if (s.userId === game.players[loserIdx].id) {
+          s.emit('game_over', { won: false, prize: 0 });
+          s.emit('auth_success', loser);
+        }
       });
       delete activeGames[gameId];
     }
@@ -393,4 +404,4 @@ function checkGameOver(gameId) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`CardFool Full Stable Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`CardFool Swiss Watch Server running on port ${PORT}`));
