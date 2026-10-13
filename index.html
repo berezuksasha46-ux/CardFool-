@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CardFool Royal Swiss Swiss Persistent</title>
+  <title>CardFool Royal Ultimate Swiss</title>
   
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
@@ -24,7 +24,7 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
     html, body { width: 100%; height: 100%; overflow-x: hidden; background: radial-gradient(circle at 50% 0%, #200a45 0%, #05020a 100%); color: var(--text-main); }
-    body { padding-top: 62px; padding-bottom: 78px; }
+    body { padding-top: 62px; padding-bottom: 84px; }
 
     .top-header {
       position: fixed; top: 0; left: 0; right: 0; height: 62px;
@@ -145,15 +145,27 @@
     .card-pair { position: relative; width: 52px; height: 75px; margin: 2px; }
     .card-pair .defend-card { position: absolute; top: 10px; left: 10px; z-index: 2; }
 
+    /* ЭЛИТНАЯ НИЖНЯЯ ПАНЕЛЬ */
     .nav-bar { 
-      position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
-      background: rgba(10, 4, 22, 0.96); backdrop-filter: blur(20px);
-      display: flex; justify-content: space-around; 
-      align-items: center; border-top: 1px solid var(--border-color); z-index: 1000; 
+      position: fixed; bottom: 8px; left: 10px; right: 10px; height: 68px;
+      background: rgba(14, 6, 30, 0.95); backdrop-filter: blur(25px);
+      display: flex; justify-content: space-around; align-items: center; 
+      border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 24px; z-index: 1000; 
+      box-shadow: 0 8px 32px rgba(0,0,0,0.85); padding: 0 4px;
     }
-    .nav-item { color: var(--text-muted); text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; background: none; border: none; flex: 1; }
-    .nav-item.active { color: var(--accent-gold); font-weight: 900; }
-    .nav-icon { font-size: 20px; margin-bottom: 2px; }
+    .nav-item { 
+      color: var(--text-muted); text-align: center; font-size: 10px; font-weight: 700; 
+      cursor: pointer; background: none; border: none; flex: 1; 
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100%; transition: all 0.2s ease; border-radius: 18px; margin: 2px;
+    }
+    .nav-item.active { 
+      color: var(--accent-gold); font-weight: 900; 
+      background: rgba(251, 191, 36, 0.14);
+      box-shadow: inset 0 0 15px rgba(251, 191, 36, 0.25);
+    }
+    .nav-icon { font-size: 20px; margin-bottom: 2px; transition: transform 0.2s; }
+    .nav-item.active .nav-icon { transform: scale(1.12); }
 
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
     .modal.active { display: flex; }
@@ -178,12 +190,13 @@
     <div style="background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.4); padding: 5px 14px; border-radius: 20px; color: var(--accent-gold); font-weight: 900; font-size: 13px;">⭐ <span id="header-stars">0</span></div>
   </div>
 
-  <!-- ВКЛАДКА 1: СТОЛЫ -->
+  <!-- ВКЛАДКА 1: СТОЛЫ И ТУРНИРЫ -->
   <div id="lobbies-view" class="view active">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
       <h2 style="font-size: 22px; font-weight: 900;">Игровые столы</h2>
       <button class="btn" style="padding: 10px 18px; font-size: 13px;" onclick="openCreateTableModal()">⚔ Создать стол</button>
     </div>
+    
     <div id="my-waiting-table-box" style="display: none;" class="card-box">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -193,7 +206,17 @@
         <button class="btn-danger" onclick="leaveCurrentWaitingTable()">✖ Отмена</button>
       </div>
     </div>
-    <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 14px;">Нет активных столов. Создайте свой!</div></div>
+
+    <!-- ТУРНИРЫ НА ВКЛАДКЕ СТОЛЫ -->
+    <div style="margin-bottom: 16px;">
+      <div style="font-size: 15px; font-weight: 900; margin-bottom: 8px; color: var(--accent-gold); display: flex; align-items: center; gap: 6px;">
+        <span>🏆</span> Активные турниры:
+      </div>
+      <div id="lobbies-tournaments-container"><div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 10px;">Нет активных турниров</div></div>
+    </div>
+
+    <div style="font-size: 15px; font-weight: 900; margin-bottom: 8px;">Открытые столы:</div>
+    <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 30px; font-size: 14px;">Нет активных столов. Создайте свой!</div></div>
   </div>
 
   <!-- ВКЛАДКА 2: РУЛЕТКА -->
@@ -276,7 +299,7 @@
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div></div>
   </div>
 
-  <!-- ВКЛАДКА 4: ЗАЛ СЛАВЫ (2 ВКЛАДКИ) -->
+  <!-- ВКЛАДКА 4: ЗАЛ СЛАВЫ -->
   <div id="leaderboard-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Зал славы 🏆</h2>
 
@@ -294,7 +317,7 @@
         <div style="font-size: 12px; font-weight: 900; color: var(--accent-gold); margin-bottom: 4px;">🎁 Еженедельные награды:</div>
         <div style="font-size: 11px; color: var(--text-muted);">
           🥇 1 Место: <b>50 ⭐</b> | 🥈 2 Место: <b>25 ⭐</b> | 🥉 3 Место: <b>10 ⭐</b><br>
-          <small>*Обновляется каждые 7 дней. Остальные получают: <b>–</b></small>
+          <small>*Отображаются игроки, пригласившие от 1 друга. Обновление каждую неделю.</small>
         </div>
       </div>
       <div id="leaderboard-list-referrals"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка...</div></div>
@@ -304,9 +327,6 @@
   <!-- ВКЛАДКА 5: МАГАЗИН -->
   <div id="shop-view" class="view">
     <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Магазин 🛒</h2>
-    <div style="font-size: 14px; font-weight: 900; margin-bottom: 8px; color: var(--accent-gold);">Активные Турниры:</div>
-    <div id="tournaments-shop-list" style="margin-bottom: 16px;"><div style="text-align: center; color: var(--text-muted);">Нет активных турниров</div></div>
-
     <div style="font-size: 14px; font-weight: 900; margin-bottom: 8px; color: var(--accent-gold);">Пакеты звёзд ⭐:</div>
     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
       <div class="card-box" style="text-align: center;"><b>100 ⭐</b><br><small style="color:var(--accent-gold)">100 Telegram Stars</small><button class="btn" style="width:100%; margin-top:8px; padding:8px;" onclick="buyStars(100)">Купить</button></div>
@@ -347,7 +367,7 @@
 
     <button class="btn" style="width: 100%; margin-bottom: 16px; padding: 14px;" onclick="claimDailyBonus()">🎁 Ежедневный бонус (+10 ⭐)</button>
 
-    <!-- ЕЖЕДНЕВНЫЕ ЗАДАНИЯ В САМОМ НИЗУ ПРОФИЛЯ -->
+    <!-- ЕЖЕДНЕВНЫЕ ЗАДАНИЯ В САМОМ НИЗУ -->
     <div style="font-size: 16px; font-weight: 900; margin-bottom: 10px; color: var(--accent-gold);">🎯 Ежедневные задания:</div>
     <div id="daily-quests-container" style="margin-bottom: 20px;"><div style="text-align: center; color: var(--text-muted);">Загрузка заданий...</div></div>
   </div>
@@ -390,12 +410,11 @@
     </div>
   </div>
 
-  <!-- МОДАЛЬНОЕ ОКНО АДМИН-ПАНЕЛИ (ТОЛЬКО ДЛЯ 764303) -->
+  <!-- МОДАЛЬНОЕ ОКНО АДМИН-ПАНЕЛИ -->
   <div id="admin-modal" class="modal">
     <div class="modal-content">
       <h3 style="margin-bottom: 14px; font-size: 18px; font-weight: 900; color: var(--accent-gold);">⚙️ Админ-панель</h3>
       
-      <!-- ФОРМА ТУРНИРА -->
       <div class="card-box" style="text-align: left; margin-bottom: 12px; padding: 12px;">
         <b style="font-size: 13px; color: var(--accent-gold);">🏆 Создать турнир:</b>
         <input type="text" id="adm-tour-title" placeholder="Название турнира" style="width:100%; margin-top:6px; padding:8px; background:#0b0614; border:1px solid var(--border-color); color:#fff; border-radius:8px;">
@@ -433,7 +452,6 @@
         <button class="btn" style="width:100%; margin-top:10px; padding:10px;" onclick="submitAdminCreateTournament()">Запустить Турнир</button>
       </div>
 
-      <!-- ФОРМА ЗАДАНИЯ -->
       <div class="card-box" style="text-align: left; padding: 12px;">
         <b style="font-size: 13px; color: var(--accent-gold);">🎯 Добавить Ежедневное Задание:</b>
         <input type="text" id="adm-quest-title" placeholder="Описание (например, Сыграть 3 игры)" style="width:100%; margin-top:6px; padding:8px; background:#0b0614; border:1px solid var(--border-color); color:#fff; border-radius:8px;">
@@ -512,7 +530,7 @@
     </div>
   </div>
 
-  <!-- НИЖНЕЕ МЕНЮ НАВИГАЦИИ (6 ВКЛАДОК) -->
+  <!-- ЭЛИТНАЯ НИЖНЯЯ ПАНЕЛЬ (6 ВКЛАДОК) -->
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
     <button class="nav-item" onclick="switchTab('wheel', this)"><div class="nav-icon">🎡</div><div>Рулетка</div></button>
@@ -520,8 +538,7 @@
     <button class="nav-item" onclick="switchTab('leaderboard', this)"><div class="nav-icon">🏆</div><div>Зал славы</div></button>
     <button class="nav-item" onclick="switchTab('shop', this)"><div class="nav-icon">🛒</div><div>Магазин</div></button>
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
-  </div>
-  <script>
+  </div>  <script>
     let tg = window.Telegram?.WebApp;
     if (tg) { tg.ready(); if (tg.expand) tg.expand(); }
 
@@ -592,7 +609,6 @@
       document.getElementById('stat-winrate').innerText = winrate + '%';
       document.getElementById('stat-referrals').innerText = user.referral_count || 0;
 
-      // ПРОВЕРКА НА АДМИНА (ТОЛЬКО ДЛЯ ID 764303 ИЛИ UNIQUE ID 764303)
       if (String(user.telegram_id) === '764303' || String(user.unique_id) === '764303') {
         document.getElementById('admin-panel-btn').style.display = 'block';
       }
@@ -637,34 +653,49 @@
         container.innerHTML = '<div style="text-align: center; color: var(--text-muted);">Заданий на сегодня пока нет.</div>';
         return;
       }
-      container.innerHTML = quests.map(q => `
-        <div class="card-box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:12px;">
-          <div>
-            <b style="font-size:13px;">${q.title}</b><br>
-            <small style="color:var(--text-muted)">Прогресс: ${q.progress || 0}/${q.target}</small>
-          </div>
-          <button class="btn" style="padding:6px 12px; font-size:12px;" ${q.claimed ? 'disabled style="opacity:0.5"' : ''} onclick="socket.emit('claim_quest', '${q.id}')">
-            ${q.claimed ? 'Выполнено' : '+' + q.reward + ' ⭐'}
-          </button>
-        </div>`).join('');
+      container.innerHTML = quests.map(q => {
+        const progress = q.progress || 0;
+        const target = q.target || 1;
+        const isCompleted = progress >= target;
+        const claimed = q.claimed;
+
+        let btnHtml = '';
+        if (claimed) {
+          btnHtml = `<button class="btn btn-secondary" style="padding:6px 12px; font-size:12px; opacity:0.6;" disabled>Выполнено</button>`;
+        } else if (isCompleted) {
+          btnHtml = `<button class="btn" style="padding:6px 12px; font-size:12px;" onclick="socket.emit('claim_quest', '${q.id}')">+${q.reward} ⭐</button>`;
+        } else {
+          btnHtml = `<button class="btn btn-secondary" style="padding:6px 12px; font-size:12px; opacity:0.4;" disabled>Сбор (${progress}/${target})</button>`;
+        }
+
+        return `
+          <div class="card-box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:12px;">
+            <div>
+              <b style="font-size:13px;">${q.title}</b><br>
+              <small style="color:${isCompleted ? 'var(--success)' : 'var(--text-muted)'}">Прогресс: ${progress}/${target}</small>
+            </div>
+            ${btnHtml}
+          </div>`;
+      }).join('');
     });
 
     socket.on('tournaments_data', (list) => {
-      const container = document.getElementById('tournaments-shop-list');
+      const container = document.getElementById('lobbies-tournaments-container');
+      if (!container) return;
       if (!list || list.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted);">Нет активных турниров</div>';
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 10px;">Нет активных турниров</div>';
         return;
       }
       container.innerHTML = list.map(t => `
-        <div class="card-box" style="margin-bottom:8px; padding:12px; text-align:left;">
+        <div class="card-box" style="margin-bottom:8px; padding:12px; text-align:left; border-color:var(--accent-gold);">
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <b style="font-size:14px; color:var(--accent-gold);">${t.title}</b>
             <small style="color:var(--text-muted)">👥 ${t.joinedCount}/${t.maxPlayers}</small>
           </div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
-            Взнос: <b>${t.stake > 0 ? t.stake + ' ⭐' : 'Бесплатно'}</b> | Приз: <b>${t.prize} ⭐</b>
+            Взнос: <b>${t.stake > 0 ? t.stake + ' ⭐' : 'Бесплатно'}</b> | Приз: <b style="color:var(--success);">${t.prize} ⭐</b>
           </div>
-          <button class="btn" style="width:100%; margin-top:8px; padding:8px;" onclick="socket.emit('join_tournament', '${t.id}')">Вступить в турнир</button>
+          <button class="btn" style="width:100%; margin-top:8px; padding:8px; font-size:12px;" onclick="socket.emit('join_tournament', '${t.id}')">Вступить в турнир</button>
         </div>`).join('');
     });
 
@@ -699,27 +730,32 @@
       }
 
       if (refsList && data.topRefs) {
-        refsList.innerHTML = data.topRefs.map((u, i) => {
-          const avatarStyle = u.photo_url ? `background-image: url('${u.photo_url}')` : '';
-          const initial = u.photo_url ? '' : (u.first_name || 'U')[0].toUpperCase();
-          let prizeTag = '–';
-          if (i === 0) prizeTag = '50 ⭐';
-          else if (i === 1) prizeTag = '25 ⭐';
-          else if (i === 2) prizeTag = '10 ⭐';
+        if (data.topRefs.length === 0) {
+          refsList.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Пока никто не пригласил друзей</div>';
+        } else {
+          refsList.innerHTML = data.topRefs.map((u, i) => {
+            const avatarStyle = u.photo_url ? `background-image: url('${u.photo_url}')` : '';
+            const initial = u.photo_url ? '' : (u.first_name || 'U')[0].toUpperCase();
+            
+            let prizeTag = '–';
+            if (i === 0) prizeTag = '50 ⭐ (1 место)';
+            else if (i === 1) prizeTag = '25 ⭐ (2 место)';
+            else if (i === 2) prizeTag = '10 ⭐ (3 место)';
 
-          return `
-            <div class="table-card" onclick="openUserProfile('${u.unique_id}')">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-weight: 900; color: var(--accent-gold); width: 24px;">#${i+1}</span>
-                <div class="avatar-wrapper"><div class="avatar-container" style="width: 38px; height: 38px; font-size: 14px; ${avatarStyle}">${initial}</div></div>
-                <div>
-                  <b style="font-size: 14px;">${u.first_name}</b><br>
-                  <small style="color:var(--text-muted)">Приглашено: ${u.weekly_refs || 0}</small>
+            return `
+              <div class="table-card" onclick="openUserProfile('${u.unique_id}')">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="font-weight: 900; color: var(--accent-gold); width: 24px;">#${i+1}</span>
+                  <div class="avatar-wrapper"><div class="avatar-container" style="width: 38px; height: 38px; font-size: 14px; ${avatarStyle}">${initial}</div></div>
+                  <div>
+                    <b style="font-size: 14px;">${u.first_name}</b><br>
+                    <small style="color:var(--text-muted)">Приглашено: ${u.weekly_refs || 0}</small>
+                  </div>
                 </div>
-              </div>
-              <span style="color:var(--accent-gold); font-weight: 900;">${prizeTag}</span>
-            </div>`;
-        }).join('');
+                <span style="color:var(--accent-gold); font-weight: 900; font-size: 13px;">${prizeTag}</span>
+              </div>`;
+          }).join('');
+        }
       }
     });
 
@@ -777,7 +813,7 @@
       const availableTables = tables.filter(t => !currentUser || String(t.hostId) !== String(currentUser.telegram_id));
       
       if (availableTables.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 14px;">Нет активных столов. Создайте свой!</div>';
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 30px; font-size: 14px;">Нет активных столов. Создайте свой!</div>';
         return;
       }
       container.innerHTML = '';
@@ -920,8 +956,7 @@
           }
         }
       }
-
-      const tableSlot = document.getElementById('table-cards-slot');
+const tableSlot = document.getElementById('table-cards-slot');
       tableSlot.innerHTML = '';
       currentTableCards.forEach(pair => {
         const attRed = ['♥', '♦'].includes(pair.attack.suit) ? 'red' : '';
@@ -1087,10 +1122,12 @@
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       document.getElementById(tabId + '-view')?.classList.add('active');
       if (el) el.classList.add('active');
-      if (tabId === 'lobbies') socket.emit('get_lobbies');
+      if (tabId === 'lobbies') {
+        socket.emit('get_lobbies');
+        socket.emit('get_tournaments');
+      }
       if (tabId === 'friends') socket.emit('get_friends');
       if (tabId === 'leaderboard') socket.emit('get_leaderboard');
-      if (tabId === 'shop') socket.emit('get_tournaments');
       if (tabId === 'profile') socket.emit('get_daily_quests');
     }
 
