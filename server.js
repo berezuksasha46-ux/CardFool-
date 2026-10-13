@@ -30,7 +30,7 @@ function loadDatabase() {
       uniqueIdToTgId = data.uniqueIdToTgId || {};
       adminQuests = data.adminQuests || adminQuests;
       tournaments = data.tournaments || [];
-      console.log('БД успешно загружена.');
+      console.log('БД с новой системой ID загружена.');
     }
   } catch (err) {
     console.error('Ошибка чтения БД:', err);
@@ -145,9 +145,11 @@ io.on('connection', (socket) => {
     const { telegram_id, username, first_name, photo_url, refId } = data;
     if (!telegram_id) return;
 
+    // СИСТЕМА ID: Первые 6 цифр от Telegram ID пользователя
+    const newUniqueId = String(telegram_id).slice(0, 6);
+
     let user = users[telegram_id];
     if (!user) {
-      const newUniqueId = (String(telegram_id) === '764303') ? '764303' : Math.floor(100000 + Math.random() * 900000).toString();
       user = {
         telegram_id: String(telegram_id),
         username: username || 'Игрок',
@@ -185,9 +187,11 @@ io.on('connection', (socket) => {
       }
       saveDatabase();
     } else {
+      user.unique_id = newUniqueId;
       user.username = username || user.username;
       user.first_name = first_name || user.first_name;
       user.photo_url = photo_url || user.photo_url;
+      uniqueIdToTgId[newUniqueId] = telegram_id;
       saveDatabase();
     }
 
@@ -205,7 +209,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('admin_create_tournament', (data) => {
-    if (String(socket.userId) !== '764303' && users[socket.userId]?.unique_id !== '764303') return;
+    if (!String(socket.userId).startsWith('764303') && users[socket.userId]?.unique_id !== '764303') return;
     const prize = (data.prizeType === 'fixed') ? data.fixedPrize : Math.floor(data.stake * data.players * 0.9);
     tournaments.push({
       id: 'tour_' + Date.now(),
@@ -223,7 +227,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('admin_create_quest', (data) => {
-    if (String(socket.userId) !== '764303' && users[socket.userId]?.unique_id !== '764303') return;
+    if (!String(socket.userId).startsWith('764303') && users[socket.userId]?.unique_id !== '764303') return;
     adminQuests.push({
       id: 'q_' + Date.now(),
       title: data.title,
@@ -256,7 +260,6 @@ io.on('connection', (socket) => {
     if (!user.quest_progress) user.quest_progress = {};
     const currentProgress = user.quest_progress[questId] || 0;
 
-    // ЖЕСТКАЯ ПРОВЕРКА ПРОГРЕССА
     if (currentProgress < quest.target) {
       return socket.emit('error_message', `Задание еще не выполнено! (${currentProgress}/${quest.target})`);
     }
@@ -469,7 +472,6 @@ io.on('connection', (socket) => {
       attackerIdx: 0, defenderIdx: 1
     };
 
-    // Засчитываем прогресс квеста "Сыграть игру"
     updateQuestProgress(host.telegram_id, 'play');
     updateQuestProgress(guest.telegram_id, 'play');
 
@@ -557,7 +559,6 @@ socket.on('claim_daily', () => {
   socket.on('get_leaderboard', () => {
     const allUsers = Object.values(users);
     const topStars = [...allUsers].sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 20);
-    // Показываем в ТОП рефералов только тех, кто пригласил хотя бы 1 человека
     const topRefs = allUsers.filter(u => (u.weekly_refs || 0) > 0).sort((a, b) => (b.weekly_refs || 0) - (a.weekly_refs || 0)).slice(0, 20);
 
     socket.emit('leaderboard_data', { topStars, topRefs });
@@ -628,4 +629,4 @@ function checkGameOver(gameId) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`CardFool Ultimate Secured Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`CardFool Swiss Ultimate ID System Server running on port ${PORT}`));
