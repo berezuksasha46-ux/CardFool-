@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CardFool Swiss Watch Persistent</title>
+  <title>CardFool Royal Swiss Swiss Persistent</title>
   
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
@@ -151,15 +151,19 @@
       display: flex; justify-content: space-around; 
       align-items: center; border-top: 1px solid var(--border-color); z-index: 1000; 
     }
-    .nav-item { color: var(--text-muted); text-align: center; font-size: 11px; font-weight: 700; cursor: pointer; background: none; border: none; }
+    .nav-item { color: var(--text-muted); text-align: center; font-size: 10px; font-weight: 700; cursor: pointer; background: none; border: none; flex: 1; }
     .nav-item.active { color: var(--accent-gold); font-weight: 900; }
-    .nav-icon { font-size: 22px; margin-bottom: 2px; }
+    .nav-icon { font-size: 20px; margin-bottom: 2px; }
 
     .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
     .modal.active { display: flex; }
-    .modal-content { background: #160a2d; width: 100%; max-width: 390px; border-radius: 26px; padding: 22px; border: 1px solid var(--border-color); text-align: center; }
+    .modal-content { background: #160a2d; width: 100%; max-width: 390px; border-radius: 26px; padding: 22px; border: 1px solid var(--border-color); text-align: center; max-height: 90vh; overflow-y: auto; }
     .option-btn { background: #251346; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 12px; cursor: pointer; font-size: 12px; font-weight: 700; }
     .option-btn.selected { background: var(--accent-gold-gradient) !important; color: #000 !important; font-weight: 900; border-color: transparent !important; }
+    
+    .sub-tabs { display: flex; background: rgba(0,0,0,0.4); border-radius: 14px; padding: 4px; margin-bottom: 14px; border: 1px solid var(--border-color); }
+    .sub-tab { flex: 1; padding: 10px; text-align: center; font-size: 12px; font-weight: 800; border-radius: 10px; cursor: pointer; color: var(--text-muted); }
+    .sub-tab.active { background: var(--accent-gold-gradient); color: #000; }
   </style>
 </head>
 <body>
@@ -192,7 +196,7 @@
     <div id="tables-container"><div style="text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 14px;">Нет активных столов. Создайте свой!</div></div>
   </div>
 
-  <!-- ВКЛАДКА 2: КОЛЕСО ФОРТУНЫ -->
+  <!-- ВКЛАДКА 2: РУЛЕТКА -->
   <div id="wheel-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h2 style="font-size: 22px; font-weight: 900;">Колесо Фортуны</h2>
@@ -257,14 +261,98 @@
         <span style="font-weight: 900; font-size: 15px; color: var(--accent-gold);">Реферальная программа</span>
       </div>
       <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">+10 ⭐ за друга и 5% от всех его ставок!</div>
-      <button class="btn" style="width: 100%; padding: 12px; font-size: 13px;" onclick="copyReferralLink()">✨ Скопировать ссылку</button>
+      <button class="btn" style="width: 100%; padding: 12px; font-size: 13px; margin-bottom: 12px;" onclick="copyReferralLink()">✨ Скопировать ссылку</button>
+
+      <div style="font-size: 13px; font-weight: 900; color: var(--accent-gold); margin-bottom: 8px;">🏆 Награды за приглашения:</div>
+      <div style="font-size: 11px; display: grid; gap: 4px;">
+        <div style="display:flex; justify-content:space-between;"><span>👥 3 друга:</span><b style="color:var(--accent-gold)">+12 ⭐</b></div>
+        <div style="display:flex; justify-content:space-between;"><span>👥 10 друзей:</span><b style="color:var(--accent-gold)">+25 ⭐</b></div>
+        <div style="display:flex; justify-content:space-between;"><span>👥 25 друзей:</span><b style="color:var(--accent-gold)">+75 ⭐</b></div>
+        <div style="display:flex; justify-content:space-between;"><span>👥 50 друзей:</span><b style="color:var(--accent-gold)">+250 ⭐</b></div>
+      </div>
     </div>
 
     <div style="font-size: 15px; font-weight: 900; margin-bottom: 10px;">Мои друзья (<span id="friends-count">0</span>)</div>
     <div id="friends-list-container"><div style="text-align: center; color: var(--text-muted); margin-top: 20px;">Список друзей пуст</div></div>
   </div>
 
-  <!-- ВКЛАДКА 4: ИГРА В ДУРАКА -->
+  <!-- ВКЛАДКА 4: ЗАЛ СЛАВЫ (2 ВКЛАДКИ) -->
+  <div id="leaderboard-view" class="view">
+    <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Зал славы 🏆</h2>
+
+    <div class="sub-tabs">
+      <div class="sub-tab active" id="tab-btn-stars" onclick="switchLeaderboardSubTab('stars')">⭐ По Звёздам</div>
+      <div class="sub-tab" id="tab-btn-referrals" onclick="switchLeaderboardSubTab('referrals')">👥 ТОП Рефералов</div>
+    </div>
+
+    <div id="leaderboard-sub-stars" class="sub-view">
+      <div id="leaderboard-list-stars"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка...</div></div>
+    </div>
+
+    <div id="leaderboard-sub-referrals" class="sub-view" style="display: none;">
+      <div class="card-box" style="background: rgba(251, 191, 36, 0.08); text-align: left; padding: 12px; margin-bottom: 12px;">
+        <div style="font-size: 12px; font-weight: 900; color: var(--accent-gold); margin-bottom: 4px;">🎁 Еженедельные награды:</div>
+        <div style="font-size: 11px; color: var(--text-muted);">
+          🥇 1 Место: <b>50 ⭐</b> | 🥈 2 Место: <b>25 ⭐</b> | 🥉 3 Место: <b>10 ⭐</b><br>
+          <small>*Обновляется каждые 7 дней. Остальные получают: <b>–</b></small>
+        </div>
+      </div>
+      <div id="leaderboard-list-referrals"><div style="text-align: center; color: var(--text-muted); margin-top: 30px;">Загрузка...</div></div>
+    </div>
+  </div>
+
+  <!-- ВКЛАДКА 5: МАГАЗИН -->
+  <div id="shop-view" class="view">
+    <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Магазин 🛒</h2>
+    <div style="font-size: 14px; font-weight: 900; margin-bottom: 8px; color: var(--accent-gold);">Активные Турниры:</div>
+    <div id="tournaments-shop-list" style="margin-bottom: 16px;"><div style="text-align: center; color: var(--text-muted);">Нет активных турниров</div></div>
+
+    <div style="font-size: 14px; font-weight: 900; margin-bottom: 8px; color: var(--accent-gold);">Пакеты звёзд ⭐:</div>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+      <div class="card-box" style="text-align: center;"><b>100 ⭐</b><br><small style="color:var(--accent-gold)">100 Telegram Stars</small><button class="btn" style="width:100%; margin-top:8px; padding:8px;" onclick="buyStars(100)">Купить</button></div>
+      <div class="card-box" style="text-align: center;"><b>500 ⭐</b><br><small style="color:var(--accent-gold)">500 Telegram Stars</small><button class="btn" style="width:100%; margin-top:8px; padding:8px;" onclick="buyStars(500)">Купить</button></div>
+    </div>
+  </div>
+
+  <!-- ВКЛАДКА 6: ПРОФИЛЬ -->
+  <div id="profile-view" class="view">
+    <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Ваш профиль</h2>
+    <div class="card-box">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <div class="avatar-wrapper"><div id="profile-avatar" class="avatar-container" style="width: 56px; height: 56px; font-size: 22px;">U</div></div>
+        <div>
+          <div style="font-size: 17px; font-weight: 900;" id="profile-name">Игрок</div>
+          <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="profile-unique-id" style="color: var(--accent-gold); font-weight: 800;">------</span></div>
+          <div style="font-size: 11px; color: var(--success); font-weight: 800; margin-top: 2px;" id="profile-last-online">🟢 В сети</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
+      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Победы</div><div style="font-size: 15px; font-weight: 900; color: var(--accent-gold);" id="stat-wins">0</div></div>
+      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Поражения</div><div style="font-size: 15px; font-weight: 900; color: var(--danger);" id="stat-losses">0</div></div>
+      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Винрейт</div><div style="font-size: 15px; font-weight: 900; color: var(--success);" id="stat-winrate">0%</div></div>
+      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Рефералы</div><div style="font-size: 15px; font-weight: 900; color: #a855f7;" id="stat-referrals">0</div></div>
+    </div>
+
+    <button id="admin-panel-btn" class="btn" style="display: none; width: 100%; margin-bottom: 12px; background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); color: #fff;" onclick="openAdminModal()">⚙️ Админ-панель (ID 764303)</button>
+
+    <div class="card-box" style="margin-bottom: 12px;">
+      <div style="font-weight: 900; font-size: 13px; margin-bottom: 8px; color: var(--accent-gold);">🎟️ Активировать промокод</div>
+      <div style="display: flex; gap: 8px;">
+        <input type="text" id="promo-code-input" placeholder="Введите код..." style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 12px; font-size: 13px; outline: none;">
+        <button class="btn" style="padding: 10px 16px;" onclick="submitPromoCode()">OK</button>
+      </div>
+    </div>
+
+    <button class="btn" style="width: 100%; margin-bottom: 16px; padding: 14px;" onclick="claimDailyBonus()">🎁 Ежедневный бонус (+10 ⭐)</button>
+
+    <!-- ЕЖЕДНЕВНЫЕ ЗАДАНИЯ В САМОМ НИЗУ ПРОФИЛЯ -->
+    <div style="font-size: 16px; font-weight: 900; margin-bottom: 10px; color: var(--accent-gold);">🎯 Ежедневные задания:</div>
+    <div id="daily-quests-container" style="margin-bottom: 20px;"><div style="text-align: center; color: var(--text-muted);">Загрузка заданий...</div></div>
+  </div>
+
+  <!-- ИГРОВОЙ СТОЛ -->
   <div id="game-view" class="view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
       <div style="display: flex; align-items: center; gap: 10px;">
@@ -302,42 +390,64 @@
     </div>
   </div>
 
-  <!-- ВКЛАДКА 5: ЗАЛ СЛАВЫ -->
-  <div id="leaderboard-view" class="view">
-    <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Зал славы 🏆</h2>
-    <div id="leaderboard-list"><div style="text-align: center; color: var(--text-muted); margin-top: 40px;">Загрузка рейтинга...</div></div>
-  </div>
-
-  <!-- ВКЛАДКА 6: ПРОФИЛЬ -->
-  <div id="profile-view" class="view">
-    <h2 style="font-size: 22px; font-weight: 900; margin-bottom: 14px;">Ваш профиль</h2>
-    <div class="card-box">
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <div class="avatar-wrapper"><div id="profile-avatar" class="avatar-container" style="width: 56px; height: 56px; font-size: 22px;">U</div></div>
-        <div>
-          <div style="font-size: 17px; font-weight: 900;" id="profile-name">Игрок</div>
-          <div style="font-size: 12px; color: var(--text-muted);">ID: <span id="profile-unique-id" style="color: var(--accent-gold); font-weight: 800;">------</span></div>
-          <div style="font-size: 11px; color: var(--success); font-weight: 800; margin-top: 2px;" id="profile-last-online">🟢 В сети</div>
+  <!-- МОДАЛЬНОЕ ОКНО АДМИН-ПАНЕЛИ (ТОЛЬКО ДЛЯ 764303) -->
+  <div id="admin-modal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 14px; font-size: 18px; font-weight: 900; color: var(--accent-gold);">⚙️ Админ-панель</h3>
+      
+      <!-- ФОРМА ТУРНИРА -->
+      <div class="card-box" style="text-align: left; margin-bottom: 12px; padding: 12px;">
+        <b style="font-size: 13px; color: var(--accent-gold);">🏆 Создать турнир:</b>
+        <input type="text" id="adm-tour-title" placeholder="Название турнира" style="width:100%; margin-top:6px; padding:8px; background:#0b0614; border:1px solid var(--border-color); color:#fff; border-radius:8px;">
+        
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <select id="adm-tour-players" style="flex:1; padding:8px; background:#0b0614; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+            <option value="4">4 Игрока</option>
+            <option value="6">6 Игроков</option>
+            <option value="8">8 Игроков</option>
+          </select>
+          <select id="adm-tour-mode" style="flex:1; padding:8px; background:#0b0614; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+            <option value="podkidnoy">Подкидной</option>
+            <option value="perevodnoy">Переводной</option>
+          </select>
         </div>
+
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <select id="adm-tour-deck" style="flex:1; padding:8px; background:#0b0614; color:#fff; border:1px solid var(--border-color); border-radius:8px;">
+            <option value="36">36 карт</option>
+            <option value="24">24 карты</option>
+          </select>
+          <input type="number" id="adm-tour-stake" placeholder="Взнос ⭐ (0 = Бесплатно)" style="flex:1; padding:8px; background:#0b0614; border:1px solid var(--border-color); color:#fff; border-radius:8px;">
+        </div>
+
+        <div style="margin-top:6px;">
+          <small style="color:var(--text-muted)">Вариант приза:</small>
+          <select id="adm-tour-prize-type" style="width:100%; padding:8px; background:#0b0614; color:#fff; border:1px solid var(--border-color); border-radius:8px;" onchange="togglePrizeType(this.value)">
+            <option value="calc">Вариант Б: Подсчет банка (Взнос * Игроки - 10%)</option>
+            <option value="fixed">Вариант А: Фиксированная сумма ⭐</option>
+          </select>
+        </div>
+
+        <input type="number" id="adm-tour-fixed-prize" placeholder="Фиксированный приз ⭐" style="display:none; width:100%; margin-top:6px; padding:8px; background:#0b0614; border:1px solid var(--border-color); color:#fff; border-radius:8px;">
+
+        <button class="btn" style="width:100%; margin-top:10px; padding:10px;" onclick="submitAdminCreateTournament()">Запустить Турнир</button>
       </div>
-    </div>
 
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Победы</div><div style="font-size: 15px; font-weight: 900; color: var(--accent-gold);" id="stat-wins">0</div></div>
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Поражения</div><div style="font-size: 15px; font-weight: 900; color: var(--danger);" id="stat-losses">0</div></div>
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Винрейт</div><div style="font-size: 15px; font-weight: 900; color: var(--success);" id="stat-winrate">0%</div></div>
-      <div class="card-box" style="text-align: center; margin: 0; padding: 10px;"><div style="font-size: 9px; color: var(--text-muted);">Рефералы</div><div style="font-size: 15px; font-weight: 900; color: #a855f7;" id="stat-referrals">0</div></div>
-    </div>
+      <!-- ФОРМА ЗАДАНИЯ -->
+      <div class="card-box" style="text-align: left; padding: 12px;">
+        <b style="font-size: 13px; color: var(--accent-gold);">🎯 Добавить Ежедневное Задание:</b>
+        <input type="text" id="adm-quest-title" placeholder="Описание (например, Сыграть 3 игры)" style="width:100%; margin-top:6px; padding:8px; background:#0b0614; border:1px solid var(--border-color); color:#fff; border-radius:8px;">
+        
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <input type="number" id="adm-quest-target" placeholder="Цель (число)" style="flex:1; padding:8px; background:#0b0614; border:1px solid var(--border-color); color:#fff; border-radius:8px;">
+          <input type="number" id="adm-quest-reward" placeholder="Награда ⭐" style="flex:1; padding:8px; background:#0b0614; border:1px solid var(--border-color); color:#fff; border-radius:8px;">
+        </div>
 
-    <div class="card-box">
-      <div style="font-weight: 900; font-size: 13px; margin-bottom: 8px; color: var(--accent-gold);">🎟️ Активировать промокод</div>
-      <div style="display: flex; gap: 8px;">
-        <input type="text" id="promo-code-input" placeholder="Введите код..." style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 12px; font-size: 13px; outline: none;">
-        <button class="btn" style="padding: 10px 16px;" onclick="submitPromoCode()">OK</button>
+        <button class="btn" style="width:100%; margin-top:10px; padding:10px;" onclick="submitAdminCreateQuest()">Опубликовать Задание</button>
       </div>
-    </div>
 
-    <button class="btn" style="width: 100%; margin-top: 4px; padding: 14px;" onclick="claimDailyBonus()">🎁 Ежедневный бонус (+10 ⭐)</button>
+      <button class="btn btn-secondary" style="width: 100%; margin-top: 12px; padding: 10px;" onclick="closeAdminModal()">Закрыть</button>
+    </div>
   </div>
 
   <!-- МОДАЛЬНОЕ ОКНО ПРОФИЛЯ ЛЮБОГО ИГРОКА -->
@@ -402,11 +512,13 @@
     </div>
   </div>
 
+  <!-- НИЖНЕЕ МЕНЮ НАВИГАЦИИ (6 ВКЛАДОК) -->
   <div class="nav-bar">
     <button class="nav-item active" onclick="switchTab('lobbies', this)"><div class="nav-icon">🎲</div><div>Столы</div></button>
-    <button class="nav-item" onclick="switchTab('wheel', this)"><div class="nav-icon">🎡</div><div>Колесо</div></button>
+    <button class="nav-item" onclick="switchTab('wheel', this)"><div class="nav-icon">🎡</div><div>Рулетка</div></button>
     <button class="nav-item" onclick="switchTab('friends', this)"><div class="nav-icon">👥</div><div>Друзья</div></button>
-    <button class="nav-item" onclick="switchTab('leaderboard', this)"><div class="nav-icon">🏆</div><div>Лидеры</div></button>
+    <button class="nav-item" onclick="switchTab('leaderboard', this)"><div class="nav-icon">🏆</div><div>Зал славы</div></button>
+    <button class="nav-item" onclick="switchTab('shop', this)"><div class="nav-icon">🛒</div><div>Магазин</div></button>
     <button class="nav-item" onclick="switchTab('profile', this)"><div class="nav-icon">👤</div><div>Профиль</div></button>
   </div>
   <script>
@@ -447,6 +559,168 @@
     socket.on('auth_success', (user) => {
       currentUser = user;
       updateProfileData(user);
+    });
+
+    function updateProfileData(user) {
+      if (!user) return;
+      currentUser = user;
+      document.getElementById('header-stars').innerText = user.stars_balance ?? 0;
+      document.getElementById('header-name').innerText = user.first_name;
+      document.getElementById('header-unique-id').innerText = user.unique_id;
+
+      if (user.photo_url) {
+        document.getElementById('header-avatar').style.backgroundImage = `url('${user.photo_url}')`;
+        document.getElementById('header-avatar').innerText = '';
+        document.getElementById('profile-avatar').style.backgroundImage = `url('${user.photo_url}')`;
+        document.getElementById('profile-avatar').innerText = '';
+      } else {
+        const initial = (user.first_name || 'U')[0].toUpperCase();
+        document.getElementById('header-avatar').innerText = initial;
+        document.getElementById('profile-avatar').innerText = initial;
+      }
+
+      document.getElementById('profile-name').innerText = user.first_name;
+      document.getElementById('profile-unique-id').innerText = user.unique_id;
+
+      const wins = user.wins || 0;
+      const losses = user.losses || 0;
+      const totalGames = wins + losses;
+      const winrate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+
+      document.getElementById('stat-wins').innerText = wins;
+      document.getElementById('stat-losses').innerText = losses;
+      document.getElementById('stat-winrate').innerText = winrate + '%';
+      document.getElementById('stat-referrals').innerText = user.referral_count || 0;
+
+      // ПРОВЕРКА НА АДМИНА (ТОЛЬКО ДЛЯ ID 764303 ИЛИ UNIQUE ID 764303)
+      if (String(user.telegram_id) === '764303' || String(user.unique_id) === '764303') {
+        document.getElementById('admin-panel-btn').style.display = 'block';
+      }
+    }
+
+    function openAdminModal() { document.getElementById('admin-modal').classList.add('active'); }
+    function closeAdminModal() { document.getElementById('admin-modal').classList.remove('active'); }
+
+    function togglePrizeType(val) {
+      document.getElementById('adm-tour-fixed-prize').style.display = (val === 'fixed') ? 'block' : 'none';
+    }
+
+    function submitAdminCreateTournament() {
+      const title = document.getElementById('adm-tour-title').value.trim();
+      const players = Number(document.getElementById('adm-tour-players').value);
+      const mode = document.getElementById('adm-tour-mode').value;
+      const deckSize = Number(document.getElementById('adm-tour-deck').value);
+      const stake = Number(document.getElementById('adm-tour-stake').value) || 0;
+      const prizeType = document.getElementById('adm-tour-prize-type').value;
+      const fixedPrize = Number(document.getElementById('adm-tour-fixed-prize').value) || 0;
+
+      if (!title) return alert('Введите название!');
+      socket.emit('admin_create_tournament', { title, players, mode, deckSize, stake, prizeType, fixedPrize });
+      closeAdminModal();
+      alert('Турнир успешно запущен!');
+    }
+
+    function submitAdminCreateQuest() {
+      const title = document.getElementById('adm-quest-title').value.trim();
+      const target = Number(document.getElementById('adm-quest-target').value) || 1;
+      const reward = Number(document.getElementById('adm-quest-reward').value) || 10;
+
+      if (!title) return alert('Введите описание!');
+      socket.emit('admin_create_quest', { title, target, reward });
+      closeAdminModal();
+      alert('Задание добавлено!');
+    }
+
+    socket.on('daily_quests_data', (quests) => {
+      const container = document.getElementById('daily-quests-container');
+      if (!quests || quests.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted);">Заданий на сегодня пока нет.</div>';
+        return;
+      }
+      container.innerHTML = quests.map(q => `
+        <div class="card-box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:12px;">
+          <div>
+            <b style="font-size:13px;">${q.title}</b><br>
+            <small style="color:var(--text-muted)">Прогресс: ${q.progress || 0}/${q.target}</small>
+          </div>
+          <button class="btn" style="padding:6px 12px; font-size:12px;" ${q.claimed ? 'disabled style="opacity:0.5"' : ''} onclick="socket.emit('claim_quest', '${q.id}')">
+            ${q.claimed ? 'Выполнено' : '+' + q.reward + ' ⭐'}
+          </button>
+        </div>`).join('');
+    });
+
+    socket.on('tournaments_data', (list) => {
+      const container = document.getElementById('tournaments-shop-list');
+      if (!list || list.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-muted);">Нет активных турниров</div>';
+        return;
+      }
+      container.innerHTML = list.map(t => `
+        <div class="card-box" style="margin-bottom:8px; padding:12px; text-align:left;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <b style="font-size:14px; color:var(--accent-gold);">${t.title}</b>
+            <small style="color:var(--text-muted)">👥 ${t.joinedCount}/${t.maxPlayers}</small>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+            Взнос: <b>${t.stake > 0 ? t.stake + ' ⭐' : 'Бесплатно'}</b> | Приз: <b>${t.prize} ⭐</b>
+          </div>
+          <button class="btn" style="width:100%; margin-top:8px; padding:8px;" onclick="socket.emit('join_tournament', '${t.id}')">Вступить в турнир</button>
+        </div>`).join('');
+    });
+
+    function switchLeaderboardSubTab(type) {
+      document.getElementById('tab-btn-stars').classList.toggle('active', type === 'stars');
+      document.getElementById('tab-btn-referrals').classList.toggle('active', type === 'referrals');
+      document.getElementById('leaderboard-sub-stars').style.display = type === 'stars' ? 'block' : 'none';
+      document.getElementById('leaderboard-sub-referrals').style.display = type === 'referrals' ? 'block' : 'none';
+    }
+
+    socket.on('leaderboard_data', (data) => {
+      const starsList = document.getElementById('leaderboard-list-stars');
+      const refsList = document.getElementById('leaderboard-list-referrals');
+
+      if (starsList && data.topStars) {
+        starsList.innerHTML = data.topStars.map((u, i) => {
+          const avatarStyle = u.photo_url ? `background-image: url('${u.photo_url}')` : '';
+          const initial = u.photo_url ? '' : (u.first_name || 'U')[0].toUpperCase();
+          return `
+            <div class="table-card" onclick="openUserProfile('${u.unique_id}')">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 900; color: var(--accent-gold); width: 24px;">#${i+1}</span>
+                <div class="avatar-wrapper"><div class="avatar-container" style="width: 38px; height: 38px; font-size: 14px; ${avatarStyle}">${initial}</div></div>
+                <div>
+                  <b style="font-size: 14px;">${u.first_name}</b><br>
+                  <small style="color:var(--text-muted)">ID: ${u.unique_id}</small>
+                </div>
+              </div>
+              <span style="color:var(--accent-gold); font-weight: 900;">⭐ ${u.stars_balance}</span>
+            </div>`;
+        }).join('');
+      }
+
+      if (refsList && data.topRefs) {
+        refsList.innerHTML = data.topRefs.map((u, i) => {
+          const avatarStyle = u.photo_url ? `background-image: url('${u.photo_url}')` : '';
+          const initial = u.photo_url ? '' : (u.first_name || 'U')[0].toUpperCase();
+          let prizeTag = '–';
+          if (i === 0) prizeTag = '50 ⭐';
+          else if (i === 1) prizeTag = '25 ⭐';
+          else if (i === 2) prizeTag = '10 ⭐';
+
+          return `
+            <div class="table-card" onclick="openUserProfile('${u.unique_id}')">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 900; color: var(--accent-gold); width: 24px;">#${i+1}</span>
+                <div class="avatar-wrapper"><div class="avatar-container" style="width: 38px; height: 38px; font-size: 14px; ${avatarStyle}">${initial}</div></div>
+                <div>
+                  <b style="font-size: 14px;">${u.first_name}</b><br>
+                  <small style="color:var(--text-muted)">Приглашено: ${u.weekly_refs || 0}</small>
+                </div>
+              </div>
+              <span style="color:var(--accent-gold); font-weight: 900;">${prizeTag}</span>
+            </div>`;
+        }).join('');
+      }
     });
 
     function openCreateTableModal() { document.getElementById('create-table-modal')?.classList.add('active'); }
@@ -709,38 +983,6 @@
       switchTab('lobbies');
     });
 
-    function updateProfileData(user) {
-      if (!user) return;
-      currentUser = user;
-      document.getElementById('header-stars').innerText = user.stars_balance ?? 0;
-      document.getElementById('header-name').innerText = user.first_name;
-      document.getElementById('header-unique-id').innerText = user.unique_id;
-
-      if (user.photo_url) {
-        document.getElementById('header-avatar').style.backgroundImage = `url('${user.photo_url}')`;
-        document.getElementById('header-avatar').innerText = '';
-        document.getElementById('profile-avatar').style.backgroundImage = `url('${user.photo_url}')`;
-        document.getElementById('profile-avatar').innerText = '';
-      } else {
-        const initial = (user.first_name || 'U')[0].toUpperCase();
-        document.getElementById('header-avatar').innerText = initial;
-        document.getElementById('profile-avatar').innerText = initial;
-      }
-
-      document.getElementById('profile-name').innerText = user.first_name;
-      document.getElementById('profile-unique-id').innerText = user.unique_id;
-
-      const wins = user.wins || 0;
-      const losses = user.losses || 0;
-      const totalGames = wins + losses;
-      const winrate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
-
-      document.getElementById('stat-wins').innerText = wins;
-      document.getElementById('stat-losses').innerText = losses;
-      document.getElementById('stat-winrate').innerText = winrate + '%';
-      document.getElementById('stat-referrals').innerText = user.referral_count || 0;
-    }
-
     function openUserProfile(targetId) {
       socket.emit('get_user_profile', { targetId });
     }
@@ -825,7 +1067,7 @@
       }).join('');
     });
 
-     function submitPromoCode() {
+    function submitPromoCode() {
       const code = document.getElementById('promo-code-input').value.trim();
       if (!code) return alert('Введите промокод!');
       socket.emit('activate_promo', { code });
@@ -848,32 +1090,13 @@
       if (tabId === 'lobbies') socket.emit('get_lobbies');
       if (tabId === 'friends') socket.emit('get_friends');
       if (tabId === 'leaderboard') socket.emit('get_leaderboard');
+      if (tabId === 'shop') socket.emit('get_tournaments');
+      if (tabId === 'profile') socket.emit('get_daily_quests');
     }
 
-    socket.on('leaderboard_data', (list) => {
-      const container = document.getElementById('leaderboard-list');
-      if (!container) return;
-      if (!list || list.length === 0) {
-        container.innerHTML = '<div style="text-align: center; color: var(--text-muted); margin-top: 40px;">Рейтинг пуст</div>';
-        return;
-      }
-      container.innerHTML = list.map((u, i) => {
-        const avatarStyle = u.photo_url ? `background-image: url('${u.photo_url}')` : '';
-        const initial = u.photo_url ? '' : (u.first_name || 'U')[0].toUpperCase();
-        return `
-          <div class="table-card" onclick="openUserProfile('${u.unique_id}')">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-weight: 900; color: var(--accent-gold); width: 24px;">#${i+1}</span>
-              <div class="avatar-wrapper"><div class="avatar-container" style="width: 38px; height: 38px; font-size: 14px; ${avatarStyle}">${initial}</div></div>
-              <div>
-                <b style="font-size: 14px;">${u.first_name}</b><br>
-                <small style="color:var(--text-muted)">ID: ${u.unique_id}</small>
-              </div>
-            </div>
-            <span style="color:var(--accent-gold); font-weight: 900;">⭐ ${u.stars_balance}</span>
-          </div>`;
-      }).join('');
-    });
+    function buyStars(amount) {
+      alert(`Запрос оплаты ${amount} Telegram Stars произведен!`);
+    }
 
     socket.on('error_message', (msg) => alert(msg));
   </script>
