@@ -13,9 +13,9 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 const DB_FILE = path.join(__dirname, 'database.json');
 
-// ЗАГРУЗКА И АВТОСОХРАНЕНИЕ БАЗЫ ДАННЫХ В ФАЙЛ
 let users = {};
 let uniqueIdToTgId = {};
+const onlineUsers = new Set(); // Реальный список активных онлайн-пользователей
 
 function loadDatabase() {
   try {
@@ -23,7 +23,7 @@ function loadDatabase() {
       const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
       users = data.users || {};
       uniqueIdToTgId = data.uniqueIdToTgId || {};
-      console.log('БД успешно загружена из диска!');
+      console.log('БД успешно загружена из файла.');
     }
   } catch (err) {
     console.error('Ошибка чтения БД:', err);
@@ -122,8 +122,7 @@ io.on('connection', (socket) => {
         referral_earned: 0,
         friends: [],
         activated_promos: [],
-        last_daily: 0,
-        is_online: true
+        last_daily: 0
       };
       users[telegram_id] = user;
       uniqueIdToTgId[newUniqueId] = telegram_id;
@@ -143,19 +142,19 @@ io.on('connection', (socket) => {
       user.username = username || user.username;
       user.first_name = first_name || user.first_name;
       user.photo_url = photo_url || user.photo_url;
-      user.is_online = true;
       saveDatabase();
     }
 
     socket.userId = user.telegram_id;
+    onlineUsers.add(user.telegram_id);
+
     socket.emit('auth_success', user);
     socket.emit('lobbies_list', { tables: Object.values(lobbies) });
     socket.emit('friend_requests_update', friendRequests[user.telegram_id] || []);
 
     socket.on('disconnect', () => {
-      if (users[socket.userId]) {
-        users[socket.userId].is_online = false;
-        saveDatabase();
+      if (socket.userId) {
+        onlineUsers.delete(socket.userId);
       }
     });
   });
@@ -173,7 +172,7 @@ io.on('connection', (socket) => {
         losses: targetUser.losses,
         referral_count: targetUser.referral_count,
         stars_balance: targetUser.stars_balance,
-        is_online: targetUser.is_online
+        is_online: onlineUsers.has(targetUser.telegram_id)
       });
     }
   });
@@ -214,11 +213,20 @@ io.on('connection', (socket) => {
     socket.emit('friend_requests_update', reqList);
     socket.emit('auth_success', recipient);
   });
-socket.on('get_friends', () => {
+
+  socket.on('get_friends', () => {
     if (!socket.userId) return;
     const user = users[socket.userId];
     if (!user) return;
-    const friendsList = (user.friends || []).map(id => users[uniqueIdToTgId[id]]).filter(Boolean);
+    const friendsList = (user.friends || []).map(id => {
+      const tgId = uniqueIdToTgId[id];
+      const friendObj = users[tgId];
+      if (!friendObj) return null;
+      return {
+        ...friendObj,
+        is_online: onlineUsers.has(tgId)
+      };
+    }).filter(Boolean);
     socket.emit('friends_list', { friends: friendsList });
   });
 
@@ -468,4 +476,4 @@ function checkGameOver(gameId) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`CardFool Persistent Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`CardFool Stable Server running on port ${PORT}`));
