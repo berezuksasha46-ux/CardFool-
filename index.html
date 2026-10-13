@@ -268,7 +268,7 @@
     <div class="card-box">
       <div style="font-size: 13px; font-weight: 900; color: var(--accent-gold); margin-bottom: 8px;">➕ Добавить друга по ID</div>
       <div style="display: flex; gap: 8px;">
-        <input type="text" id="add-friend-id-input" placeholder="Введите ID..." style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 12px; outline: none; font-size: 13px;">
+        <input type="text" id="add-friend-id-input" placeholder="Введите 6 цифр ID..." style="flex: 1; background: #0b0614; border: 1px solid var(--border-color); color: #fff; padding: 10px; border-radius: 12px; outline: none; font-size: 13px;">
         <button class="btn" style="padding: 10px 16px;" onclick="sendFriendRequest()">Заявка</button>
       </div>
     </div>
@@ -467,8 +467,7 @@
       <button class="btn btn-secondary" style="width: 100%; margin-top: 12px; padding: 10px;" onclick="closeAdminModal()">Закрыть</button>
     </div>
   </div>
-
-  <!-- МОДАЛЬНОЕ ОКНО ПРОФИЛЯ ЛЮБОГО ИГРОКА -->
+<!-- МОДАЛЬНОЕ ОКНО ПРОФИЛЯ ЛЮБОГО ИГРОКА -->
   <div id="user-profile-modal" class="modal">
     <div class="modal-content">
       <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px; text-align: left;">
@@ -609,7 +608,8 @@
       document.getElementById('stat-winrate').innerText = winrate + '%';
       document.getElementById('stat-referrals').innerText = user.referral_count || 0;
 
-      if (String(user.telegram_id) === '764303' || String(user.unique_id) === '764303') {
+      // ПРОВЕРКА АДМИНА ПО ПЕРВЫМ 6 ЦИФРАМ TG ID ИЛИ УНИКАЛЬНОМУ ID (764303)
+      if (String(user.telegram_id).startsWith('764303') || String(user.unique_id) === '764303') {
         document.getElementById('admin-panel-btn').style.display = 'block';
       }
     }
