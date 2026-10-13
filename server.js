@@ -209,7 +209,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('admin_create_tournament', (data) => {
-    if (!String(socket.userId).startsWith('764303') && users[socket.userId]?.unique_id !== '764303') return;
+    if (!String(socket.userId).startsWith('186601') && users[socket.userId]?.unique_id !== '186601') return;
     const prize = (data.prizeType === 'fixed') ? data.fixedPrize : Math.floor(data.stake * data.players * 0.9);
     tournaments.push({
       id: 'tour_' + Date.now(),
