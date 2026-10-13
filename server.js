@@ -15,7 +15,12 @@ const DB_FILE = path.join(__dirname, 'database.json');
 
 let users = {};
 let uniqueIdToTgId = {};
-const onlineUsers = new Set(); // Реальный список активных онлайн-пользователей
+let adminQuests = [
+  { id: 'q_1', title: 'Сыграть 3 партии в Дурака', target: 3, reward: 15 },
+  { id: 'q_2', title: 'Выиграть 1 игру', target: 1, reward: 20 }
+];
+let tournaments = [];
+const onlineUsers = new Set();
 
 function loadDatabase() {
   try {
@@ -23,7 +28,9 @@ function loadDatabase() {
       const data = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
       users = data.users || {};
       uniqueIdToTgId = data.uniqueIdToTgId || {};
-      console.log('БД успешно загружена из файла.');
+      adminQuests = data.adminQuests || adminQuests;
+      tournaments = data.tournaments || [];
+      console.log('БД с турнирами и админкой успешно загружена.');
     }
   } catch (err) {
     console.error('Ошибка чтения БД:', err);
@@ -32,13 +39,27 @@ function loadDatabase() {
 
 function saveDatabase() {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ users, uniqueIdToTgId }, null, 2), 'utf8');
+    fs.writeFileSync(DB_FILE, JSON.stringify({ users, uniqueIdToTgId, adminQuests, tournaments }, null, 2), 'utf8');
   } catch (err) {
     console.error('Ошибка сохранения БД:', err);
   }
 }
 
 loadDatabase();
+
+// ЕЖЕНЕДЕЛЬНЫЙ СБРОС И ВЫПЛАТА РЕФЕРАЛЬНОГО ТОПА
+setInterval(() => {
+  const now = new Date();
+  if (now.getDay() === 0 && now.getHours() === 23 && now.getMinutes() === 59) {
+    const sortedRefs = Object.values(users).sort((a, b) => (b.weekly_refs || 0) - (a.weekly_refs || 0));
+    if (sortedRefs[0]) sortedRefs[0].stars_balance += 50;
+    if (sortedRefs[1]) sortedRefs[1].stars_balance += 25;
+    if (sortedRefs[2]) sortedRefs[2].stars_balance += 10;
+
+    Object.values(users).forEach(u => u.weekly_refs = 0);
+    saveDatabase();
+  }
+}, 60000);
 
 const lobbies = {};         
 const activeGames = {};     
@@ -108,7 +129,8 @@ io.on('connection', (socket) => {
 
     let user = users[telegram_id];
     if (!user) {
-      const newUniqueId = Math.floor(100000 + Math.random() * 900000).toString();
+      // ИСПОЛЬЗУЕМ 764303 ДЛЯ ВАШЕГО АДМИН-АККАУНТА
+      const newUniqueId = (String(telegram_id) === '764303') ? '764303' : Math.floor(100000 + Math.random() * 900000).toString();
       user = {
         telegram_id: String(telegram_id),
         username: username || 'Игрок',
@@ -119,9 +141,11 @@ io.on('connection', (socket) => {
         unique_id: newUniqueId,
         referrer_id: null,
         referral_count: 0,
-        referral_earned: 0,
+        weekly_refs: 0,
         friends: [],
         activated_promos: [],
+        claimed_quests: [],
+        quest_progress: {},
         last_daily: 0
       };
       users[telegram_id] = user;
@@ -134,7 +158,13 @@ io.on('connection', (socket) => {
           user.referrer_id = referrer.unique_id;
           referrer.stars_balance += 10;
           referrer.referral_count += 1;
-          referrer.referral_earned += 10;
+          referrer.weekly_refs = (referrer.weekly_refs || 0) + 1;
+
+          // ПОНИЖЕННЫЕ В 4 РАЗА НАГРАДЫ ЗА СТОЛБИКИ РЕФЕРАЛОВ
+          if (referrer.referral_count === 3) referrer.stars_balance += 12;
+          if (referrer.referral_count === 10) referrer.stars_balance += 25;
+          if (referrer.referral_count === 25) referrer.stars_balance += 75;
+          if (referrer.referral_count === 50) referrer.stars_balance += 250;
         }
       }
       saveDatabase();
@@ -153,10 +183,85 @@ io.on('connection', (socket) => {
     socket.emit('friend_requests_update', friendRequests[user.telegram_id] || []);
 
     socket.on('disconnect', () => {
-      if (socket.userId) {
-        onlineUsers.delete(socket.userId);
-      }
+      if (socket.userId) onlineUsers.delete(socket.userId);
     });
+  });
+
+  // АДМИН-СОБЫТИЯ (ТОЛЬКО ДЛЯ ID 764303)
+  socket.on('admin_create_tournament', (data) => {
+    if (String(socket.userId) !== '764303' && users[socket.userId]?.unique_id !== '764303') return;
+    const prize = (data.prizeType === 'fixed') ? data.fixedPrize : Math.floor(data.stake * data.players * 0.9);
+    tournaments.push({
+      id: 'tour_' + Date.now(),
+      title: data.title,
+      maxPlayers: data.players,
+      mode: data.mode,
+      deckSize: data.deckSize,
+      stake: data.stake,
+      prize,
+      joined: [],
+      joinedCount: 0
+    });
+    saveDatabase();
+    io.emit('tournaments_data', tournaments);
+  });
+
+  socket.on('admin_create_quest', (data) => {
+    if (String(socket.userId) !== '764303' && users[socket.userId]?.unique_id !== '764303') return;
+    adminQuests.push({
+      id: 'q_' + Date.now(),
+      title: data.title,
+      target: data.target,
+      reward: data.reward
+    });
+    saveDatabase();
+    io.emit('daily_quests_data', adminQuests);
+  });
+
+  socket.on('get_daily_quests', () => {
+    const user = users[socket.userId];
+    if (!user) return;
+    const questsData = adminQuests.map(q => ({
+      ...q,
+      progress: user.quest_progress[q.id] || 0,
+      claimed: user.claimed_quests.includes(q.id)
+    }));
+    socket.emit('daily_quests_data', questsData);
+  });
+
+  socket.on('claim_quest', (questId) => {
+    const user = users[socket.userId];
+    const quest = adminQuests.find(q => q.id === questId);
+    if (!user || !quest) return;
+    if (user.claimed_quests.includes(questId)) return socket.emit('error_message', 'Уже получено!');
+
+    user.claimed_quests.push(questId);
+    user.stars_balance += quest.reward;
+    saveDatabase();
+    socket.emit('auth_success', user);
+    socket.emit('error_message', `🎉 Задание выполнено! +${quest.reward} ⭐`);
+  });
+
+  socket.on('get_tournaments', () => {
+    socket.emit('tournaments_data', tournaments);
+  });
+
+  socket.on('join_tournament', (tourId) => {
+    const user = users[socket.userId];
+    const tour = tournaments.find(t => t.id === tourId);
+    if (!user || !tour) return;
+    if (tour.joined.includes(user.telegram_id)) return socket.emit('error_message', 'Вы уже зарегистрированы!');
+    if (tour.joinedCount >= tour.maxPlayers) return socket.emit('error_message', 'Турнир полон!');
+    if (user.stars_balance < tour.stake) return socket.emit('error_message', 'Недостаточно звезд!');
+
+    user.stars_balance -= tour.stake;
+    tour.joined.push(user.telegram_id);
+    tour.joinedCount++;
+    saveDatabase();
+
+    socket.emit('auth_success', user);
+    io.emit('tournaments_data', tournaments);
+    socket.emit('error_message', 'Вы успешно вступили в турнир!');
   });
 
   socket.on('get_user_profile', (data) => {
@@ -264,7 +369,7 @@ io.on('connection', (socket) => {
       const refUser = users[uniqueIdToTgId[user.referrer_id]];
       if (refUser) {
         const comm = Math.round(amount * 0.05);
-        if (comm > 0) { refUser.stars_balance += comm; refUser.referral_earned += comm; }
+        if (comm > 0) { refUser.stars_balance += comm; }
       }
     }
     saveDatabase();
@@ -412,7 +517,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_leaderboard', () => {
-    socket.emit('leaderboard_data', Object.values(users).sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 20));
+    const allUsers = Object.values(users);
+    const topStars = [...allUsers].sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 20);
+    const topRefs = [...allUsers].sort((a, b) => (b.weekly_refs || 0) - (a.weekly_refs || 0)).slice(0, 20);
+
+    socket.emit('leaderboard_data', { topStars, topRefs });
   });
 });
 
@@ -476,4 +585,4 @@ function checkGameOver(gameId) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`CardFool Stable Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`CardFool Complete Admin Server running on port ${PORT}`));
