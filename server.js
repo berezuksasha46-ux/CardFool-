@@ -16,8 +16,8 @@ const DB_FILE = path.join(__dirname, 'database.json');
 let users = {};
 let uniqueIdToTgId = {};
 let adminQuests = [
-  { id: 'q_1', title: 'Сыграть 3 партии в Дурака', target: 3, reward: 15 },
-  { id: 'q_2', title: 'Выиграть 1 игру', target: 1, reward: 20 }
+  { id: 'q_1', title: 'Сыграть 3 партии в Дурака', target: 3, reward: 15, type: 'play' },
+  { id: 'q_2', title: 'Выиграть 1 игру', target: 1, reward: 20, type: 'win' }
 ];
 let tournaments = [];
 const onlineUsers = new Set();
@@ -30,7 +30,7 @@ function loadDatabase() {
       uniqueIdToTgId = data.uniqueIdToTgId || {};
       adminQuests = data.adminQuests || adminQuests;
       tournaments = data.tournaments || [];
-      console.log('БД с турнирами и админкой успешно загружена.');
+      console.log('БД успешно загружена.');
     }
   } catch (err) {
     console.error('Ошибка чтения БД:', err);
@@ -51,7 +51,7 @@ loadDatabase();
 setInterval(() => {
   const now = new Date();
   if (now.getDay() === 0 && now.getHours() === 23 && now.getMinutes() === 59) {
-    const sortedRefs = Object.values(users).sort((a, b) => (b.weekly_refs || 0) - (a.weekly_refs || 0));
+    const sortedRefs = Object.values(users).filter(u => (u.weekly_refs || 0) > 0).sort((a, b) => (b.weekly_refs || 0) - (a.weekly_refs || 0));
     if (sortedRefs[0]) sortedRefs[0].stars_balance += 50;
     if (sortedRefs[1]) sortedRefs[1].stars_balance += 25;
     if (sortedRefs[2]) sortedRefs[2].stars_balance += 10;
@@ -122,6 +122,24 @@ function createDeck(size) {
   return deck;
 }
 
+function updateQuestProgress(userId, type) {
+  const user = users[userId];
+  if (!user) return;
+  if (!user.quest_progress) user.quest_progress = {};
+
+  adminQuests.forEach(q => {
+    if (q.type === type) {
+      if (!user.claimed_quests.includes(q.id)) {
+        const current = user.quest_progress[q.id] || 0;
+        if (current < q.target) {
+          user.quest_progress[q.id] = current + 1;
+        }
+      }
+    }
+  });
+  saveDatabase();
+}
+
 io.on('connection', (socket) => {
   socket.on('auth', (data) => {
     const { telegram_id, username, first_name, photo_url, refId } = data;
@@ -129,7 +147,6 @@ io.on('connection', (socket) => {
 
     let user = users[telegram_id];
     if (!user) {
-      // ИСПОЛЬЗУЕМ 764303 ДЛЯ ВАШЕГО АДМИН-АККАУНТА
       const newUniqueId = (String(telegram_id) === '764303') ? '764303' : Math.floor(100000 + Math.random() * 900000).toString();
       user = {
         telegram_id: String(telegram_id),
@@ -160,7 +177,6 @@ io.on('connection', (socket) => {
           referrer.referral_count += 1;
           referrer.weekly_refs = (referrer.weekly_refs || 0) + 1;
 
-          // ПОНИЖЕННЫЕ В 4 РАЗА НАГРАДЫ ЗА СТОЛБИКИ РЕФЕРАЛОВ
           if (referrer.referral_count === 3) referrer.stars_balance += 12;
           if (referrer.referral_count === 10) referrer.stars_balance += 25;
           if (referrer.referral_count === 25) referrer.stars_balance += 75;
@@ -180,6 +196,7 @@ io.on('connection', (socket) => {
 
     socket.emit('auth_success', user);
     socket.emit('lobbies_list', { tables: Object.values(lobbies) });
+    socket.emit('tournaments_data', tournaments);
     socket.emit('friend_requests_update', friendRequests[user.telegram_id] || []);
 
     socket.on('disconnect', () => {
@@ -187,7 +204,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // АДМИН-СОБЫТИЯ (ТОЛЬКО ДЛЯ ID 764303)
   socket.on('admin_create_tournament', (data) => {
     if (String(socket.userId) !== '764303' && users[socket.userId]?.unique_id !== '764303') return;
     const prize = (data.prizeType === 'fixed') ? data.fixedPrize : Math.floor(data.stake * data.players * 0.9);
@@ -212,15 +228,17 @@ io.on('connection', (socket) => {
       id: 'q_' + Date.now(),
       title: data.title,
       target: data.target,
-      reward: data.reward
+      reward: data.reward,
+      type: 'play'
     });
     saveDatabase();
-    io.emit('daily_quests_data', adminQuests);
+    io.emit('daily_quests_data', adminQuests.map(q => ({ ...q, progress: 0, claimed: false })));
   });
 
   socket.on('get_daily_quests', () => {
     const user = users[socket.userId];
     if (!user) return;
+    if (!user.quest_progress) user.quest_progress = {};
     const questsData = adminQuests.map(q => ({
       ...q,
       progress: user.quest_progress[q.id] || 0,
@@ -233,13 +251,29 @@ io.on('connection', (socket) => {
     const user = users[socket.userId];
     const quest = adminQuests.find(q => q.id === questId);
     if (!user || !quest) return;
-    if (user.claimed_quests.includes(questId)) return socket.emit('error_message', 'Уже получено!');
+    if (user.claimed_quests.includes(questId)) return socket.emit('error_message', 'Награда уже получена!');
+
+    if (!user.quest_progress) user.quest_progress = {};
+    const currentProgress = user.quest_progress[questId] || 0;
+
+    // ЖЕСТКАЯ ПРОВЕРКА ПРОГРЕССА
+    if (currentProgress < quest.target) {
+      return socket.emit('error_message', `Задание еще не выполнено! (${currentProgress}/${quest.target})`);
+    }
 
     user.claimed_quests.push(questId);
     user.stars_balance += quest.reward;
     saveDatabase();
+
     socket.emit('auth_success', user);
-    socket.emit('error_message', `🎉 Задание выполнено! +${quest.reward} ⭐`);
+    socket.emit('error_message', `🎉 Задание выполнено! Начислено +${quest.reward} ⭐`);
+
+    const updatedQuestsData = adminQuests.map(q => ({
+      ...q,
+      progress: user.quest_progress[q.id] || 0,
+      claimed: user.claimed_quests.includes(q.id)
+    }));
+    socket.emit('daily_quests_data', updatedQuestsData);
   });
 
   socket.on('get_tournaments', () => {
@@ -434,6 +468,11 @@ io.on('connection', (socket) => {
       ],
       attackerIdx: 0, defenderIdx: 1
     };
+
+    // Засчитываем прогресс квеста "Сыграть игру"
+    updateQuestProgress(host.telegram_id, 'play');
+    updateQuestProgress(guest.telegram_id, 'play');
+
     broadcastGameState(gameId);
   });
 
@@ -500,8 +539,7 @@ io.on('connection', (socket) => {
       checkGameOver(data.gameId);
     }
   });
-
-  socket.on('claim_daily', () => {
+socket.on('claim_daily', () => {
     const user = users[socket.userId];
     if (!user) return;
     const now = Date.now();
@@ -519,7 +557,8 @@ io.on('connection', (socket) => {
   socket.on('get_leaderboard', () => {
     const allUsers = Object.values(users);
     const topStars = [...allUsers].sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 20);
-    const topRefs = [...allUsers].sort((a, b) => (b.weekly_refs || 0) - (a.weekly_refs || 0)).slice(0, 20);
+    // Показываем в ТОП рефералов только тех, кто пригласил хотя бы 1 человека
+    const topRefs = allUsers.filter(u => (u.weekly_refs || 0) > 0).sort((a, b) => (b.weekly_refs || 0) - (a.weekly_refs || 0)).slice(0, 20);
 
     socket.emit('leaderboard_data', { topStars, topRefs });
   });
@@ -565,7 +604,11 @@ function checkGameOver(gameId) {
       const winner = users[game.players[winnerIdx].id];
       const loser = users[game.players[loserIdx].id];
 
-      if (winner) { winner.wins = (winner.wins || 0) + 1; winner.stars_balance += prize; }
+      if (winner) { 
+        winner.wins = (winner.wins || 0) + 1; 
+        winner.stars_balance += prize; 
+        updateQuestProgress(winner.telegram_id, 'win');
+      }
       if (loser) { loser.losses = (loser.losses || 0) + 1; }
 
       saveDatabase();
@@ -585,4 +628,4 @@ function checkGameOver(gameId) {
 }
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`CardFool Complete Admin Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`CardFool Ultimate Secured Server running on port ${PORT}`));
