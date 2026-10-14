@@ -4,18 +4,32 @@ const { Server } = require('socket.io');
 const path = require('path');
 const admin = require('firebase-admin');
 
-const serviceAccount = require('./firebase-key.json');
+// Безопасное подключение Firebase (работает и на Render, и локально)
+let serviceAccount;
+if (process.env.FIREBASE_KEY) {
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+  } catch (e) {
+    console.error("Ошибка парсинга FIREBASE_KEY:", e);
+  }
+} else {
+  try {
+    serviceAccount = require('./firebase-key.json');
+  } catch (e) {
+    console.error("Файл firebase-key.json не найден!");
+  }
+}
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+if (serviceAccount) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  console.log('✅ Успешное подключение к Firebase Firestore!');
+} else {
+  console.error('❌ Ключ Firebase не найден ни в ENV, ни в файле!');
+}
 
 const db = admin.firestore();
-console.log('✅ Успешное подключение к Firebase Firestore!');
-
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(__dirname));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
