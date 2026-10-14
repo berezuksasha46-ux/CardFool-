@@ -1,0 +1,13 @@
+
+  "type": "service_account",
+  "project_id": "cardfoolcloud",
+  "private_key_id": "e7a6fcd614c2e793de99a2cf400c1599fc762a8b",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDH0sHFGdhccW8C\nIRE7I1bpvnswKv3bpHZNPmVpsObDGOm082atJvxByt0o+ifeli40OJYVzfGq7+IV\n2wyAi1FBAWNdKtycQf1NiiAPr6up4wgPOOSB0ed3EREJ7OnHYom+m1wV4fj4PEZs\nRyW jVw1hz3grpKxrqIU+YiIJC5cpi/lTFfJjMlfUo3U5Y1vb6TWoyk4fSJ68Vzji\nnk6cEHjxOEsIR9H3XRmm7ava/vQ9HSa/fjSrvCRSl09 PPTRAFPD3Ne6npQzL+pgg\njbpRwCylEUb73ChbPIgOorsG1Qiklmy9XeNHE1V/w8wu+nMWTa9XHn9qK/TVTdGv\nBqP2yp6zAgMBAAECg gEAYJoYCTSEb7R7CRl5XhConNn0bgXqsfuhIZivqFfYR6tM\nmKkvEziMrTXokz3Udnw+HArbK/FjCtNrhktekOpJPtbv9YOaIYSZc5n6A/tWTwwt\nwkYr2kLi1qIOjbDWGAkgNGChNQcIuOFS3lfK71tPYeDN5LN4k5dlyxHgCGVtD3q0\n3p8EI6dIduxGgkKmazG5cf5pDinlssT GObCbk/YNx4yHP2pXUfvusQlJdczMtIfW\nH9CzVyb2yPCMAiBXhQU9XPEdHO9EoWt59IJB+s3dtHQfqTh+PbxmMVVmupJwQNLQ\nJhnmH I3C5pt0mipo4EQcSoNuQKPCV/YKNwHl7DTtkQKBgQDrAh3dkjjuZhSRtJBn\nqK3WfQNasBZxiaD3ghzUwpXJokMIvz1cgrfJS/luQfOq1 eTCuw7oD8WlQeyvTMMn\n00FYy7eyp+BYtMfsb44GvdP2c4x3Rf84/xsBqvqRWkjf+8qmGE9zg4w7uEnta+2K\nMeobHV8gbceqAH1AXI PDBgxJywKBgQDZrBKNsDbgMuGNW2V4z6DJjAtASX6yF9/R\ntQAIEeGDdhRBb/c6/nDWLV3b4ppKlIlvsh/xoyCePRqjm6GSJZpYHjCDEh 11S4gQ\nzA6jNQgsMBDWbBEWg5CBQrfDzRF9MM6MMcUbxKCtrnDytvA3mCl2fGj/TS0KhkYK\nv7Ip5O6BuQKBgBcksDg/zCd+Ggx3UblDnUsAKLJnoO4xdY6qW5iASSwANMXJv4s6\nvEqwlrHLAOoUAmFC9qbX1sj9gweIcbecUFUkSsTnT2qs8vtPyRbU3ujoXC7qz8WX\nKduyMN bbo02biEtvHXPswoSnE3C0LkJrw/hDnjidVwpg3fTWp4svL0qdAoGAenID\nVdTkaaX1n1DkedtCNV4kDhvJu2EWtJ6+z8tPMmY/6reTOYpb6v9GJyUHaiC4Vy66\nLXF4Lcttqs8nSlEAy8TfwTt1er/sYJaJPWHdoQ3Ayv2rdyC3Lx9axDgdOHE2H0L4\nADDRuiHAw6gI5R0hZdeC MOs3BQ6XZACFtm9jg3ECgYAwCo8GQk3daKkXfDJq+qlc\nxPCXm+WpDVTMtFk1pxxtV/shK9L5NwcNjY8j9sVFlS+SsUJ+9M/IBGNPCHWj H6dK\nc3Z0RPYSYdy3SV4VwXES8pCHP6rVy/IKcHmg+Im5BK8vTrIUt3fswpRQjeFWXLfq\n6AsYv0yzKQOVA5LtFK1/ig==\n-----END ЧАСТНЫЙ КЛЮЧ -----\n",
+  "client_email": "firebase-adminsdk-fbsvc@cardfoolcloud.iam.gserviceaccount.com",
+  "client_id": "107196832510313425735",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40cardfoolcloud.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
