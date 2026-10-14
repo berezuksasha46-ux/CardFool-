@@ -4,32 +4,34 @@ const { Server } = require('socket.io');
 const path = require('path');
 const admin = require('firebase-admin');
 
-// Безопасное подключение Firebase (работает и на Render, и локально)
 let serviceAccount;
-if (process.env.FIREBASE_KEY) {
-  try {
-    serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
-  } catch (e) {
-    console.error("Ошибка парсинга FIREBASE_KEY:", e);
-  }
-} else {
-  try {
+try {
+  if (process.env.FIREBASE_KEY) {
+    let rawKey = process.env.FIREBASE_KEY.trim();
+    if (rawKey.startsWith('"') && rawKey.endsWith('"')) {
+      rawKey = rawKey.slice(1, -1);
+    }
+    serviceAccount = JSON.parse(rawKey);
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
+  } else {
     serviceAccount = require('./firebase-key.json');
-  } catch (e) {
-    console.error("Файл firebase-key.json не найден!");
   }
-}
 
-if (serviceAccount) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
   console.log('✅ Успешное подключение к Firebase Firestore!');
-} else {
-  console.error('❌ Ключ Firebase не найден ни в ENV, ни в файле!');
+} catch (e) {
+  console.error('❌ ОШИБКА ИНИЦИАЛИЗАЦИИ FIREBASE:', e.message);
 }
 
 const db = admin.firestore();
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(__dirname));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -38,7 +40,6 @@ const onlineUsers = new Set();
 const lobbies = {};         
 const activeGames = {};     
 const friendRequests = {}; 
-
 async function initDefaultQuests() {
   const qRef = db.collection('quests');
   const snapshot = await qRef.get();
@@ -294,7 +295,6 @@ io.on('connection', (socket) => {
     const questsSnap = await db.collection('quests').get();
     io.emit('daily_quests_data', questsSnap.docs.map(doc => ({ ...doc.data(), progress: 0, claimed: false })));
   });
-
   socket.on('get_daily_quests', async () => {
     const userDoc = await db.collection('users').doc(socket.userId).get();
     if (!userDoc.exists) return;
@@ -391,6 +391,7 @@ io.on('connection', (socket) => {
     io.emit('tournaments_data', tourSnapshot.docs.map(doc => doc.data()));
     socket.emit('error_message', 'Вы успешно вступили в турнир!');
   });
+
   socket.on('get_user_profile', async (data) => {
     const query = await db.collection('users').where('unique_id', '==', data.targetId).limit(1).get();
     if (!query.empty) {
@@ -432,7 +433,6 @@ io.on('connection', (socket) => {
       socket.emit('error_message', 'Заявка отправлена!');
     }
   });
-
   socket.on('respond_friend_request', async (data) => {
     const recipientRef = db.collection('users').doc(socket.userId);
     const recipientDoc = await recipientRef.get();
