@@ -12,6 +12,8 @@ try {
       rawKey = rawKey.slice(1, -1);
     }
     serviceAccount = JSON.parse(rawKey);
+    
+    // Преобразуем \\n в настоящие переносы строк
     if (serviceAccount.private_key) {
       serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
     }
@@ -24,7 +26,7 @@ try {
   });
   console.log('✅ Успешное подключение к Firebase Firestore!');
 } catch (e) {
-  console.error('❌ ОШИБКА ИНИЦИАЛИЗАЦИИ FIREBASE:', e.message);
+  console.error('❌ Ошибка инициализации Firebase:', e.message);
 }
 
 const db = admin.firestore();
